@@ -169,7 +169,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="flex flex-col font-bold h-[31.59px] justify-center leading-[0] text-[#0f172a] text-[28px]">
+            <div className="flex flex-col font-bold h-[31.59px] justify-center text-[#0f172a] text-[28px]">
               Run courses, track learners, and grow revenue from one institute workspace.
             </div>
 
