@@ -68,6 +68,12 @@ function StepPill({ label, variant }) {
 }
 
 export default function AdminDashboard() {
+  const adminSharePercent = 30
+  const instructorSharePercent = 70
+  const sampleCoursePrice = 500
+  const adminShareAmount = Math.round((sampleCoursePrice * adminSharePercent) / 100)
+  const instructorShareAmount = sampleCoursePrice - adminShareAmount
+
   const courses = [
     {
       title: 'STEM Explorers Program',
@@ -276,6 +282,32 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Subscription revenue split */}
+        <section className="bg-white border border-black/[0.08] border-solid rounded-[8px] p-[21px]">
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <div className="font-bold text-[18px] text-[#0f172a]">Subscription revenue split</div>
+              <div className="text-[13px] text-[#94a3b8] mt-[4px]">
+                Course price example ₹{sampleCoursePrice} with admin and instructor percentage split.
+              </div>
+            </div>
+            <div className="bg-[#eef2ff] h-[30px] rounded-[12px] flex items-center px-[12px]">
+              <div className="text-[12px] font-medium text-[#4338ca]">Configurable in Subscriptions</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-[16px]">
+            <div className="bg-[#f8fafc] rounded-[6px] p-[14px] border border-black/[0.06]">
+              <div className="text-[13px] font-medium text-[#94a3b8]">Admin share</div>
+              <div className="text-[24px] font-bold text-[#0f172a] mt-[6px]">{adminSharePercent}% (₹{adminShareAmount})</div>
+            </div>
+            <div className="bg-[#f8fafc] rounded-[6px] p-[14px] border border-black/[0.06]">
+              <div className="text-[13px] font-medium text-[#94a3b8]">Instructor share</div>
+              <div className="text-[24px] font-bold text-[#0f172a] mt-[6px]">{instructorSharePercent}% (₹{instructorShareAmount})</div>
+            </div>
+          </div>
+        </section>
 
         {/* Keep all other sections exactly as they were */}
         {/* Top 2 cards: Course management + Live classes */}

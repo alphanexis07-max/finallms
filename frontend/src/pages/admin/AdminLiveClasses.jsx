@@ -41,12 +41,12 @@ export default function AdminLiveClasses() {
               >
                 Cancel
               </button>
-              <button className="h-9 rounded-[7px] bg-[#5b3df6] px-3 text-[12px] font-semibold text-white">Create Live Batch</button>
+              <button className="h-9 rounded-[7px] bg-[#5b3df6] px-3 text-[12px] font-semibold text-white">Create Zoom Meeting</button>
             </div>
           </div>
 
-          <p className="text-[12px] text-[#94a3b8]">Live Classes / Create Live Batch</p>
-          <h2 className="mt-1 text-[32px] font-bold text-[#0f172a]">Create Live Batch</h2>
+          <p className="text-[12px] text-[#94a3b8]">Live Classes / Create Zoom Meeting</p>
+          <h2 className="mt-1 text-[32px] font-bold text-[#0f172a]">Create Zoom Meeting</h2>
 
           <div className="mt-4 grid grid-cols-[1.5fr_1fr] gap-4">
             <section className="rounded-[8px] border border-black/[0.08] bg-white p-4">
@@ -141,7 +141,7 @@ export default function AdminLiveClasses() {
               <button
                 onClick={() => setActiveView('create')}
                 className="inline-flex h-9 items-center gap-1 rounded-[7px] bg-[#5b3df6] px-3 text-[12px] font-semibold text-white"
-              ><Plus className="h-4 w-4" />Create live batch</button>
+              ><Plus className="h-4 w-4" />Create Zoom meeting</button>
               <button className="h-9 rounded-[7px] border border-black/[0.08] bg-white px-3 text-[12px] font-semibold text-[#111827]">This week</button>
             </div>
           </div>

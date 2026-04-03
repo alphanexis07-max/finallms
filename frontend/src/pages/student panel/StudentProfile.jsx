@@ -38,36 +38,6 @@ function DetailField({ label, value }) {
 export default function StudentProfile() {
   return (
     <div className="min-h-full bg-[#f3f4f6]">
-      <header className="flex h-[70px] items-center justify-between border-b border-black/[0.06] bg-white px-6">
-        <div>
-          <p className="text-[12px] text-[#94a3b8]">Student panel / Profile</p>
-          <h1 className="text-[22px] font-bold leading-tight text-[#0f172a]">Student Profile</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 min-w-[260px] items-center gap-2 rounded-[8px] border border-black/[0.08] bg-white px-3">
-            <Search className="h-4 w-4 shrink-0 text-[#94a3b8]" />
-            <input
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none"
-              placeholder="Search profile, courses, or settings"
-            />
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-1.5 rounded-[8px] border border-black/[0.08] bg-white px-3 text-[12px] font-semibold text-[#0f172a]"
-          >
-            <Bell className="h-4 w-4" />
-            Notifications
-          </button>
-          <div className="flex items-center gap-2 rounded-[8px] border border-black/[0.08] bg-white px-2 py-1">
-            <img src={AVATAR} alt="" className="h-8 w-8 rounded-full object-cover" />
-            <div>
-              <p className="text-[12px] font-semibold leading-none text-[#0f172a]">Aarohi Shah</p>
-              <p className="text-[10px] text-[#94a3b8]">Learner</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="p-6">
         <div className="mx-auto flex max-w-[1200px] flex-col gap-6 lg:flex-row lg:items-start">
           {/* Left: profile summary */}

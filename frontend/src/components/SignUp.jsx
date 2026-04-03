@@ -4,8 +4,8 @@ const DECORATIVE_IMG = 'https://www.figma.com/api/mcp/asset/a41cf675-38f9-4801-9
 
 export default function SignUp() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-8 box-border bg-gradient-to-br from-[#1c113b] via-[#3a2286] to-[#5d3df0] font-[Inter,_'Segoe_UI',_Roboto,_sans-serif]">
-      <div className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-[1fr_460px] items-center gap-13">
+    <div className="h-screen w-screen overflow-hidden flex items-center justify-center p-8 box-border bg-gradient-to-br from-[#1c113b] via-[#3a2286] to-[#5d3df0] font-[Inter,_'Segoe_UI',_Roboto,_sans-serif]">
+      <div className="h-full w-full max-w-[1300px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_460px] items-center gap-13">
         {/* Left Section */}
         <section className="text-white">
           <h1 className="m-0 text-[64px] leading-[1.15] font-extrabold tracking-[-1.2px] whitespace-pre-line max-lg:text-[44px] max-sm:text-[34px]">
@@ -33,13 +33,13 @@ export default function SignUp() {
         </section>
 
         {/* Card Section */}
-        <section className="relative max-lg:max-w-[520px] max-lg:mx-auto">
+        <section className="relative h-full max-lg:max-w-[520px] max-lg:mx-auto">
           <img 
             src={DECORATIVE_IMG} 
             alt="Education icon" 
             className="absolute -top-9 -right-9 w-[110px] h-[110px] rounded-full border-6 border-white object-cover shadow-lg bg-white max-lg:hidden z-1" 
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl p-10 max-sm:p-5">
+          <div className="relative h-full max-h-[820px] bg-white rounded-2xl shadow-2xl p-10 max-sm:p-5 flex flex-col">
             {/* Tabs */}
             <div className="flex gap-1.5 p-1.5 rounded-xl bg-[#f3f6f8] mb-7">
               <Link 
@@ -58,7 +58,8 @@ export default function SignUp() {
               Start your learning platform journey with a few quick details.
             </p>
 
-            <form className="mt-6 flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
+            <div className="mt-6 flex-1 overflow-y-auto pr-1">
+            <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
               <label className="flex flex-col gap-2">
                 <span className="text-[#0b1020] text-sm font-semibold">Full Name</span>
                 <input 
@@ -105,6 +106,7 @@ export default function SignUp() {
                 Create account
               </button>
             </form>
+            </div>
 
             <div className="my-5.5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[#6b7480] text-xs font-semibold">
               <div className="border-t border-black/10"></div>

@@ -103,6 +103,27 @@ export default function Login() {
                 Apple
               </button>
             </div>
+
+            <div className="mt-5 text-center text-[13px] text-[#6b7480]">
+              Need platform-level access?{' '}
+              <Link to="/superadmin-signup" className="font-semibold text-[#5d3df0] no-underline">
+                Super Admin Signup
+              </Link>
+            </div>
+
+            <div className="mt-2 text-center text-[13px] text-[#6b7480]">
+              Joining as educator?{' '}
+              <Link to="/instructor-signup" className="font-semibold text-[#5d3df0] no-underline">
+                Instructor Signup
+              </Link>
+            </div>
+
+            <div className="mt-2 text-center text-[13px] text-[#6b7480]">
+              Running an institute?{' '}
+              <Link to="/admin-signup" className="font-semibold text-[#5d3df0] no-underline">
+                Admin Signup
+              </Link>
+            </div>
           </div>
         </section>
       </div>

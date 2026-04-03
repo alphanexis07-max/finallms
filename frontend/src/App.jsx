@@ -2,6 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/layout'
 import Login from './components/Login'
 import SignUp from './components/SignUp'
+import AdminSignup from './components/AdminSignup'
+import InstructorSignup from './components/InstructorSignup'
+import SuperAdminSignup from './components/SuperAdminSignup'
 import ForgetPassword from './components/forgetPassword'
 import Home from './pages/Home'
 import Features from './pages/Features'
@@ -17,13 +20,17 @@ import SuperAdminUsers from './pages/super admin/SuperAdminUsers'
 import SuperAdminReports from './pages/super admin/SuperAdminReports'
 import SuperAdminPlansBilling from './pages/super admin/SuperAdminPlansBilling'
 import SuperAdminSettings from './pages/super admin/SuperAdminSettings'
+import SuperAdminProfile from './pages/super admin/SuperAdminProfile'
 import AdminLayout from './components/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminCourseManagement from './pages/admin/AdminCourseManagement'
 import AdminInstructorManagement from './pages/admin/AdminInstructorManagement'
 import AdminStudentManagement from './pages/admin/AdminStudentManagement'
+import AdminSchoolEvents from './pages/admin/AdminSchoolEvents'
 import AdminPaymentsCupons from './pages/admin/AdminPayments&Cupons'
 import AdminLiveClasses from './pages/admin/AdminLiveClasses'
+import AdminELibrary from './pages/admin/AdminELibrary'
+import AdminSubscription from './pages/admin/AdminSubscription'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminProfile from './pages/admin/AdminProfile'
 import AdminNotification from './pages/admin/AdminNotification'
@@ -32,14 +39,12 @@ import InstructorDashboard from './pages/instructor/InstructorDashboard'
 import InstructorMycourses from './pages/instructor/InstructorMycourses'
 import InstructorOnlineClasses from './pages/instructor/InstructorOnlineClasses'
 import InstructorWeeklyTest from './pages/instructor/InstructorWeeklyTest'
-import InstructorSchoolEvents from './pages/instructor/InstructorSchoolEvents'
 import InstructorStudentInsights from './pages/instructor/InstructorStudentInsights'
 import InstructorProfile from './pages/instructor/InstructorProfile'
 import StudentLayout from './components/student/StudentLayout'
 import StudentDashboard from './pages/student panel/StudentDashboard'
 import StudentContinueLearning from './pages/student panel/StudentContinueLearning'
 import StudentMyCourses from './pages/student panel/StudentMyCourses'
-import StudentProgressOverview from './pages/student panel/StudentProgressOverview'
 import StudentBrowseCourses from './pages/student panel/StudentBrowseCourse'
 import StudentELibrary from './pages/student panel/StudentELibrary'
 import StudentLiveClasses from './pages/student panel/StudentLiveClasses'
@@ -61,6 +66,9 @@ function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
         </Route>
+        <Route path="/superadmin-signup" element={<SuperAdminSignup />} />
+        <Route path="/admin-signup" element={<AdminSignup />} />
+        <Route path="/instructor-signup" element={<InstructorSignup />} />
         <Route path="/superadmin" element={<SuperAdminLayout />}>
           <Route index element={<SuperAdminOverview />} />
           <Route path="dashboard" element={<SuperAdminDashboard />} />
@@ -70,6 +78,7 @@ function App() {
           <Route path="reports" element={<SuperAdminReports />} />
           <Route path="plans-billing" element={<SuperAdminPlansBilling />} />
           <Route path="platform-settings" element={<SuperAdminSettings />} />
+          <Route path="profile" element={<SuperAdminProfile />} />
         </Route>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -77,8 +86,11 @@ function App() {
           <Route path="course-management" element={<AdminCourseManagement />} />
           <Route path="instructor-management" element={<AdminInstructorManagement />} />
           <Route path="student-management" element={<AdminStudentManagement />} />
+          <Route path="School-Events" element={<AdminSchoolEvents/>} />
           <Route path="payments-coupons" element={<AdminPaymentsCupons />} />
           <Route path="live-classes" element={<AdminLiveClasses />} />
+          <Route path="e-library" element={<AdminELibrary />} />
+          <Route path="subscription" element={<AdminSubscription />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="notification" element={<AdminNotification />} />
           <Route path="profile" element={<AdminProfile />} />
@@ -89,7 +101,6 @@ function App() {
           <Route path="my-courses" element={<InstructorMycourses />} />
           <Route path="online-classes" element={<InstructorOnlineClasses />} />
           <Route path="weekly-tests" element={<InstructorWeeklyTest />} />
-          <Route path="school-events" element={<InstructorSchoolEvents />} />
           <Route path="student-insights" element={<InstructorStudentInsights />} />
           <Route path="profile" element={<InstructorProfile />} />
         </Route>
@@ -98,7 +109,6 @@ function App() {
           <Route path="dashboard" element={<StudentDashboard />} />
           <Route path="continue-learning" element={<StudentContinueLearning />} />
           <Route path="my-courses" element={<StudentMyCourses />} />
-          <Route path="progress-overview" element={<StudentProgressOverview />} />
           <Route path="browse-courses" element={<StudentBrowseCourses />} />
           <Route path="e-library" element={<StudentELibrary />} />
           <Route path="live-classes" element={<StudentLiveClasses />} />

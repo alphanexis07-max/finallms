@@ -1,7 +1,9 @@
 import React from 'react'
-import { Search, Calendar, Upload, PlayCircle, Users, Video, Clock, FileText, Eye, CheckCircle } from 'lucide-react'
+import { Upload, PlayCircle, Users, Video } from 'lucide-react'
 
 export default function InstructorOnlineClasses() {
+  const isClassCreationManagedByAdmin = true
+
   const items = [
     { 
       title: 'Live class • Chemical reactions and equations', 
@@ -46,22 +48,22 @@ export default function InstructorOnlineClasses() {
 
   return (
     <div className="min-h-full bg-[#F7FAFD]">
-      <div className="bg-gradient-to-b flex flex-col from-[#f6f8fa] gap-[24px] h-full p-[28px] to-[#f7fcff]">
+      <div className="flex h-full flex-col gap-6 bg-gradient-to-b from-[#f6f8fa] to-[#f7fcff] p-4 sm:p-6 lg:p-7">
         {/* Hero Section */}
-        <section className="border border-black/[0.08] border-solid content-stretch flex flex-col items-start pb-[23px] pt-[25px] px-[25px] relative rounded-[8px] shrink-0 w-full bg-gradient-to-br from-white to-[#e8f5ff]">
-          <div className="flex items-start justify-between w-full">
-            <div className="flex flex-col gap-[11px] items-start relative shrink-0">
-              <div className="flex gap-2">
+        <section className="relative w-full shrink-0 rounded-[8px] border border-black/[0.08] border-solid bg-gradient-to-br from-white to-[#e8f5ff] px-4 pb-5 pt-5 sm:px-6 sm:pb-6 sm:pt-6">
+          <div className="flex w-full flex-col items-start justify-between gap-4 lg:flex-row">
+            <div className="relative flex min-w-0 flex-1 flex-col items-start gap-[11px]">
+              <div className="flex flex-wrap gap-2">
                 <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#e8f5ff] text-[#0f172a]">Class 9 • Science</span>
                 <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#ffd966] text-[#4b2e00]">Live now in 12 mins</span>
               </div>
-              <div className="flex flex-col font-bold h-[31.59px] justify-center leading-[0] text-[#0f172a] text-[28px]">
+              <div className="text-[24px] font-bold leading-tight text-[#0f172a] sm:text-[28px]">
                 Integrated Science Foundation • Online classes
               </div>
-              <div className="flex flex-col font-normal h-[17px] justify-center leading-[0] text-[#94a3b8] text-[14px]">
+              <div className="text-[14px] leading-relaxed text-[#94a3b8]">
                 Manage upcoming live sessions, revision rooms, and recorded lectures for the current science batch. Keep learners on schedule with class timings, session notes, and replay access.
               </div>
-              <div className="flex gap-4 text-[13px] text-[#94a3b8]">
+              <div className="flex flex-wrap gap-4 text-[13px] text-[#94a3b8]">
                 <span className="inline-flex items-center gap-1">
                   <Users className="h-4 w-4 text-[#5b3df6]" />
                   124 students this batch
@@ -70,25 +72,34 @@ export default function InstructorOnlineClasses() {
                 <span>28 recordings available</span>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button className="inline-flex items-center gap-2 h-[40px] px-[16px] rounded-[6px] text-[14px] font-medium bg-[#5b3df6] text-white hover:bg-[#4c2dd9] transition-colors cursor-pointer">
+            <div className="flex w-full flex-wrap gap-2 lg:w-auto lg:justify-end">
+              <button className="inline-flex h-[40px] items-center gap-2 rounded-[6px] bg-[#5b3df6] px-[16px] text-[14px] font-medium text-white transition-colors hover:bg-[#4c2dd9]">
                 <Video className="h-[18px] w-[18px]" />
-                Start class
+                Join class
               </button>
-              <button className="inline-flex items-center gap-2 h-[40px] px-[17px] rounded-[6px] text-[14px] font-medium bg-white text-[#0f172a] border border-black/[0.08] hover:bg-[#f1f5f9] transition-colors cursor-pointer">
+              <button
+                disabled={isClassCreationManagedByAdmin}
+                title="Only admin can create Zoom meetings"
+                className="inline-flex h-[40px] items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-[17px] text-[14px] font-medium text-[#0f172a] disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <Upload className="h-[18px] w-[18px]" />
-                Upload recording
+                Admin creates Zoom meeting
               </button>
             </div>
           </div>
+          {isClassCreationManagedByAdmin ? (
+            <div className="mt-4 rounded-[6px] border border-[#c7d2fe] bg-[#eef2ff] px-3 py-2 text-[12px] text-[#4338ca]">
+              Online class creation is admin-managed. Instructors can join and conduct only assigned Zoom sessions.
+            </div>
+          ) : null}
         </section>
 
         {/* Stats Grid */}
-        <div className="gap-x-[16px] gap-y-[16px] grid grid-cols-[repeat(2,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <div className="bg-white border border-black/[0.08] rounded-[8px] p-[21px]">
             <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Class overview</h3>
             <p className="text-[13px] text-[#94a3b8] mt-[4px] mb-[16px]">Monitor live session quality, attendance, and recording coverage.</p>
-            <div className="grid grid-cols-3 gap-[16px]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-[16px]">
               <div className="bg-[#f8fafc] rounded-[6px] p-[14px]">
                 <div className="text-[13px] font-medium text-[#94a3b8]">Live attendance</div>
                 <div className="text-[30px] font-bold text-[#0f172a] mt-[6px]">89%</div>
@@ -111,7 +122,7 @@ export default function InstructorOnlineClasses() {
             <div className="h-2 rounded-full bg-[#edf2ff] mb-[16px]">
               <div className="h-2 w-[72%] rounded-full bg-[#5b3df6]" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#f1f5f9] text-[#0f172a]">18 classes done</span>
               <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#2dd4bf] text-[#023b33]">7 pending</span>
             </div>
@@ -119,21 +130,21 @@ export default function InstructorOnlineClasses() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="gap-x-[24px] gap-y-[24px] grid grid-cols-[1.7fr_1fr]">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] xl:gap-x-6 xl:gap-y-6">
           {/* Upcoming and recent sessions */}
           <div className="bg-white border border-black/[0.08] rounded-[8px] flex flex-col">
-            <div className="px-[21px] pt-[21px] pb-[16px] flex justify-between items-start gap-4">
+            <div className="flex flex-col items-start justify-between gap-4 px-[21px] pb-[16px] pt-[21px] sm:flex-row">
               <div>
                 <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Upcoming and recent sessions</h3>
                 <p className="text-[13px] text-[#94a3b8] mt-[4px]">Live lectures, revision classes, and practical demos for this week.</p>
               </div>
-              <button className="inline-flex items-center gap-1.5 h-[36px] px-[12px] rounded-[6px] text-[13px] font-medium bg-white text-[#0f172a] border border-black/[0.08] hover:bg-[#f1f5f9] transition-colors cursor-pointer">
+              <button className="inline-flex h-[36px] items-center gap-1.5 rounded-[6px] border border-black/[0.08] bg-white px-[12px] text-[13px] font-medium text-[#0f172a] transition-colors hover:bg-[#f1f5f9]">
                 All sessions
               </button>
             </div>
             <div className="flex flex-col gap-[12px] px-[21px] pb-[21px]">
               {items.map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-[16px] border border-black/[0.08] rounded-[6px]">
+                <div key={i} className="flex flex-col gap-3 rounded-[6px] border border-black/[0.08] p-[16px] lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <PlayCircle className="h-5 w-5 text-[#5b3df6] mt-0.5 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -142,11 +153,11 @@ export default function InstructorOnlineClasses() {
                       <div className="text-[12px] text-[#94a3b8] mt-[4px] line-clamp-1">{item.description}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 lg:ml-4 lg:flex-shrink-0">
                     <span className={`inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium ${statusStyles[item.statusType]}`}>
                       {item.status}
                     </span>
-                    <button className="inline-flex items-center h-[36px] px-[12px] rounded-[6px] text-[13px] font-medium bg-white text-[#0f172a] border border-black/[0.08] hover:bg-[#f1f5f9] transition-colors cursor-pointer whitespace-nowrap">
+                    <button className="inline-flex h-[36px] items-center whitespace-nowrap rounded-[6px] border border-black/[0.08] bg-white px-[12px] text-[13px] font-medium text-[#0f172a] transition-colors hover:bg-[#f1f5f9]">
                       {item.cta}
                     </button>
                   </div>

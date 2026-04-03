@@ -93,52 +93,9 @@ function Pill({ children, variant }) {
   return <span className={`inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium ${style}`}>{children}</span>
 }
 
-function TopBar() {
-  return (
-    <header className="flex h-[76px] items-center justify-between border-b border-black/[0.08] bg-white px-[28px]">
-      <div className="relative shrink-0">
-        <div className="flex flex-col font-medium h-[16px] justify-center leading-[0] text-[#94a3b8] text-[13px]">
-          Student panel / Browse courses
-        </div>
-        <div className="flex flex-col font-bold h-[29px] justify-center leading-[0] text-[#0f172a] text-[24px]">
-          Browse courses
-        </div>
-      </div>
-      <div className="flex items-center gap-[12px]">
-        <div className="bg-white border border-black/[0.08] flex items-center gap-[10px] h-[40px] min-w-[280px] px-[15px] py-[0.25px] relative rounded-[6px]">
-          <Search className="h-[18px] w-[18px] text-[#94a3b8]" />
-          <input
-            className="min-w-0 flex-1 bg-transparent text-[14px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none"
-            placeholder="Search courses, instructors..."
-          />
-        </div>
-        <button className="bg-white border border-black/[0.08] flex items-center gap-[8px] h-[40px] justify-center px-[17px] py-[0.25px] rounded-[6px] shrink-0">
-          <Bell className="h-[18px] w-[18px] text-[#0f172a]" />
-          <div className="flex flex-col font-medium h-[17px] justify-center leading-[0] text-[#0f172a] text-[14px]">
-            Notifications
-          </div>
-        </button>
-        <div className="bg-white border border-black/[0.08] flex items-center gap-[12px] px-[11px] py-[9px] rounded-[6px]">
-          <img src={AVATAR} alt="" className="h-[36px] w-[36px] rounded-[6px] object-cover" />
-          <div className="flex flex-col gap-[0.01px] items-start">
-            <div className="flex flex-col font-semibold h-[17px] justify-center leading-[0] text-[#0f172a] text-[14px]">
-              Aarohi Shah
-            </div>
-            <div className="flex flex-col font-normal h-[15px] justify-center leading-[0] text-[#94a3b8] text-[13px]">
-              Learner
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-  )
-}
-
 export default function StudentBrowseCourse() {
   return (
     <div className="min-h-full bg-[#F7FAFD]">
-      <TopBar />
-
       <div className="bg-gradient-to-b flex flex-col from-[#f6f8fa] gap-[24px] h-full p-[28px] to-[#f7fcff]">
         {/* Hero Section */}
         <section className="border border-black/[0.08] border-solid content-stretch flex flex-col items-start pb-[23px] pt-[25px] px-[25px] relative rounded-[8px] shrink-0 w-full bg-gradient-to-br from-white to-[#e8f5ff]">

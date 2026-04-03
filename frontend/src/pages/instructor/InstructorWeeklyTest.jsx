@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Search, Calendar, PlusCircle, FileCheck, ClipboardList, X, ChevronDown, Plus, HelpCircle, Trash2, Edit2, Copy, MoveUp, MoveDown, FileText, Users, Clock, Award } from 'lucide-react'
+import { PlusCircle, FileCheck, X, ChevronDown, Plus, HelpCircle, Trash2, Edit2, MoveUp, MoveDown, FileText, Users } from 'lucide-react'
 
 export default function InstructorWeeklyTest() {
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -141,57 +141,22 @@ export default function InstructorWeeklyTest() {
 
   return (
     <div className="min-h-full bg-[#F7FAFD]">
-      {/* Header */}
-      <header className="flex h-[76px] items-center justify-between border-b border-black/[0.08] bg-white px-[28px]">
-        <div className="relative shrink-0 w-[228.47px]">
-          <div className="flex flex-col font-medium h-[16px] justify-center leading-[0] text-[#94a3b8] text-[13px]">
-            Instructor workspace
-          </div>
-          <div className="flex flex-col font-bold h-[29px] justify-center leading-[0] text-[#0f172a] text-[24px]">
-            Weekly Tests
-          </div>
-        </div>
-
-        <div className="flex items-center gap-[12px]">
-          <div className="bg-white border border-black/[0.08] flex items-center gap-[10px] h-[40px] min-w-[280px] px-[15px] py-[0.25px] relative rounded-[6px]">
-            <div className="relative shrink-0 size-[18px] flex items-center justify-center">
-              <div className="absolute inset-[0] flex items-center justify-center">
-                <Search className="h-[18px] w-[18px] text-[#94a3b8]" />
-              </div>
-            </div>
-            <div className="flex flex-col font-normal h-[17px] justify-center leading-[0] text-[#94a3b8] text-[14px]">
-              Search tests, questions, or results
-            </div>
-          </div>
-
-          <div className="bg-white border border-black/[0.08] flex items-center gap-[8px] h-[40px] justify-center px-[17px] py-[0.25px] rounded-[6px] shrink-0">
-            <div className="h-8 w-8 rounded-full bg-[#e8f5ff] flex items-center justify-center text-[14px] font-semibold text-[#5b3df6]">
-              JD
-            </div>
-            <div className="flex flex-col">
-              <div className="text-[14px] font-medium text-[#0f172a]">John Doe</div>
-              <div className="text-[12px] text-[#94a3b8]">Instructor</div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="bg-gradient-to-b flex flex-col from-[#f6f8fa] gap-[24px] h-full p-[28px] to-[#f7fcff]">
+      <div className="flex h-full flex-col gap-6 bg-gradient-to-b from-[#f6f8fa] to-[#f7fcff] p-4 sm:p-6 lg:p-7">
         {/* Hero Section */}
-        <section className="border border-black/[0.08] border-solid content-stretch flex flex-col items-start pb-[23px] pt-[25px] px-[25px] relative rounded-[8px] shrink-0 w-full bg-gradient-to-br from-white to-[#e8f5ff]">
-          <div className="flex items-start justify-between w-full">
-            <div className="flex flex-col gap-[11px] items-start relative shrink-0">
-              <div className="flex gap-2">
+        <section className="relative w-full shrink-0 rounded-[8px] border border-black/[0.08] border-solid bg-gradient-to-br from-white to-[#e8f5ff] px-4 pb-5 pt-5 sm:px-6 sm:pb-6 sm:pt-6">
+          <div className="flex w-full flex-col items-start justify-between gap-4 lg:flex-row">
+            <div className="relative flex min-w-0 flex-1 flex-col items-start gap-[11px]">
+              <div className="flex flex-wrap gap-2">
                 <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#e8f5ff] text-[#0f172a]">Class 9 • Science</span>
                 <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#ffd966] text-[#4b2e00]">Next test on Saturday</span>
               </div>
-              <div className="flex flex-col font-bold h-[31.59px] justify-center leading-[0] text-[#0f172a] text-[28px]">
+              <div className="text-[24px] font-bold leading-tight text-[#0f172a] sm:text-[28px]">
                 Integrated Science Foundation • Weekly tests
               </div>
-              <div className="flex flex-col font-normal h-[17px] justify-center leading-[0] text-[#94a3b8] text-[14px]">
+              <div className="text-[14px] leading-relaxed text-[#94a3b8]">
                 Plan chapter-wise assessments, track student attempts, and review performance trends across MCQ tests, revision quizzes, and concept checks for the current science batch.
               </div>
-              <div className="flex gap-4 text-[13px] text-[#94a3b8]">
+              <div className="flex flex-wrap gap-4 text-[13px] text-[#94a3b8]">
                 <span className="inline-flex items-center gap-1">
                   <Users className="h-4 w-4 text-[#5b3df6]" />
                   124 students assigned
@@ -200,15 +165,15 @@ export default function InstructorWeeklyTest() {
                 <span>84% average score</span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex w-full flex-wrap gap-2 lg:w-auto lg:justify-end">
               <button 
                 onClick={() => setShowCreateModal(true)} 
-                className="inline-flex items-center gap-2 h-[40px] px-[16px] rounded-[6px] text-[14px] font-medium bg-[#5b3df6] text-white hover:bg-[#4c2dd9] transition-colors cursor-pointer"
+                className="inline-flex h-[40px] items-center gap-2 rounded-[6px] bg-[#5b3df6] px-[16px] text-[14px] font-medium text-white transition-colors hover:bg-[#4c2dd9]"
               >
                 <PlusCircle className="h-[18px] w-[18px]" />
                 Create test
               </button>
-              <button className="inline-flex items-center gap-2 h-[40px] px-[17px] rounded-[6px] text-[14px] font-medium bg-white text-[#0f172a] border border-black/[0.08] hover:bg-[#f1f5f9] transition-colors cursor-pointer">
+              <button className="inline-flex h-[40px] items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-[17px] text-[14px] font-medium text-[#0f172a] transition-colors hover:bg-[#f1f5f9]">
                 <FileText className="h-[18px] w-[18px]" />
                 Export results
               </button>
@@ -217,11 +182,11 @@ export default function InstructorWeeklyTest() {
         </section>
 
         {/* Stats Grid */}
-        <div className="gap-x-[16px] gap-y-[16px] grid grid-cols-[repeat(2,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <div className="bg-white border border-black/[0.08] rounded-[8px] p-[21px]">
             <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Test overview</h3>
             <p className="text-[13px] text-[#94a3b8] mt-[4px] mb-[16px]">Monitor participation, average scores, and review turnaround for weekly assessments.</p>
-            <div className="grid grid-cols-3 gap-[16px]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-[16px]">
               <div className="bg-[#f8fafc] rounded-[6px] p-[14px]">
                 <div className="text-[13px] font-medium text-[#94a3b8]">Attempt rate</div>
                 <div className="text-[30px] font-bold text-[#0f172a] mt-[6px]">93%</div>
@@ -244,7 +209,7 @@ export default function InstructorWeeklyTest() {
             <div className="h-2 rounded-full bg-[#edf2ff] mb-[16px]">
               <div className="h-2 w-[76%] rounded-full bg-[#5b3df6]" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#f1f5f9] text-[#0f172a]">9 published</span>
               <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#2dd4bf] text-[#023b33]">3 pending</span>
             </div>
@@ -252,22 +217,22 @@ export default function InstructorWeeklyTest() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="gap-x-[24px] gap-y-[24px] grid grid-cols-[1.7fr_1fr]">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] xl:gap-x-6 xl:gap-y-6">
           {/* Upcoming and recent tests */}
           <div className="bg-white border border-black/[0.08] rounded-[8px] flex flex-col">
-            <div className="px-[21px] pt-[21px] pb-[16px] flex justify-between items-start gap-4">
+            <div className="flex flex-col items-start justify-between gap-4 px-[21px] pb-[16px] pt-[21px] sm:flex-row">
               <div>
                 <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Upcoming and recent tests</h3>
                 <p className="text-[13px] text-[#94a3b8] mt-[4px]">Scheduled assessments, auto-graded quizzes, and recently published results.</p>
               </div>
-              <button className="inline-flex items-center gap-1.5 h-[36px] px-[12px] rounded-[6px] text-[13px] font-medium bg-white text-[#0f172a] border border-black/[0.08] hover:bg-[#f1f5f9] transition-colors cursor-pointer">
+              <button className="inline-flex h-[36px] items-center gap-1.5 rounded-[6px] border border-black/[0.08] bg-white px-[12px] text-[13px] font-medium text-[#0f172a] transition-colors hover:bg-[#f1f5f9]">
                 All tests
               </button>
             </div>
             <div className="flex flex-col gap-[12px] px-[21px] pb-[21px]">
               {tests.map(([title, time, desc, tags, status, cta], i) => (
                 <div key={i} className="p-[16px] border border-black/[0.08] rounded-[6px]">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-3">
                         <FileCheck className="h-5 w-5 text-[#5b3df6] mt-0.5 flex-shrink-0" />
@@ -275,7 +240,7 @@ export default function InstructorWeeklyTest() {
                           <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{title}</div>
                           <div className="text-[12px] text-[#94a3b8] mt-[4px]">{time}</div>
                           <div className="text-[12px] text-[#94a3b8] mt-[4px] line-clamp-2">{desc}</div>
-                          <div className="flex gap-1 mt-2">
+                          <div className="mt-2 flex flex-wrap gap-1">
                             {tags.map((tag, idx) => (
                               <span key={idx} className="inline-flex h-[24px] items-center px-[8px] rounded-[10px] text-[10px] font-medium bg-[#f1f5f9] text-[#64748b]">
                                 {tag}
@@ -285,11 +250,11 @@ export default function InstructorWeeklyTest() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 lg:ml-4 lg:flex-shrink-0">
                       <span className={`inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium ${statusStyles[status] || 'bg-[#f1f5f9] text-[#64748b]'}`}>
                         {status}
                       </span>
-                      <button className="inline-flex items-center h-[36px] px-[12px] rounded-[6px] text-[13px] font-medium bg-white text-[#0f172a] border border-black/[0.08] hover:bg-[#f1f5f9] transition-colors cursor-pointer whitespace-nowrap">
+                      <button className="inline-flex h-[36px] items-center whitespace-nowrap rounded-[6px] border border-black/[0.08] bg-white px-[12px] text-[13px] font-medium text-[#0f172a] transition-colors hover:bg-[#f1f5f9]">
                         {cta}
                       </button>
                     </div>
@@ -339,7 +304,7 @@ export default function InstructorWeeklyTest() {
       {/* Create Test Modal - Keep existing modal but update styling to match */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-[680px] max-h-[90vh] overflow-y-auto bg-white rounded-[8px] shadow-xl">
+          <div className="w-[95vw] max-w-[680px] max-h-[90vh] overflow-y-auto bg-white rounded-[8px] shadow-xl">
             <div className="flex items-center justify-between p-5 border-b border-black/[0.08] sticky top-0 bg-white">
               <h2 className="text-[20px] font-bold text-[#0f172a]">Create new test</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
@@ -368,7 +333,7 @@ export default function InstructorWeeklyTest() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-[13px] font-semibold text-[#0f172a] mb-1.5">Class</label>
                       <div className="relative">
@@ -435,7 +400,7 @@ export default function InstructorWeeklyTest() {
 
                   <div>
                     <label className="block text-[13px] font-semibold text-[#0f172a] mb-1.5">Deadline</label>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row">
                       <input
                         type="date"
                         value={deadlineDate}
@@ -451,7 +416,7 @@ export default function InstructorWeeklyTest() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-[13px] font-semibold text-[#0f172a] mb-1.5">Duration</label>
                       <div className="flex items-center gap-2">
@@ -603,7 +568,7 @@ export default function InstructorWeeklyTest() {
       {/* Question Modal - Keep existing but update styling */}
       {showQuestionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-[600px] max-h-[90vh] overflow-y-auto bg-white rounded-[8px] shadow-xl">
+          <div className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto bg-white rounded-[8px] shadow-xl">
             <div className="flex items-center justify-between p-5 border-b border-black/[0.08] sticky top-0 bg-white">
               <h2 className="text-[20px] font-bold text-[#0f172a]">
                 {editingQuestionId ? 'Edit Question' : 'Add New Question'}
