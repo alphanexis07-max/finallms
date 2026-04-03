@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { User, Mail, BookOpen, Lock, Eye, EyeOff, CheckCircle2, GraduationCap } from 'lucide-react'
 
 const DECORATIVE_IMG = 'https://www.figma.com/api/mcp/asset/a41cf675-38f9-4801-90f3-b9a095bc404c'
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+const PHONE_REGEX = /^\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{4}$/
 
 export default function InstructorSignup() {
 	const [formData, setFormData] = useState({
@@ -16,6 +18,7 @@ export default function InstructorSignup() {
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 	const [submitted, setSubmitted] = useState(false)
+	const [phone, setPhone] = useState('')
 
 	const passwordStrength = useMemo(() => {
 		const value = formData.password
@@ -27,9 +30,13 @@ export default function InstructorSignup() {
 		return score
 	}, [formData.password])
 
+	const isEmailValid = EMAIL_REGEX.test(formData.email)
+	const isPhoneValid = PHONE_REGEX.test(phone)
+
 	const isFormValid =
 		formData.fullName.trim() &&
-		formData.email.trim() &&
+		isEmailValid &&
+		isPhoneValid &&
 		formData.expertise.trim() &&
 		formData.password &&
 		formData.confirmPassword &&
@@ -124,6 +131,20 @@ export default function InstructorSignup() {
 								placeholder="you@example.com"
 							/>
 
+							<div>
+								<label className="flex flex-col gap-2">
+									<span className="text-[#0b1020] text-sm font-semibold">Phone Number</span>
+									<input
+										type="tel"
+										value={phone}
+										onChange={(e) => setPhone(e.target.value)}
+										placeholder="(123) 456-7890"
+										className="border border-black/10 rounded-md p-3.5 text-sm text-[#0b1020] outline-none focus:border-[#5a3bd6] focus:ring-3 focus:ring-[#5a3bd6]/20"
+									/>
+									{submitted && !isPhoneValid ? <span className="text-xs font-medium text-[#dc2626]">Enter a valid phone number.</span> : null}
+								</label>
+							</div>
+
 							<Field
 								icon={<BookOpen className="h-4 w-4" />}
 								label="Subject Expertise"
@@ -201,7 +222,7 @@ export default function InstructorSignup() {
 								</p>
 							) : null}
 
-							<button type="submit" className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1">
+							<button type="submit" disabled={!isFormValid} className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1 disabled:cursor-not-allowed disabled:opacity-60">
 								Create Instructor Account
 							</button>
 						</form>

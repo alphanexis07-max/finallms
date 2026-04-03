@@ -1,7 +1,64 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Search, Bell, Download, PlayCircle, ChevronRight, ChevronDown, ChevronUp, Lock, FileText, Link2, MessageSquare, Calendar, Pause, Volume2, Settings, Maximize2, Users, GraduationCap, Wallet, BarChart3, Upload, Plus, ThumbsUp, Flag, Reply, MoreHorizontal, Bookmark, Edit2, Trash2 } from 'lucide-react'
 
 const HERO = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80'
+const ENROLLED_COURSES_KEY = 'student-enrolled-courses'
+const COURSE_PROGRESS_KEY = 'student-course-progress'
+
+const DEFAULT_CONTINUE_COURSE = {
+  id: 'default-accessibility-course',
+  title: 'Advanced Accessibility for Designers',
+  mentor: 'Marcus Chen',
+  image: HERO,
+  progressPct: 65,
+  completedLessons: 24,
+  totalLessons: 36,
+  currentLesson: '4.2: Screen Readers and Semantic HTML',
+  lastWatched: '15:45 / 45:00',
+  moduleNum: 4,
+}
+
+function getCourseId(course) {
+  return `${course?.title || 'course'}-${course?.mentor || 'mentor'}`
+}
+
+function readContinueLearningCourses() {
+  if (typeof window === 'undefined') return [DEFAULT_CONTINUE_COURSE]
+
+  try {
+    const enrolledRaw = window.localStorage.getItem(ENROLLED_COURSES_KEY)
+    const enrolled = enrolledRaw ? JSON.parse(enrolledRaw) : []
+    const progressRaw = window.localStorage.getItem(COURSE_PROGRESS_KEY)
+    const progressMap = progressRaw ? JSON.parse(progressRaw) : {}
+
+    if (!Array.isArray(enrolled) || enrolled.length === 0) return [DEFAULT_CONTINUE_COURSE]
+
+    const inProgressCourses = enrolled
+      .map((course) => {
+        const id = getCourseId(course)
+        const progress = progressMap?.[id] || {}
+        const progressPct = Number(progress?.progressPct ?? 35)
+
+        return {
+          id,
+          title: course?.title || 'Untitled course',
+          mentor: course?.mentor || 'Assigned mentor',
+          image: course?.image || HERO,
+          progressPct,
+          completedLessons: Number(progress?.completedLessons ?? Math.max(1, Math.floor((progressPct / 100) * 30))),
+          totalLessons: Number(progress?.totalLessons ?? 30),
+          currentLesson: progress?.currentLesson || 'Continue from your last lesson',
+          lastWatched: progress?.lastWatched || '10:20 / 38:00',
+          moduleNum: Number(progress?.moduleNum ?? 4),
+        }
+      })
+      .filter((course) => course.progressPct > 0 && course.progressPct < 100)
+
+    return inProgressCourses.length > 0 ? inProgressCourses : [DEFAULT_CONTINUE_COURSE]
+  } catch {
+    return [DEFAULT_CONTINUE_COURSE]
+  }
+}
 
 const modules = [
   { num: 1, title: 'Introduction to UI/UX', meta: '3 / 3 | 45 min', locked: false, open: false, lessons: [] },
@@ -110,6 +167,30 @@ export default function StudentContinueLearning() {
   const [showQuestionInput, setShowQuestionInput] = useState(false)
   const [localDiscussions, setLocalDiscussions] = useState(discussions)
   const [localNotes, setLocalNotes] = useState(notes)
+  const [continueCourses, setContinueCourses] = useState([])
+  const [selectedCourseId, setSelectedCourseId] = useState('')
+
+  useEffect(() => {
+    const courseList = readContinueLearningCourses()
+    setContinueCourses(courseList)
+    setSelectedCourseId(courseList[0]?.id || DEFAULT_CONTINUE_COURSE.id)
+  }, [])
+
+  const selectedCourse = useMemo(() => {
+    return continueCourses.find((course) => course.id === selectedCourseId) || continueCourses[0] || DEFAULT_CONTINUE_COURSE
+  }, [continueCourses, selectedCourseId])
+
+  const progressWidth = `${Math.min(100, Math.max(0, selectedCourse.progressPct || 0))}%`
+
+  const handleContinueLearning = (course) => {
+    setSelectedCourseId(course.id)
+    setActiveTab('Overview')
+    setOpenModule(course.moduleNum || 4)
+
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
 
   const handleAddNote = () => {
     if (newNote.trim()) {
@@ -150,7 +231,7 @@ export default function StudentContinueLearning() {
   }
 
   const renderTabContent = () => {
-    switch(activeTab) {
+    switch (activeTab) {
       case 'Overview':
         return (
           <div>
@@ -408,7 +489,7 @@ export default function StudentContinueLearning() {
           <div className="flex flex-col gap-[24px]">
             {/* Video player */}
             <div className="relative bg-black select-none rounded-[8px] overflow-hidden border border-black/[0.08]">
-              <img src={HERO} alt="lesson" className="h-[240px] w-full object-cover opacity-80 sm:h-[320px] lg:h-[450px]" />
+              <img src={selectedCourse.image || HERO} alt="lesson" className="h-[240px] w-full object-cover opacity-80 sm:h-[320px] lg:h-[450px]" />
               <div className="absolute inset-0 flex flex-col justify-between p-[24px]">
                 <div className="flex-1 flex items-center justify-center">
                   <button className="h-[56px] w-[56px] rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center border border-white/40 hover:bg-white/35 transition">
@@ -424,7 +505,7 @@ export default function StudentContinueLearning() {
                     <div className="flex items-center gap-[12px] text-white">
                       <button className="hover:opacity-80"><Pause className="h-[16px] w-[16px]" /></button>
                       <button className="hover:opacity-80"><Volume2 className="h-[16px] w-[16px]" /></button>
-                      <span className="text-[12px] font-mono opacity-90">15:45 / 45:00</span>
+                      <span className="text-[12px] font-mono opacity-90">{selectedCourse.lastWatched || '15:45 / 45:00'}</span>
                     </div>
                     <div className="flex items-center gap-[12px] text-white">
                       <button className="hover:opacity-80"><Settings className="h-[16px] w-[16px]" /></button>
@@ -437,14 +518,14 @@ export default function StudentContinueLearning() {
 
             {/* Lesson header */}
             <div className="bg-white border border-black/[0.08] rounded-[8px] p-[24px]">
-              <h1 className="text-[20px] font-bold text-[#0f172a]">4.2: Screen Readers and Semantic HTML</h1>
+              <h1 className="text-[20px] font-bold text-[#0f172a]">{selectedCourse.currentLesson || 'Continue from your last lesson'}</h1>
               <div className="mt-[12px] flex flex-wrap items-center gap-[16px] text-[12px] text-[#94a3b8]">
                 <div className="flex items-center gap-[8px]">
                   <div className="h-[28px] w-[28px] rounded-[6px] bg-[#e8f5ff] flex items-center justify-center text-[11px] font-bold text-[#5b3df6]">M</div>
-                  <span className="font-medium text-[#0f172a]">Marcus Chen</span>
+                  <span className="font-medium text-[#0f172a]">{selectedCourse.mentor || 'Mentor'}</span>
                 </div>
                 <div className="flex items-center gap-[6px]"><Calendar className="h-[14px] w-[14px]" /> Updated Oct 12, 2023</div>
-                <div className="flex items-center gap-[6px]"><MessageSquare className="h-[14px] w-[14px]" /> 124 Discussions</div>
+                <div className="flex items-center gap-[6px]"><MessageSquare className="h-[14px] w-[14px]" /> {localDiscussions.length} Discussions</div>
               </div>
               {/* Tabs */}
               <div className="mt-[16px] flex gap-[24px] overflow-x-auto border-b border-black/[0.08]">
@@ -472,12 +553,12 @@ export default function StudentContinueLearning() {
               <h2 className="font-bold text-[16px] text-[#0f172a]">Course Content</h2>
               <div className="mt-[12px] flex items-center justify-between text-[12px]">
                 <span className="text-[#94a3b8]">Overall Progress</span>
-                <span className="font-bold text-[#5b3df6]">65%</span>
+                <span className="font-bold text-[#5b3df6]">{selectedCourse.progressPct}%</span>
               </div>
               <div className="mt-[8px] h-[6px] rounded-full bg-[#f1f5f9]">
-                <div className="h-[6px] rounded-full bg-[#5b3df6]" style={{ width: '65%' }} />
+                <div className="h-[6px] rounded-full bg-[#5b3df6]" style={{ width: progressWidth }} />
               </div>
-              <p className="mt-[8px] text-[11px] text-[#94a3b8]">24 of 36 lessons completed</p>
+              <p className="mt-[8px] text-[11px] text-[#94a3b8]">{selectedCourse.completedLessons} of {selectedCourse.totalLessons} lessons completed</p>
             </div>
 
             <div className="flex-1">

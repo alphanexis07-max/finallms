@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
 export default function ForgetPassword() {
     const [email, setEmail] = useState('')
+    const [submitted, setSubmitted] = useState(false)
+
+    const isEmailValid = EMAIL_REGEX.test(email)
 
     return (
         <div className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-gradient-to-br from-[#1c113b] via-[#3a2286] to-[#5d3df0] p-4 font-[Inter,_'Segoe_UI',_Roboto,_sans-serif] sm:p-6 lg:p-8">
@@ -42,7 +47,7 @@ export default function ForgetPassword() {
                             Enter the email associated with your account and we will send you a reset link.
                         </p>
 
-                        <form className="mt-6 flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
+                        <form className="mt-6 flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }}>
                             <label className="flex flex-col gap-2">
                                 <span className="text-[#0b1020] text-sm font-semibold">Email Address</span>
                                 <input
@@ -51,13 +56,14 @@ export default function ForgetPassword() {
                                     onChange={(event) => setEmail(event.target.value)}
                                     className="border border-black/10 rounded-md p-3.5 text-sm text-[#0b1020] outline-none focus:border-[#5a3bd6] focus:ring-3 focus:ring-[#5a3bd6]/20"
                                 />
+                                {submitted && !isEmailValid ? <span className="text-xs font-medium text-[#dc2626]">Enter a valid email address.</span> : null}
                             </label>
 
                             <div className="rounded-xl bg-gray-100 p-4 text-[13px] text-[#6b7280]">
                                 Reset instructions typically arrive within a few minutes. Check spam if you do not see the email.
                             </div>
 
-                            <button type="submit" className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1">
+                            <button type="submit" disabled={!isEmailValid} className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1 disabled:cursor-not-allowed disabled:opacity-60">
                                 Send reset link
                             </button>
 

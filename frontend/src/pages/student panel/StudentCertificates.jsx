@@ -1,275 +1,170 @@
 import React, { useState } from 'react'
-import { Search, Bell, Download, Award, Share2, Copy, Link, Clock, CheckCircle, Globe, Users, GraduationCap, Wallet, BarChart3, Upload, Plus } from 'lucide-react'
-
-const AVATAR = 'https://www.figma.com/api/mcp/asset/5b24609b-97ad-4bea-af20-b4f4df404b75'
+import { Download, Award, Share2, Search, CheckCircle, Calendar } from 'lucide-react'
 
 const certs = [
   {
-    type: 'Certificate of Completion',
-    status: 'Issued',
-    statusColor: 'bg-[#2dd4bf] text-[#023b33]',
-    awardedTo: 'Aarohi Shah',
-    program: 'UI/UX Masterclass',
     title: 'UI/UX Masterclass',
+    program: 'Design Track',
+    awardedTo: 'Aarohi Shah',
     id: 'UX-2024-1189',
-    issued: 'Issued Feb 12, 2024',
-    pending: false,
+    issued: 'Feb 12, 2024',
   },
   {
-    type: 'Certificate of Completion',
-    status: 'Issued',
-    statusColor: 'bg-[#2dd4bf] text-[#023b33]',
-    awardedTo: 'Aarohi Shah',
-    program: 'Designing for Accessibility',
     title: 'Designing for Accessibility',
-    id: 'AX-2024-0741',
-    issued: 'Issued Jan 08, 2024',
-    pending: false,
-  },
-  {
-    type: 'Certificate pending',
-    status: 'Pending',
-    statusColor: 'bg-[#ffd966] text-[#4b2e00]',
-    awardedTo: null,
-    program: 'Product Strategy Bootcamp',
-    title: 'Product Strategy Bootcamp',
-    id: null,
-    issued: 'Completion approved • ETA 2 days',
-    pending: true,
-    pendingNote: 'Awaiting final review',
-  },
-  {
-    type: 'Certificate of Completion',
-    status: 'Issued',
-    statusColor: 'bg-[#2dd4bf] text-[#023b33]',
+    program: 'Design Track',
     awardedTo: 'Aarohi Shah',
-    program: 'Frontend Foundations',
+    id: 'AX-2024-0741',
+    issued: 'Jan 08, 2024',
+  },
+  {
     title: 'Frontend Foundations',
+    program: 'Engineering Track',
+    awardedTo: 'Aarohi Shah',
     id: 'FE-2023-4217',
-    issued: 'Issued Nov 18, 2023',
-    pending: false,
+    issued: 'Nov 18, 2023',
+  },
+  {
+    title: 'Product Management Basics',
+    program: 'Product Track',
+    awardedTo: 'Aarohi Shah',
+    id: 'PM-2023-3302',
+    issued: 'Sep 05, 2023',
+  },
+  {
+    title: 'Data Analysis with Python',
+    program: 'Data Track',
+    awardedTo: 'Aarohi Shah',
+    id: 'DA-2023-2891',
+    issued: 'Jul 22, 2023',
+  },
+  {
+    title: 'Agile & Scrum Fundamentals',
+    program: 'Management Track',
+    awardedTo: 'Aarohi Shah',
+    id: 'AG-2023-1134',
+    issued: 'Apr 14, 2023',
   },
 ]
 
-const activity = [
-  { icon: <Download className="h-3.5 w-3.5 text-[#5b3df6]" />, bg: 'bg-[#e8f5ff]', text: 'UI/UX Masterclass downloaded', sub: 'Today, 10:18 AM' },
-  { icon: <Share2 className="h-3.5 w-3.5 text-[#5b3df6]" />, bg: 'bg-[#e8f5ff]', text: 'Accessibility certificate shared', sub: 'Yesterday, 7:42 PM' },
-  { icon: <Clock className="h-3.5 w-3.5 text-[#94a3b8]" />, bg: 'bg-[#f1f5f9]', text: 'Product Strategy Bootcamp pending', sub: 'Expected within 48 hours' },
-]
-
-function Pill({ children, variant }) {
-  const style =
-    variant === 'success'
-      ? 'bg-[#2dd4bf] text-[#023b33]'
-      : variant === 'warning'
-        ? 'bg-[#ffd966] text-[#4b2e00]'
-        : variant === 'primary'
-          ? 'bg-[#5b3df6] text-white'
-          : 'bg-[#e8f5ff] text-[#0f172a]'
-
-  return <span className={`inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium ${style}`}>{children}</span>
+const PROGRAM_COLORS = {
+  'Design Track': { bg: 'bg-violet-50', text: 'text-violet-600', dot: 'bg-violet-400' },
+  'Engineering Track': { bg: 'bg-blue-50', text: 'text-blue-600', dot: 'bg-blue-400' },
+  'Product Track': { bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-400' },
+  'Data Track': { bg: 'bg-emerald-50', text: 'text-emerald-600', dot: 'bg-emerald-400' },
+  'Management Track': { bg: 'bg-rose-50', text: 'text-rose-600', dot: 'bg-rose-400' },
 }
 
 export default function StudentCertificates() {
-  const [filter, setFilter] = useState('All')
+  const [search, setSearch] = useState('')
 
-  const filtered = filter === 'All' ? certs
-    : filter === 'Downloaded' ? certs.filter(c => !c.pending)
-    : certs.filter(c => c.pending)
+  const filtered = certs.filter(
+    c =>
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.program.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
-    <div className="min-h-full bg-[#F7FAFD]">
-      <div className="bg-gradient-to-b flex h-full flex-col gap-[24px] from-[#f6f8fa] p-4 to-[#f7fcff] sm:p-6 lg:p-7">
-        {/* Top 3-column row */}
-        <div className="grid grid-cols-1 gap-x-[24px] gap-y-[24px] xl:grid-cols-3">
-          {/* Your verified achievements */}
-          <div className="border border-black/[0.08] border-solid flex flex-col gap-[16px] items-start p-[21px] rounded-[8px] bg-gradient-to-br from-white to-[#e8f5ff]">
-            <div className="flex flex-col items-start justify-between gap-3 w-full sm:flex-row sm:items-start">
-              <div className="bg-[#ffd966] inline-flex items-center px-[10px] py-[6.5px] rounded-[12px]">
-                <Award className="h-[14px] w-[14px] mr-[6px] text-[#4b2e00]" />
-                <div className="flex flex-col font-medium h-[15px] justify-center leading-[0] text-[#4b2e00] text-[12px]">
-                  Certificates
-                </div>
-              </div>
-              <button className="bg-[#5b3df6] flex items-center gap-[8px] h-[36px] justify-center px-[14px] rounded-[6px]">
-                <Share2 className="h-[14px] w-[14px] text-white" />
-                <div className="flex flex-col font-medium h-[15px] justify-center leading-[0] text-white text-[12px]">
-                  Share Profile
-                </div>
-              </button>
-            </div>
-            <h2 className="font-bold text-[20px] text-[#0f172a]">Your verified achievements</h2>
-            <p className="text-[13px] text-[#94a3b8]">
-              Access, download, and share course completion certificates issued across your enrolled programs.
+    <div className="min-h-screen bg-[#f5f6fa] font-sans">
+      <div className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#0f172a] tracking-tight">My Certificates</h1>
+            <p className="mt-1 text-sm text-[#64748b]">
+              {certs.length} certificates earned • All verified
             </p>
-            <div className="grid w-full grid-cols-1 gap-[16px] sm:grid-cols-3">
-              {[['Issued certificates', '12'], ['Ready to download', '9'], ['In review', '3']].map(([label, val]) => (
-                <div key={label} className="bg-white rounded-[8px] p-[14px] border border-black/[0.08]">
-                  <p className="text-[11px] text-[#94a3b8] leading-tight">{label}</p>
-                  <p className="mt-[4px] text-[28px] font-bold text-[#0f172a]">{val}</p>
-                </div>
-              ))}
-            </div>
           </div>
-
-          {/* Verification */}
-          <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[16px] items-start p-[21px] rounded-[8px]">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="font-bold text-[18px] text-[#0f172a]">Verification</h3>
-              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[6px] border border-black/[0.08] bg-[#f8fafc]">
-                <CheckCircle className="h-[18px] w-[18px] text-[#5b3df6]" />
-              </div>
-            </div>
-            <p className="text-[12px] font-medium text-[#94a3b8]">Public certificate URL</p>
-            <div className="flex items-center gap-[8px] w-full rounded-[6px] border border-black/[0.08] bg-[#f8fafc] px-[12px] py-[10px]">
-              <Globe className="h-[14px] w-[14px] text-[#94a3b8]" />
-              <span className="flex-1 truncate text-[12px] text-[#0f172a]">lms.app/certificates/aarohi-shah</span>
-              <Copy className="h-[14px] w-[14px] text-[#94a3b8] cursor-pointer hover:text-[#5b3df6]" />
-            </div>
-            <div className="flex gap-[12px] w-full">
-              <button className="flex-1 bg-[#5b3df6] flex items-center justify-center h-[40px] rounded-[6px]">
-                <div className="flex flex-col font-medium h-[17px] justify-center leading-[0] text-white text-[14px]">Copy Link</div>
-              </button>
-              <button className="flex-1 border border-black/[0.08] flex items-center justify-center h-[40px] rounded-[6px] bg-white">
-                <div className="flex flex-col font-medium h-[17px] justify-center leading-[0] text-[#0f172a] text-[14px]">Manage</div>
-              </button>
-            </div>
-          </div>
-
-          {/* Certificate status */}
-          <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[16px] items-start p-[21px] rounded-[8px]">
-            <h3 className="font-bold text-[18px] text-[#0f172a]">Certificate status</h3>
-            <div className="w-full">
-              <div className="flex items-center justify-between text-[13px] mb-[8px]">
-                <span className="font-medium text-[#0f172a]">Profile completion</span>
-                <span className="font-bold text-[#5b3df6]">86%</span>
-              </div>
-              <div className="h-[6px] w-full rounded-full bg-[#f1f5f9]">
-                <div className="h-[6px] rounded-full bg-[#5b3df6]" style={{ width: '86%' }} />
-              </div>
-              <p className="mt-[12px] text-[12px] text-[#94a3b8]">Add a public bio to unlock sharing on all certificate pages.</p>
-            </div>
-            <div className="flex flex-col w-full gap-[12px]">
-              {[
-                { label: 'Ready for download', sub: '9 certificates', badge: 'Ready', badgeClass: 'bg-[#2dd4bf] text-[#023b33]' },
-                { label: 'Pending review', sub: '3 certificates', badge: 'Review', badgeClass: 'bg-[#ffd966] text-[#4b2e00]' },
-                { label: 'Shared publicly', sub: '4 certificates', badge: 'Live', badgeClass: 'bg-[#e8f5ff] text-[#5b3df6]' },
-              ].map(({ label, sub, badge, badgeClass }) => (
-                <div key={label} className="flex items-center justify-between pt-[12px] border-t border-black/[0.08]">
-                  <div>
-                    <p className="font-semibold text-[13px] text-[#0f172a]">{label}</p>
-                    <p className="text-[11px] text-[#94a3b8] mt-[2px]">{sub}</p>
-                  </div>
-                  <span className={`inline-flex h-[26px] items-center px-[10px] rounded-[10px] text-[11px] font-medium ${badgeClass}`}>{badge}</span>
-                </div>
-              ))}
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+              <input
+                type="text"
+                placeholder="Search certificates..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="h-9 w-56 rounded-lg border border-[#e2e8f0] bg-white pl-9 pr-3 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30 focus:border-[#5b3df6]"
+              />
             </div>
           </div>
         </div>
 
-        {/* Bottom: certs + activity */}
-        <div className="grid grid-cols-1 gap-x-[24px] gap-y-[24px] xl:grid-cols-[1fr_280px]">
-          <div className="flex flex-col gap-[16px]">
-            {/* Section header + filters */}
-            <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="font-bold text-[20px] text-[#0f172a]">Recent certificates</h2>
-                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Issued this year across completed programs</p>
-              </div>
-              <div className="flex flex-wrap gap-[8px]">
-                {['All', 'Downloaded', 'Pending'].map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`inline-flex h-[36px] items-center px-[14px] rounded-[12px] text-[12px] font-medium transition-colors ${
-                      filter === f ? 'bg-[#5b3df6] text-white' : 'bg-[#f1f5f9] text-[#0f172a] hover:bg-[#e8f5ff]'
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
+        {/* Stats bar */}
+        <div className="mb-8 grid grid-cols-3 gap-4">
+          {[
+            { label: 'Total Earned', value: certs.length },
+            { label: 'This Year', value: certs.filter(c => c.issued.includes('2024')).length },
+            { label: 'Ready to Share', value: certs.length },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-xl bg-white border border-[#e2e8f0] px-5 py-4">
+              <p className="text-xs text-[#94a3b8]">{label}</p>
+              <p className="mt-1 text-2xl font-bold text-[#0f172a]">{value}</p>
             </div>
+          ))}
+        </div>
 
-            {/* Certificate cards grid */}
-            <div className="grid grid-cols-1 gap-[24px] lg:grid-cols-2">
-              {filtered.map((cert) => (
-                <article key={cert.title} className="bg-white border border-black/[0.08] border-solid rounded-[8px] overflow-hidden">
-                  {/* Card top */}
-                  <div className="flex items-center justify-between px-[20px] pt-[16px] pb-[12px]">
-                    <div>
-                      <p className={`text-[11px] font-semibold ${cert.pending ? 'text-[#ffd966]' : 'text-[#5b3df6]'}`}>{cert.type}</p>
-                      {cert.awardedTo && (
-                        <>
-                          <p className="mt-[4px] text-[10px] text-[#94a3b8]">Awarded to</p>
-                          <p className="text-[14px] font-bold text-[#0f172a]">{cert.awardedTo}</p>
-                        </>
-                      )}
-                      {cert.pending && <p className="mt-[8px] text-[11px] text-[#94a3b8]">Program</p>}
+        {/* Certificates grid */}
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <Award className="h-10 w-10 text-[#cbd5e1] mb-3" />
+            <p className="text-[#64748b] font-medium">No certificates found</p>
+            <p className="text-sm text-[#94a3b8] mt-1">Try a different search term</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((cert) => {
+              const colors = PROGRAM_COLORS[cert.program] || PROGRAM_COLORS['Design Track']
+              return (
+                <div
+                  key={cert.id}
+                  className="group relative bg-white rounded-xl border border-[#e2e8f0] overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  {/* Top accent bar */}
+                  <div className={`h-1 w-full ${colors.dot}`} />
+
+                  <div className="p-5">
+                    {/* Program tag */}
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${colors.bg} ${colors.text}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} />
+                        {cert.program}
+                      </span>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f1f5f9]">
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                      </div>
                     </div>
-                    <div className={`flex h-[40px] w-[40px] items-center justify-center rounded-[8px] ${cert.pending ? 'bg-[#ffd966] bg-opacity-20' : 'bg-[#e8f5ff]'}`}>
-                      {cert.pending
-                        ? <Clock className="h-[18px] w-[18px] text-[#ffd966]" />
-                        : <Award className="h-[18px] w-[18px] text-[#5b3df6]" />
-                      }
+
+                    {/* Title */}
+                    <h3 className="font-bold text-[15px] text-[#0f172a] leading-snug mb-1">{cert.title}</h3>
+                    <p className="text-xs text-[#94a3b8] mb-4">Awarded to {cert.awardedTo}</p>
+
+                    {/* Meta */}
+                    <div className="flex items-center gap-3 text-[11px] text-[#94a3b8] mb-5">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {cert.issued}
+                      </span>
+                      <span className="text-[#e2e8f0]">•</span>
+                      <span className="font-mono">{cert.id}</span>
                     </div>
-                  </div>
-
-                  <div className="px-[20px] pb-[16px]">
-                    {cert.awardedTo && <p className="mb-[4px] text-[11px] text-[#94a3b8]">{cert.program}</p>}
-
-                    {/* Title + status */}
-                    <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-                      <h3 className="font-bold text-[16px] text-[#0f172a]">{cert.title}</h3>
-                      <span className={`inline-flex h-[26px] items-center px-[10px] rounded-[10px] text-[11px] font-medium ${cert.statusColor}`}>{cert.status}</span>
-                    </div>
-
-                    {/* ID + date */}
-                    <p className="mt-[8px] text-[11px] text-[#94a3b8]">
-                      {cert.id ? `ID: ${cert.id}   ` : ''}{cert.issued}
-                    </p>
-                    {cert.pending && cert.pendingNote && (
-                      <p className="text-[11px] text-[#94a3b8] mt-[4px]">{cert.pendingNote}</p>
-                    )}
 
                     {/* Actions */}
-                    {!cert.pending && (
-                      <div className="mt-[16px] flex flex-col gap-[12px] sm:flex-row">
-                        <button className="bg-[#5b3df6] flex h-[36px] w-full items-center justify-center gap-[8px] px-[14px] rounded-[6px] sm:w-auto">
-                          <Download className="h-[14px] w-[14px] text-white" />
-                          <div className="flex flex-col font-medium h-[15px] justify-center leading-[0] text-white text-[12px]">
-                            Download PDF
-                          </div>
-                        </button>
-                        <button className="border border-black/[0.08] flex h-[36px] w-full items-center justify-center px-[14px] rounded-[6px] bg-white sm:w-auto">
-                          <div className="flex flex-col font-medium h-[15px] justify-center leading-[0] text-[#0f172a] text-[12px]">
-                            View
-                          </div>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent activity */}
-          <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[16px] items-start p-[21px] rounded-[8px]">
-            <h3 className="font-bold text-[18px] text-[#0f172a]">Recent activity</h3>
-            <div className="flex flex-col w-full gap-[16px]">
-              {activity.map(({ icon, bg, text, sub }) => (
-                <div key={text} className="flex items-start gap-[12px]">
-                  <div className={`flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[6px] ${bg}`}>{icon}</div>
-                  <div>
-                    <p className="font-semibold text-[13px] text-[#0f172a]">{text}</p>
-                    <p className="text-[11px] text-[#94a3b8] mt-[2px]">{sub}</p>
+                    <div className="flex gap-2">
+                      <button className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg bg-[#5b3df6] text-white text-xs font-medium hover:bg-[#4c31d4] transition-colors">
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </button>
+                      <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2e8f0] bg-white text-[#64748b] hover:bg-[#f8fafc] transition-colors">
+                        <Share2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

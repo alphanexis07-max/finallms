@@ -259,11 +259,12 @@ function AssignCourseModal({ instructor, onClose, onAssign }) {
   const [selectedCourse, setSelectedCourse] = useState('')
   const [selectedBatch, setSelectedBatch] = useState('')
   const [teachingRole, setTeachingRole] = useState('primary')
+  const [note, setNote] = useState('')
 
   const courses = [
-    { id: 1, name: 'Creative English Level 1', hours: 4.5 },
-    { id: 2, name: 'Creative English Level 2', hours: 4.5 },
-    { id: 3, name: 'Advanced English Writing', hours: 3 },
+    { id: 1, name: 'Creative English Level 1', hours: 4.5, level: 'Beginner', learners: 58 },
+    { id: 2, name: 'Creative English Level 2', hours: 4.5, level: 'Intermediate', learners: 46 },
+    { id: 3, name: 'Advanced English Writing', hours: 3, level: 'Advanced', learners: 29 },
   ]
 
   const batches = {
@@ -285,153 +286,230 @@ function AssignCourseModal({ instructor, onClose, onAssign }) {
   const currentLoad = instructor?.load ? parseInt(instructor.load) || 0 : 0
   const newTotal = currentLoad + additionalHours
   const isOverload = newTotal > 25
+  const selectedCourseData = courses.find((course) => course.name === selectedCourse)
+  const loadPercent = Math.min((newTotal / 25) * 100, 100)
 
   if (!instructor) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto">
-      <div className="relative w-full max-w-[900px] my-8 mx-4 bg-white rounded-[16px] shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+      <div className="relative flex w-full max-w-[1140px] max-h-[calc(100vh-30px)] flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_28px_70px_rgba(15,23,42,0.3)]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/[0.08] px-6 py-4 bg-white">
-          <h2 className="text-xl font-bold text-[#0f172a]">Assign Course</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+        <div className="flex items-center justify-between border-b border-black/[0.08] bg-white px-4 py-4 sm:px-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-[10px] bg-[#f0f4f8] px-3 py-1 text-[11px] font-medium text-[#64748b]">
+              Course mapping
+            </span>
+            <h2 className="mt-2 text-[22px] font-bold text-[#0f172a]">Assign Course & Batch</h2>
+            <p className="mt-1 text-[12px] text-[#94a3b8]">Map instructor to the right cohort with safe workload planning.</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100 transition-colors">
             <X className="h-5 w-5 text-[#94a3b8]" />
           </button>
         </div>
 
-        <div className="p-6">
-          {/* Instructor Info */}
-          <div className="flex items-center gap-4 mb-6 pb-4 border-b border-black/[0.08]">
-            <Avatar src={instructor.avatar} alt={instructor.name} className="h-12 w-12 rounded-full" />
-            <div>
-              <p className="text-[18px] font-semibold text-[#111827]">{instructor.name}</p>
-              <p className="text-[12px] text-[#94a3b8]">Current load: {instructor.load} ({instructor.capacity || '82% capacity'})</p>
-            </div>
-          </div>
-
-          {/* Select Course */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">1</div>
-              <h4 className="text-[16px] font-semibold text-[#1f2937]">Select Course</h4>
-            </div>
-            <label className="block text-[12px] font-medium text-[#334155] mb-1.5">Choose a course from directory...</label>
-            <div className="relative">
-              <select
-                value={selectedCourse}
-                onChange={(e) => {
-                  setSelectedCourse(e.target.value)
-                  setSelectedBatch('')
-                }}
-                className="w-full appearance-none rounded-[8px] border border-black/[0.08] bg-white px-3 py-2.5 text-[14px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-[#5b3df6] cursor-pointer"
-              >
-                <option value="">Select a course...</option>
-                {courses.map(course => (
-                  <option key={course.id} value={course.name}>{course.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Select Batch */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">2</div>
-              <h4 className="text-[16px] font-semibold text-[#1f2937]">Select Batch</h4>
-            </div>
-            {!selectedCourse ? (
-              <p className="text-[12px] text-[#94a3b8] italic">Please select a course first</p>
-            ) : selectedBatchesList.length === 0 ? (
-              <p className="text-[12px] text-[#f97316]">No batches available for this course</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {selectedBatchesList.map((batch) => (
-                  <button
-                    key={batch.key}
-                    onClick={() => setSelectedBatch(batch.key)}
-                    className={`rounded-[10px] border p-4 text-left transition-all ${
-                      selectedBatch === batch.key
-                        ? 'border-[#5b3df6] bg-[#faf9ff] shadow-sm'
-                        : 'border-black/[0.08] bg-white hover:bg-[#fafcff]'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="text-[14px] font-semibold text-[#1f2937]">{batch.title}</p>
-                        <p className="text-[11px] text-[#94a3b8] mt-0.5">{batch.sub}</p>
-                      </div>
-                      <div
-                        className={`flex h-5 w-5 items-center justify-center rounded-[4px] border-2 ${
-                          selectedBatch === batch.key
-                            ? 'border-[#5b3df6] bg-[#5b3df6]'
-                            : 'border-black/[0.2] bg-white'
-                        }`}
-                      >
-                        {selectedBatch === batch.key && <Check className="h-3 w-3 text-white" />}
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-[#64748b]">{batch.days}</p>
-                    <p className="text-[11px] text-[#64748b] mt-0.5">{batch.time}</p>
-                    <p className="text-[11px] text-[#64748b] mt-0.5">{batch.hours}</p>
-                    <p className="text-[11px] font-medium text-[#5b3df6] mt-2">{batch.seats}</p>
-                  </button>
-                ))}
+        <div className="grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[1.35fr_0.9fr]">
+          <div className="min-h-0 overflow-y-auto p-4 sm:p-6">
+            {/* Instructor Info */}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-[14px] border border-black/[0.08] bg-[#fbfdff] p-4">
+              <div className="flex items-center gap-3">
+                <Avatar src={instructor.avatar} alt={instructor.name} className="h-12 w-12 rounded-full" />
+                <div>
+                  <p className="text-[18px] font-semibold text-[#111827]">{instructor.name}</p>
+                  <p className="text-[12px] text-[#94a3b8]">Current load: {instructor.load} ({instructor.capacity || '82% capacity'})</p>
+                </div>
               </div>
-            )}
-          </div>
-
-          {/* Teaching Role */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">3</div>
-              <h4 className="text-[16px] font-semibold text-[#1f2937]">Teaching Role</h4>
+              <Pill variant={instructor.statusVariant}>{instructor.status}</Pill>
             </div>
-            <div className="flex gap-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="teachingRole"
-                  value="primary"
-                  checked={teachingRole === 'primary'}
-                  onChange={(e) => setTeachingRole(e.target.value)}
-                  className="h-4 w-4 text-[#5b3df6] focus:ring-[#5b3df6]"
-                />
-                <span className="text-[13px] text-[#334155]">Primary Instructor</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="teachingRole"
-                  value="co"
-                  checked={teachingRole === 'co'}
-                  onChange={(e) => setTeachingRole(e.target.value)}
-                  className="h-4 w-4 text-[#5b3df6] focus:ring-[#5b3df6]"
-                />
-                <span className="text-[13px] text-[#334155]">Co-Instructor</span>
-              </label>
-            </div>
-          </div>
 
-          {/* Warning Message */}
-          <div className="rounded-[10px] bg-[#fff8e7] border border-[#ffd966] p-4 flex gap-3">
-            <TriangleAlert className="h-5 w-5 text-[#f97316] flex-shrink-0" />
-            <p className="text-[12px] text-[#4b2e00]">
-              Assigning a new batch will increase the instructor's weekly teaching load based on the course schedule.
-              Proceed with caution to avoid burnout.
-              {selectedBatchData && (
-                <span className="block mt-1 font-medium">
-                  Current: {currentLoad} hrs/week → New: {newTotal} hrs/week
-                  {isOverload && <span className="text-[#f97316] ml-2">⚠️ Exceeds recommended 25 hrs/week limit!</span>}
-                </span>
+            {/* Select Course */}
+            <div className="mb-6 rounded-[14px] border border-black/[0.08] bg-white p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">1</div>
+                <h4 className="text-[16px] font-semibold text-[#1f2937]">Select Course</h4>
+              </div>
+              <label className="mb-1.5 block text-[12px] font-medium text-[#334155]">Choose a course from directory...</label>
+              <div className="relative">
+                <select
+                  value={selectedCourse}
+                  onChange={(e) => {
+                    setSelectedCourse(e.target.value)
+                    setSelectedBatch('')
+                  }}
+                  className="w-full appearance-none rounded-[8px] border border-black/[0.08] bg-white px-3 py-2.5 text-[14px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-[#5b3df6] cursor-pointer"
+                >
+                  <option value="">Select a course...</option>
+                  {courses.map(course => (
+                    <option key={course.id} value={course.name}>{course.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              </div>
+              {selectedCourseData && (
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#64748b]">
+                  <span className="rounded-full bg-[#f0f4f8] px-2.5 py-1">{selectedCourseData.level}</span>
+                  <span className="rounded-full bg-[#e8f5ff] px-2.5 py-1 text-[#2563eb]">{selectedCourseData.learners} active learners</span>
+                  <span className="rounded-full bg-[#ede7ff] px-2.5 py-1 text-[#5b3df6]">{selectedCourseData.hours} hrs / week</span>
+                </div>
               )}
-            </p>
+            </div>
+
+            {/* Select Batch */}
+            <div className="mb-6 rounded-[14px] border border-black/[0.08] bg-white p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">2</div>
+                <h4 className="text-[16px] font-semibold text-[#1f2937]">Select Batch</h4>
+              </div>
+              {!selectedCourse ? (
+                <p className="text-[12px] text-[#94a3b8] italic">Please select a course first</p>
+              ) : selectedBatchesList.length === 0 ? (
+                <p className="text-[12px] text-[#f97316]">No batches available for this course</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {selectedBatchesList.map((batch) => (
+                    <button
+                      key={batch.key}
+                      onClick={() => setSelectedBatch(batch.key)}
+                      className={`rounded-[10px] border p-4 text-left transition-all ${
+                        selectedBatch === batch.key
+                          ? 'border-[#5b3df6] bg-[#faf9ff] shadow-sm'
+                          : 'border-black/[0.08] bg-white hover:bg-[#fafcff]'
+                      }`}
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-[14px] font-semibold text-[#1f2937]">{batch.title}</p>
+                          <p className="mt-0.5 text-[11px] text-[#94a3b8]">{batch.sub}</p>
+                        </div>
+                        <div
+                          className={`flex h-5 w-5 items-center justify-center rounded-[4px] border-2 ${
+                            selectedBatch === batch.key
+                              ? 'border-[#5b3df6] bg-[#5b3df6]'
+                              : 'border-black/[0.2] bg-white'
+                          }`}
+                        >
+                          {selectedBatch === batch.key && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[11px] text-[#64748b]">{batch.days}</p>
+                        <p className="text-[11px] text-[#64748b]">{batch.time}</p>
+                        <p className="text-[11px] text-[#64748b]">{batch.hours}</p>
+                      </div>
+                      <p className="mt-2 text-[11px] font-medium text-[#5b3df6]">{batch.seats}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Teaching Role */}
+            <div className="mb-6 rounded-[14px] border border-black/[0.08] bg-white p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">3</div>
+                <h4 className="text-[16px] font-semibold text-[#1f2937]">Teaching Role</h4>
+              </div>
+              <div className="flex flex-wrap gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="teachingRole"
+                    value="primary"
+                    checked={teachingRole === 'primary'}
+                    onChange={(e) => setTeachingRole(e.target.value)}
+                    className="h-4 w-4 text-[#5b3df6] focus:ring-[#5b3df6]"
+                  />
+                  <span className="text-[13px] text-[#334155]">Primary Instructor</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="teachingRole"
+                    value="co"
+                    checked={teachingRole === 'co'}
+                    onChange={(e) => setTeachingRole(e.target.value)}
+                    className="h-4 w-4 text-[#5b3df6] focus:ring-[#5b3df6]"
+                  />
+                  <span className="text-[13px] text-[#334155]">Co-Instructor</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="rounded-[14px] border border-black/[0.08] bg-white p-5">
+              <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Assignment note</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="Add handover notes, assessment expectations, or class objectives..."
+                className="w-full rounded-[8px] border border-black/[0.08] px-3 py-2 text-[13px] text-[#334155] outline-none transition focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+              />
+            </div>
+
+            {/* Warning Message */}
+            <div className="rounded-[10px] border border-[#ffd966] bg-[#fff8e7] p-4 flex gap-3">
+              <TriangleAlert className="h-5 w-5 text-[#f97316] flex-shrink-0" />
+              <p className="text-[12px] text-[#4b2e00]">
+                Assigning a new batch will increase the instructor's weekly teaching load based on the course schedule.
+                Proceed with caution to avoid burnout.
+                {selectedBatchData && (
+                  <span className="block mt-1 font-medium">
+                    Current: {currentLoad} hrs/week {'->'} New: {newTotal} hrs/week
+                    {isOverload && <span className="ml-2 text-[#f97316]">Exceeds recommended 25 hrs/week limit.</span>}
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
+
+          <aside className="min-h-0 overflow-y-auto border-t border-black/[0.08] bg-[#fafcff] p-4 sm:p-6 xl:border-l xl:border-t-0">
+            <div className="space-y-4">
+              <div className="rounded-[14px] border border-black/[0.08] bg-white p-4">
+                <h3 className="text-[15px] font-semibold text-[#0f172a]">Assignment summary</h3>
+                <div className="mt-3 space-y-2 text-[12px] text-[#64748b]">
+                  <p><span className="text-[#94a3b8]">Course:</span> <span className="font-medium text-[#334155]">{selectedCourse || 'Not selected'}</span></p>
+                  <p><span className="text-[#94a3b8]">Batch:</span> <span className="font-medium text-[#334155]">{selectedBatchData ? selectedBatchData.title : 'Not selected'}</span></p>
+                  <p><span className="text-[#94a3b8]">Role:</span> <span className="font-medium text-[#334155]">{teachingRole === 'primary' ? 'Primary Instructor' : 'Co-Instructor'}</span></p>
+                </div>
+              </div>
+
+              <div className="rounded-[14px] border border-black/[0.08] bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[15px] font-semibold text-[#0f172a]">Workload impact</h3>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${isOverload ? 'bg-[#ffe2db] text-[#c2410c]' : 'bg-[#e8f5ff] text-[#2563eb]'}`}>
+                    {isOverload ? 'High load' : 'Safe range'}
+                  </span>
+                </div>
+                <p className="mt-2 text-[12px] text-[#64748b]">{currentLoad} hrs/week {'->'} {newTotal} hrs/week</p>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
+                  <div
+                    className={`h-full rounded-full ${isOverload ? 'bg-[#f97316]' : 'bg-[#5b3df6]'}`}
+                    style={{ width: `${Math.max(12, loadPercent)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-[#94a3b8]">Recommended max weekly load: 25 hrs</p>
+              </div>
+
+              <div className="rounded-[14px] border border-[#d8cffc] bg-[#faf9ff] p-4">
+                <h3 className="text-[14px] font-semibold text-[#3b2aa8]">What happens next?</h3>
+                <ul className="mt-2 space-y-2 text-[12px] text-[#5f4bb8]">
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-3.5 w-3.5" />
+                    Instructor schedule will be updated in live calendar.
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-3.5 w-3.5" />
+                    Batch roster gets notified after confirmation.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </aside>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-black/[0.08] px-6 py-4 bg-[#fafcff] flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 border border-black/[0.08] rounded-[6px] text-[13px] text-[#64748b] hover:bg-gray-50">
+        <div className="flex flex-col gap-3 border-t border-black/[0.08] bg-[#fafcff] px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <button onClick={onClose} className="h-10 rounded-[8px] border border-black/[0.08] px-4 text-[13px] text-[#64748b] hover:bg-gray-50">
             Cancel
           </button>
           <button
@@ -442,13 +520,14 @@ function AssignCourseModal({ instructor, onClose, onAssign }) {
               }
             }}
             disabled={!selectedCourse || !selectedBatch}
-            className={`px-4 py-2 rounded-[6px] text-[13px] font-semibold transition-colors ${
+            className={`inline-flex h-10 items-center gap-2 rounded-[8px] px-4 text-[13px] font-semibold transition-colors ${
               selectedCourse && selectedBatch
                 ? 'bg-[#5b3df6] text-white hover:bg-[#4a2ed8]'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
             Assign Course
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -457,48 +536,276 @@ function AssignCourseModal({ instructor, onClose, onAssign }) {
 }
 
 function CreateInstructorModal({ onClose }) {
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    expertise: 'STEM',
+    experience: '3-5 years',
+    bio: '',
+  })
+  const [selectedDays, setSelectedDays] = useState(['Mon', 'Wed'])
+
+  const expertiseOptions = ['STEM', 'Coding', 'English', 'Math']
+  const scheduleOptions = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  const formCompletion = [form.fullName, form.email, form.phone, form.bio].filter(Boolean).length
+
+  const toggleDay = (day) => {
+    setSelectedDays((prev) => (prev.includes(day) ? prev.filter((item) => item !== day) : [...prev, day]))
+  }
+
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-lg rounded-[16px] bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4">
-          <h2 className="text-lg font-bold text-[#0f172a]">Create Instructor</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-[2px]">
+      <div className="relative flex w-full max-w-[1120px] max-h-[calc(100vh-32px)] flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_30px_80px_rgba(15,23,42,0.28)]">
+        <div className="flex items-center justify-between border-b border-black/[0.08] bg-white px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <span className="inline-flex items-center rounded-[10px] bg-[#f0f4f8] px-3 py-1 text-[11px] font-medium text-[#64748b]">
+              Instructor onboarding
+            </span>
+            <h2 className="mt-3 text-[22px] font-bold leading-tight text-[#0f172a] sm:text-[26px]">Create Instructor Profile</h2>
+            <p className="mt-1 text-[13px] text-[#94a3b8]">
+              Capture identity, contact details, expertise, and weekly availability in one place.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-gray-100">
             <X className="h-5 w-5 text-[#94a3b8]" />
           </button>
         </div>
-        <div className="space-y-3 p-5">
-          <div>
-            <label className="mb-1 block text-[12px] font-medium text-[#334155]">Full name</label>
-            <input className="h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]" placeholder="e.g. Aisha Verma" />
+
+        <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1.35fr_0.85fr]">
+          <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
+            <div className="space-y-5">
+              <section className="rounded-[18px] border border-black/[0.08] bg-[#fbfdff] p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[18px] bg-[#ede7ff] text-[#5b3df6]">
+                      <Camera className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-[#0f172a]">Profile photo</p>
+                      <p className="mt-1 text-[12px] text-[#94a3b8]">Upload a clear headshot for instructor cards and class rosters.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#0f172a] hover:bg-gray-50"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload photo
+                  </button>
+                </div>
+              </section>
+
+              <section className="rounded-[18px] border border-black/[0.08] bg-white p-5">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-[16px] font-bold text-[#0f172a]">Basic details</h3>
+                    <p className="mt-1 text-[12px] text-[#94a3b8]">Use the same identity format shown in the Figma instructor frame.</p>
+                  </div>
+                  <span className="rounded-full bg-[#e8f5ff] px-3 py-1 text-[11px] font-medium text-[#2563eb]">Required fields</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Full name</label>
+                    <input
+                      value={form.fullName}
+                      onChange={(e) => handleChange('fullName', e.target.value)}
+                      className="h-11 w-full rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+                      placeholder="e.g. Aisha Verma"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Email address</label>
+                    <div className="flex h-11 items-center gap-2 rounded-[10px] border border-black/[0.08] bg-white px-3 focus-within:border-[#5b3df6] focus-within:ring-2 focus-within:ring-[#5b3df6]/15">
+                      <Mail className="h-4 w-4 text-[#94a3b8]" />
+                      <input
+                        value={form.email}
+                        onChange={(e) => handleChange('email', e.target.value)}
+                        className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0f172a] outline-none placeholder:text-[#94a3b8]"
+                        placeholder="name@institute.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Phone number</label>
+                    <div className="flex h-11 items-center gap-2 rounded-[10px] border border-black/[0.08] bg-white px-3 focus-within:border-[#5b3df6] focus-within:ring-2 focus-within:ring-[#5b3df6]/15">
+                      <Phone className="h-4 w-4 text-[#94a3b8]" />
+                      <input
+                        value={form.phone}
+                        onChange={(e) => handleChange('phone', e.target.value)}
+                        className="min-w-0 flex-1 bg-transparent text-[13px] text-[#0f172a] outline-none placeholder:text-[#94a3b8]"
+                        placeholder="(123) 456-7890"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Primary expertise</label>
+                    <div className="relative">
+                      <select
+                        value={form.expertise}
+                        onChange={(e) => handleChange('expertise', e.target.value)}
+                        className="h-11 w-full appearance-none rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+                      >
+                        {expertiseOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Experience</label>
+                    <div className="relative">
+                      <select
+                        value={form.experience}
+                        onChange={(e) => handleChange('experience', e.target.value)}
+                        className="h-11 w-full appearance-none rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+                      >
+                        <option>1-2 years</option>
+                        <option>3-5 years</option>
+                        <option>5+ years</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Short bio</label>
+                    <textarea
+                      value={form.bio}
+                      onChange={(e) => handleChange('bio', e.target.value)}
+                      rows={4}
+                      className="w-full rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+                      placeholder="Summarize teaching style, subject strength, and classroom approach..."
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[18px] border border-black/[0.08] bg-white p-5">
+                <div className="mb-4">
+                  <h3 className="text-[16px] font-bold text-[#0f172a]">Availability</h3>
+                  <p className="mt-1 text-[12px] text-[#94a3b8]">Mark the instructor's default teaching days for onboarding and scheduling.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                  {scheduleOptions.map((day) => {
+                    const active = selectedDays.includes(day)
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDay(day)}
+                        className={`rounded-[10px] border px-3 py-2 text-[12px] font-medium transition-colors ${
+                          active
+                            ? 'border-[#d8cffc] bg-[#ede7ff] text-[#5b3df6]'
+                            : 'border-black/[0.08] bg-white text-[#64748b] hover:bg-gray-50'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-[12px] font-medium text-[#334155]">Email</label>
-            <input className="h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]" placeholder="name@institute.com" />
-          </div>
-          <div>
-            <label className="mb-1 block text-[12px] font-medium text-[#334155]">Primary expertise</label>
-            <select className="h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]">
-              <option>STEM</option>
-              <option>Coding</option>
-              <option>English</option>
-              <option>Math</option>
-            </select>
-          </div>
+
+          <aside className="min-h-0 overflow-y-auto border-t border-black/[0.08] bg-[#fafcff] p-5 lg:border-l lg:border-t-0 lg:p-6">
+            <div className="space-y-5">
+              <section className="rounded-[18px] border border-black/[0.08] bg-white p-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#ede7ff] text-[24px] font-bold text-[#5b3df6]">
+                    {form.fullName ? form.fullName.charAt(0).toUpperCase() : 'A'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[16px] font-semibold text-[#0f172a]">{form.fullName || 'Aisha Verma'}</p>
+                    <p className="mt-0.5 text-[12px] text-[#94a3b8]">{form.email || 'name@institute.com'}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center rounded-full bg-[#e8f5ff] px-3 py-1 text-[11px] font-medium text-[#2563eb]">
+                        {form.expertise} expert
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-[#f0f4f8] px-3 py-1 text-[11px] font-medium text-[#64748b]">
+                        {selectedDays.length} active days
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-[14px] bg-[#fbfdff] p-3">
+                    <p className="text-[11px] text-[#94a3b8]">Profile completion</p>
+                    <p className="mt-1 text-[22px] font-bold text-[#0f172a]">{Math.min(100, formCompletion * 25)}%</p>
+                  </div>
+                  <div className="rounded-[14px] bg-[#fbfdff] p-3">
+                    <p className="text-[11px] text-[#94a3b8]">Suggested load</p>
+                    <p className="mt-1 text-[22px] font-bold text-[#0f172a]">18 hrs</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[18px] border border-black/[0.08] bg-white p-5">
+                <h3 className="text-[16px] font-bold text-[#0f172a]">Invite checklist</h3>
+                <div className="mt-4 space-y-3">
+                  {[
+                    'Instructor profile created',
+                    'Email invite will be sent',
+                    'Default schedule and expertise saved',
+                    'Ready for course assignment',
+                  ].map((item, index) => (
+                    <div key={item} className="flex items-start gap-3">
+                      <div className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full ${index < 2 ? 'bg-[#2dd4bf]' : 'bg-[#e2e8f0]'}`}>
+                        <Check className={`h-3 w-3 ${index < 2 ? 'text-white' : 'text-[#94a3b8]'}`} />
+                      </div>
+                      <p className="text-[12px] leading-5 text-[#334155]">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-[18px] border border-[#ffd966] bg-[#fff8e7] p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-[#ffd966] p-2 text-[#4b2e00]">
+                    <Clock3 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-[#4b2e00]">Next step after creation</h3>
+                    <p className="mt-1 text-[12px] leading-5 text-[#6b4b00]">
+                      Add a course mapping and batch assignment so the instructor appears in the live schedule immediately.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </aside>
         </div>
-        <div className="flex justify-end gap-2 border-t border-black/[0.08] px-5 py-4">
+
+        <div className="flex flex-col gap-3 border-t border-black/[0.08] bg-[#fafcff] px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[6px] border border-black/[0.08] px-4 py-2 text-[13px] font-medium text-[#64748b]"
+            className="h-11 rounded-[10px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#64748b] hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[6px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#4a2ed8]"
+            className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4a2ed8]"
           >
             Create & send invite
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -609,6 +916,13 @@ export default function AdminInstructorManagement() {
   }
 
   const filteredInstructors = instructors.filter((inst) => {
+    const matchesFilter =
+      activeFilter === 'All instructors' ||
+      (activeFilter === 'Pending onboarding' && inst.status === 'Onboarding') ||
+      (activeFilter === 'High workload' && inst.status === 'High workload') ||
+      (activeFilter === 'Unassigned' && inst.course === 'Not assigned')
+
+    if (!matchesFilter) return false
     if (!directorySearch.trim()) return true
     const q = directorySearch.toLowerCase()
     return (
@@ -709,34 +1023,41 @@ export default function AdminInstructorManagement() {
           />
         </div>
 
-        {/* Instructor directory — table layout like Student directory */}
+        {/* Instructor directory — Figma-style operational card */}
         <section className="rounded-[10px] border border-black/[0.08] bg-white p-6">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="text-[20px] font-bold text-[#0f172a]">Instructor directory</h2>
-              <p className="mt-0.5 text-[13px] text-[#94a3b8]">
-                Monitor course mapping, teaching load, onboarding stage, and next actions from a single operational list.
+          <div className="flex flex-col gap-4 border-b border-black/[0.08] pb-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[20px] font-bold text-[#0f172a]">Instructor directory</h2>
+                <span className="inline-flex items-center rounded-full bg-[#f0f4f8] px-3 py-1 text-[11px] font-medium text-[#64748b]">
+                  {filteredInstructors.length} visible
+                </span>
+              </div>
+              <p className="mt-1.5 max-w-[760px] text-[13px] leading-relaxed text-[#94a3b8]">
+                Review teaching load, course mapping, onboarding stage, and follow-up actions in a single operational card.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="h-9 rounded-[6px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#0f172a] hover:bg-gray-50"
+                className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#0f172a] hover:bg-gray-50"
               >
+                <Upload className="h-4 w-4 text-[#5b3df6]" />
                 Bulk invite
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
-                className="h-9 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4b2fd5]"
+                className="inline-flex h-9 items-center gap-2 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4b2fd5]"
               >
+                <Plus className="h-4 w-4" />
                 Create Instructor
               </button>
             </div>
           </div>
 
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap gap-1">
+          <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-1.5">
               {filters.map((f) => (
                 <button
                   key={f}
@@ -745,15 +1066,16 @@ export default function AdminInstructorManagement() {
                   className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${
                     activeFilter === f
                       ? 'bg-[#ede7ff] text-[#5b3df6]'
-                      : 'text-[#64748b] hover:bg-gray-50'
+                      : 'border border-transparent text-[#64748b] hover:bg-gray-50'
                   }`}
                 >
                   {f}
                 </button>
               ))}
             </div>
+
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex h-9 w-full items-center gap-2 rounded-[6px] border border-black/[0.08] bg-[#f8fafc] px-3 sm:min-w-[220px]">
+              <div className="flex h-9 w-full items-center gap-2 rounded-[6px] border border-black/[0.08] bg-[#f8fafc] px-3 sm:min-w-[240px]">
                 <Search className="h-4 w-4 shrink-0 text-[#94a3b8]" />
                 <input
                   value={directorySearch}
@@ -764,73 +1086,99 @@ export default function AdminInstructorManagement() {
               </div>
               <button
                 type="button"
-                className="h-8 rounded-[6px] border border-black/[0.08] bg-white px-3 text-[12px] font-medium text-[#0f172a] hover:bg-gray-50"
+                className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-3 text-[12px] font-medium text-[#0f172a] hover:bg-gray-50"
               >
+                <Calendar className="h-4 w-4 text-[#5b3df6]" />
                 Availability
               </button>
               <button
                 type="button"
-                className="h-8 rounded-[6px] border border-black/[0.08] bg-white px-3 text-[12px] font-medium text-[#0f172a] hover:bg-gray-50"
+                className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-3 text-[12px] font-medium text-[#0f172a] hover:bg-gray-50"
               >
+                <Star className="h-4 w-4 text-[#5b3df6]" />
                 Ratings
               </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-          <div className="min-w-[640px] sm:min-w-[720px]">
-          <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_1.1fr] gap-4 border-b border-black/[0.06] px-3 pb-2">
-            {['Instructor', 'Course & focus', 'Load', 'Status', 'Actions'].map((h) => (
-              <p key={h} className="text-[12px] font-medium text-[#94a3b8]">
-                {h}
-              </p>
-            ))}
-          </div>
-
-          <div className="divide-y divide-black/[0.05]">
-            {filteredInstructors.map((inst) => (
-              <div
-                key={inst.id}
-                className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_1.1fr] items-center gap-4 px-3 py-4 transition-colors hover:bg-gray-50/60"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <Avatar src={inst.avatar} alt={inst.name} className="h-11 w-11 shrink-0 rounded-full" />
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-semibold text-[#0f172a]">{inst.name}</p>
-                    <p className="truncate text-[12px] text-[#94a3b8]">{inst.role}</p>
-                  </div>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#0f172a]">{inst.course}</p>
-                  <p className="text-[12px] text-[#94a3b8]">{inst.courseSub}</p>
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-[#0f172a]">{inst.load}</p>
-                  <p className="text-[12px] text-[#94a3b8]">{inst.capacity}</p>
-                </div>
-                <div>
-                  <Pill variant={inst.statusVariant}>{inst.status}</Pill>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {inst.actions.map((action) => (
-                    <button
-                      key={action}
-                      type="button"
-                      onClick={() => handleActionClick(action, inst)}
-                      className={`h-8 rounded-[6px] px-3 text-[12px] font-medium transition-colors ${
-                        action === 'Assign' || action === 'Map Course'
-                          ? 'bg-[#5b3df6] text-white hover:bg-[#4b2fd5]'
-                          : 'border border-black/[0.08] bg-white text-[#0f172a] hover:bg-gray-50'
-                      }`}
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
+          <div className="mt-5 overflow-x-auto">
+            <div className="min-w-[840px]">
+              <div className="grid grid-cols-[1.7fr_1.55fr_1fr_0.95fr_1.15fr] gap-4 border-b border-black/[0.06] px-3 pb-3">
+                {['Instructor', 'Course & focus', 'Load', 'Status', 'Actions'].map((h) => (
+                  <p key={h} className="text-[12px] font-medium uppercase tracking-[0.04em] text-[#94a3b8]">
+                    {h}
+                  </p>
+                ))}
               </div>
-            ))}
-          </div>
-          </div>
+
+              <div className="divide-y divide-black/[0.05]">
+                {filteredInstructors.map((inst) => {
+                  const loadValue = parseInt(inst.load, 10) || 0
+                  const loadBar = Math.min(loadValue, 24) / 24
+
+                  return (
+                    <div
+                      key={inst.id}
+                      className="grid grid-cols-[1.7fr_1.55fr_1fr_0.95fr_1.15fr] items-center gap-4 px-3 py-4 transition-colors hover:bg-gray-50/60"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar src={inst.avatar} alt={inst.name} className="h-11 w-11 shrink-0 rounded-full" />
+                        <div className="min-w-0">
+                          <p className="text-[14px] font-semibold text-[#0f172a]">{inst.name}</p>
+                          <p className="truncate text-[12px] text-[#94a3b8]">{inst.role}</p>
+                        </div>
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-[#0f172a]">{inst.course}</p>
+                        <p className="mt-0.5 text-[12px] text-[#94a3b8]">{inst.courseSub}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#64748b]">
+                          <span className="inline-flex items-center rounded-full bg-[#f0f4f8] px-2.5 py-1">{inst.capacity}</span>
+                          <span className="inline-flex items-center rounded-full bg-[#e8f5ff] px-2.5 py-1 text-[#2563eb]">
+                            {inst.course === 'Not assigned' ? 'Needs mapping' : 'Mapped'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[13px] font-semibold text-[#0f172a]">{inst.load}</p>
+                          <p className="text-[11px] text-[#94a3b8]">{loadValue >= 19 ? 'Busy' : 'Balanced'}</p>
+                        </div>
+                        <div className="mt-2 h-2 rounded-full bg-[#e2e8f0] overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${loadValue >= 19 ? 'bg-[#f97316]' : 'bg-[#5b3df6]'}`}
+                            style={{ width: `${Math.max(18, loadBar * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Pill variant={inst.statusVariant}>{inst.status}</Pill>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {inst.actions.map((action) => (
+                          <button
+                            key={action}
+                            type="button"
+                            onClick={() => handleActionClick(action, inst)}
+                            className={`inline-flex h-9 items-center gap-2 rounded-[6px] px-3 text-[12px] font-medium transition-colors ${
+                              action === 'Assign' || action === 'Map Course'
+                                ? 'bg-[#5b3df6] text-white hover:bg-[#4b2fd5]'
+                                : 'border border-black/[0.08] bg-white text-[#0f172a] hover:bg-gray-50'
+                            }`}
+                          >
+                            {action === 'View' ? <Eye className="h-4 w-4" /> : null}
+                            {action}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </section>
 

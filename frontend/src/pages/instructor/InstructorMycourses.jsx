@@ -1036,9 +1036,6 @@ export default function InstructorCourseManagement() {
                 >
                   <Plus className="h-4 w-4" /> Create New Course
                 </button>
-                <button className="inline-flex w-full items-center justify-center gap-2 rounded-[8px] border border-black/[0.08] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] hover:bg-gray-50 sm:w-auto">
-                  <Upload className="h-4 w-4" /> Bulk Upload
-                </button>
               </div>
             </div>
             <div className="flex items-center gap-3">

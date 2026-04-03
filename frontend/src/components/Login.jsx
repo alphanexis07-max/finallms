@@ -1,8 +1,17 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 
 const DECORATIVE_IMG = 'https://www.figma.com/api/mcp/asset/ce009895-65be-4c55-8e2c-8114666b793d'
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 
 export default function Login() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const isEmailValid = EMAIL_REGEX.test(email)
+  const canSubmit = isEmailValid && password.trim()
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-gradient-to-br from-[#1c113b] via-[#3a2286] to-[#5d3df0] p-4 font-[Inter,_'Segoe_UI',_Roboto,_sans-serif] sm:p-6 lg:p-8">
       <div className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-[1300px] grid-cols-1 items-start gap-8 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[1fr_460px] lg:items-center lg:gap-13">
@@ -57,19 +66,24 @@ export default function Login() {
             <p className="mt-2 text-[#6b7480] text-sm">Enter your details to access your account.</p>
 
             <div className="mt-6 flex-1 overflow-y-auto pr-1">
-            <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
+            <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }}>
               <label className="flex flex-col gap-2">
                 <span className="text-[#0b1020] text-sm font-semibold">Email Address</span>
                 <input 
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   className="border border-black/10 rounded-md p-3.5 text-sm text-[#0b1020] outline-none focus:border-[#5a3bd6] focus:ring-3 focus:ring-[#5a3bd6]/20" 
                   type="email" 
                   placeholder="you@example.com" 
                 />
+                {submitted && !isEmailValid ? <span className="text-xs font-medium text-[#dc2626]">Enter a valid email address.</span> : null}
               </label>
 
               <label className="flex flex-col gap-2">
                 <span className="text-[#0b1020] text-sm font-semibold">Password</span>
                 <input 
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   className="border border-black/10 rounded-md p-3.5 text-sm text-[#0b1020] outline-none focus:border-[#5a3bd6] focus:ring-3 focus:ring-[#5a3bd6]/20" 
                   type="password" 
                   placeholder="••••••••" 
@@ -85,7 +99,7 @@ export default function Login() {
                 </Link>
               </div>
 
-              <button type="submit" className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1">
+              <button type="submit" disabled={!canSubmit} className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1 disabled:cursor-not-allowed disabled:opacity-60">
                 Login to your account
               </button>
             </form>

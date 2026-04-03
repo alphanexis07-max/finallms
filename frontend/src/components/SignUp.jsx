@@ -1,8 +1,19 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 
 const DECORATIVE_IMG = 'https://www.figma.com/api/mcp/asset/a41cf675-38f9-4801-90f3-b9a095bc404c'
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+const PHONE_REGEX = /^\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{4}$/
 
 export default function SignUp() {
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const isEmailValid = EMAIL_REGEX.test(email)
+  const isPhoneValid = PHONE_REGEX.test(phone)
+  const canSubmit = isEmailValid && isPhoneValid
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-gradient-to-br from-[#1c113b] via-[#3a2286] to-[#5d3df0] p-4 font-[Inter,_'Segoe_UI',_Roboto,_sans-serif] sm:p-6 lg:p-8">
       <div className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-[1300px] grid-cols-1 items-start gap-8 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[1fr_460px] lg:items-center lg:gap-13">
@@ -59,7 +70,7 @@ export default function SignUp() {
             </p>
 
             <div className="mt-6 flex-1 overflow-y-auto pr-1">
-            <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
+            <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }}>
               <label className="flex flex-col gap-2">
                 <span className="text-[#0b1020] text-sm font-semibold">Full Name</span>
                 <input 
@@ -72,10 +83,25 @@ export default function SignUp() {
               <label className="flex flex-col gap-2">
                 <span className="text-[#0b1020] text-sm font-semibold">Email Address</span>
                 <input 
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   className="border border-black/10 rounded-md p-3.5 text-sm text-[#0b1020] outline-none focus:border-[#5a3bd6] focus:ring-3 focus:ring-[#5a3bd6]/20" 
                   type="email" 
                   placeholder="ava@example.com" 
                 />
+                {submitted && !isEmailValid ? <span className="text-xs font-medium text-[#dc2626]">Enter a valid email address.</span> : null}
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className="text-[#0b1020] text-sm font-semibold">Phone Number</span>
+                <input 
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  className="border border-black/10 rounded-md p-3.5 text-sm text-[#0b1020] outline-none focus:border-[#5a3bd6] focus:ring-3 focus:ring-[#5a3bd6]/20" 
+                  type="tel" 
+                  placeholder="(123) 456-7890" 
+                />
+                {submitted && !isPhoneValid ? <span className="text-xs font-medium text-[#dc2626]">Enter a valid phone number.</span> : null}
               </label>
 
               <label className="flex flex-col gap-2">
@@ -102,7 +128,7 @@ export default function SignUp() {
                 I agree to the Terms &amp; Privacy Policy
               </label>
 
-              <button type="submit" className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1">
+              <button type="submit" disabled={!canSubmit} className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1 disabled:cursor-not-allowed disabled:opacity-60">
                 Create account
               </button>
             </form>
