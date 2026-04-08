@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Search, Video, Calendar, Clock3, Users, PlayCircle, BookOpen,
   Star, ChevronRight, X, Check, Lock, CreditCard, CheckCircle2,
@@ -35,17 +35,29 @@ function StatusBadge({ status }) {
 }
 
 // Payment/Enrollment Modal
-function EnrollmentModal({ session, me, onClose, onSuccess }) {
-  const [step, setStep] = useState('details') // details | payment | success
-  const [paymentMethod, setPaymentMethod] = useState('card')
+function EnrollmentModal({ session, plans, me, onClose, onSuccess }) {
+  const [step, setStep] = useState('details') // details | success
+  const [selectedPlanId, setSelectedPlanId] = useState('')
+  const [modalError, setModalError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    if (!selectedPlanId && plans.length > 0) {
+      setSelectedPlanId(plans[0].id)
+    }
+  }, [plans, selectedPlanId])
+
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId) || null
+  const payableAmount = selectedPlan ? Number(selectedPlan.price || 0) : Number(session.priceAmount || 0)
+  const payableLabel = `₹${Number(payableAmount || 0).toLocaleString('en-IN')}`
+
   const handlePay = async () => {
+    setModalError('')
     setLoading(true)
     try {
       if (!me?._id) throw new Error('User not found')
 
-      const amount = Number(session.priceAmount || 0)
+      const amount = Number(payableAmount || 0)
       if (amount > 0) {
         const loaded = await loadRazorpayScript()
         if (!loaded) throw new Error('Razorpay SDK load failed')
@@ -96,9 +108,16 @@ function EnrollmentModal({ session, me, onClose, onSuccess }) {
         }),
       })
 
+      if (session.link) {
+        onSuccess(session.courseId)
+        onClose()
+        window.open(session.link, '_blank', 'noopener,noreferrer')
+        return
+      }
+
       setStep('success')
-    } catch {
-      // keep same UI; silently fail to preserve design behavior
+    } catch (err) {
+      setModalError(err?.message || 'Payment or enrollment failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -155,12 +174,12 @@ function EnrollmentModal({ session, me, onClose, onSuccess }) {
                     { icon: Clock3, label: 'Duration', val: session.duration },
                     { icon: Video, label: 'Platform', val: session.platform },
                     { icon: Users, label: 'Students', val: `${session.studentsEnrolled} enrolled` },
-                  ].map(({ icon: Icon, label, val }) => (
-                    <div key={label} className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-[#5b3df6] shrink-0" />
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-2">
+                      {React.createElement(item.icon, { className: 'h-4 w-4 text-[#5b3df6] shrink-0' })}
                       <div>
-                        <p className="text-[10px] text-[#94a3b8]">{label}</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">{val}</p>
+                        <p className="text-[10px] text-[#94a3b8]">{item.label}</p>
+                        <p className="text-[12px] font-semibold text-[#0f172a]">{item.val}</p>
                       </div>
                     </div>
                   ))}
@@ -184,48 +203,65 @@ function EnrollmentModal({ session, me, onClose, onSuccess }) {
                 </div>
               </div>
 
-              {/* Payment Method */}
+              {/* Subscription Plans */}
+              <div>
+                <p className="text-[12px] font-semibold text-[#0f172a] mb-2">Choose subscription:</p>
+                <div className="space-y-2">
+                  {plans.length > 0 ? (
+                    plans.map((plan) => (
+                      <button
+                        key={plan.id}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`w-full rounded-[8px] border p-3 text-left transition-colors ${
+                          selectedPlanId === plan.id
+                            ? 'border-[#5b3df6] bg-[#f7f4ff]'
+                            : 'border-black/[0.08] bg-white hover:bg-[#f8fafc]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-[12px] font-semibold text-[#0f172a]">{plan.name}</p>
+                            <p className="text-[11px] text-[#64748b]">{plan.period}</p>
+                          </div>
+                          <p className="text-[14px] font-bold text-[#5b3df6]">₹{Number(plan.price || 0).toLocaleString('en-IN')}</p>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-[8px] border border-dashed border-black/[0.14] bg-[#f8fafc] p-3 text-[12px] text-[#64748b]">
+                      No active subscription plan found. Direct course price will be charged.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {modalError ? (
+                <p className="text-[12px] text-red-600">{modalError}</p>
+              ) : null}
+
+              {/* Payment Summary */}
               <div>
                 <p className="text-[12px] font-semibold text-[#0f172a] mb-2">Payment method:</p>
-                <div className="flex gap-2">
-                  {['card', 'upi'].map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setPaymentMethod(m)}
-                      className={`flex-1 h-10 rounded-[8px] border text-[12px] font-medium transition-colors ${paymentMethod === m ? 'border-[#5b3df6] bg-[#f7f4ff] text-[#5b3df6]' : 'border-black/[0.08] text-[#64748b] hover:bg-gray-50'}`}
-                    >
-                      {m === 'card' ? '💳 Card' : '📱 UPI'}
-                    </button>
-                  ))}
+                <div className="inline-flex items-center gap-2 rounded-[8px] border border-black/[0.08] bg-white px-3 py-2 text-[12px] text-[#64748b]">
+                  <CreditCard className="h-4 w-4" /> Razorpay secure checkout
                 </div>
-                {paymentMethod === 'card' ? (
-                  <div className="mt-3 space-y-2">
-                    <input className="h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]" placeholder="Card number" />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input className="h-10 rounded-[8px] border border-black/[0.08] px-3 text-[13px]" placeholder="MM/YY" />
-                      <input className="h-10 rounded-[8px] border border-black/[0.08] px-3 text-[13px]" placeholder="CVV" />
-                    </div>
-                  </div>
-                ) : (
-                  <input className="mt-3 h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]" placeholder="Enter UPI ID (e.g. name@upi)" />
-                )}
               </div>
 
               {/* Price + Pay Button */}
               <div className="flex items-center justify-between rounded-[10px] bg-[#f7f4ff] border border-[#5b3df6]/20 px-4 py-3">
                 <div>
                   <p className="text-[11px] text-[#64748b]">Total amount</p>
-                  <p className="text-[20px] font-bold text-[#5b3df6]">{session.price}</p>
+                  <p className="text-[20px] font-bold text-[#5b3df6]">{payableLabel}</p>
                 </div>
                 <button
                   onClick={handlePay}
-                  disabled={loading}
+                  disabled={loading || (plans.length > 0 && !selectedPlan)}
                   className="h-11 rounded-[10px] bg-[#5b3df6] px-6 text-[13px] font-semibold text-white hover:bg-[#4a2ed8] transition-colors disabled:opacity-70 flex items-center gap-2"
                 >
                   {loading ? (
                     <><span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Processing...</>
                   ) : (
-                    <><CreditCard className="h-4 w-4" /> Pay & Enroll</>
+                    <><CreditCard className="h-4 w-4" /> Pay {payableLabel} & Enroll</>
                   )}
                 </button>
               </div>
@@ -271,11 +307,11 @@ function ClassDetailModal({ session, onClose }) {
                 { icon: BarChart2, label: 'Attendance', value: `${session.attendanceRate}%` },
                 { icon: MessageSquare, label: 'Chat Msgs', value: session.chatMessages },
                 { icon: Monitor, label: 'Current Slide', value: session.currentSlide },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="rounded-[10px] bg-white/10 p-3">
-                  <Icon className="h-4 w-4 text-white/50" />
-                  <p className="mt-1 text-[16px] font-bold text-white">{value}</p>
-                  <p className="text-[10px] text-white/50">{label}</p>
+              ].map((item) => (
+                <div key={item.label} className="rounded-[10px] bg-white/10 p-3">
+                  {React.createElement(item.icon, { className: 'h-4 w-4 text-white/50' })}
+                  <p className="mt-1 text-[16px] font-bold text-white">{item.value}</p>
+                  <p className="text-[10px] text-white/50">{item.label}</p>
                 </div>
               ))}
             </div>
@@ -303,14 +339,14 @@ function ClassDetailModal({ session, onClose }) {
                   { label: 'Duration', value: session.duration, icon: Clock },
                   { label: 'Students Enrolled', value: session.studentsEnrolled, icon: Users },
                   { label: 'Platform', value: session.platform, icon: Video },
-                ].map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="flex items-center gap-3 rounded-[10px] border border-black/[0.06] p-3">
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3 rounded-[10px] border border-black/[0.06] p-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#f7f4ff]">
-                      <Icon className="h-4 w-4 text-[#5b3df6]" />
+                      {React.createElement(item.icon, { className: 'h-4 w-4 text-[#5b3df6]' })}
                     </div>
                     <div>
-                      <p className="text-[11px] text-[#94a3b8]">{label}</p>
-                      <p className="text-[13px] font-semibold text-[#0f172a]">{value}</p>
+                      <p className="text-[11px] text-[#94a3b8]">{item.label}</p>
+                      <p className="text-[13px] font-semibold text-[#0f172a]">{item.value}</p>
                     </div>
                   </div>
                 ))}
@@ -478,15 +514,25 @@ export default function StudentLiveClasses() {
   const [liveSessions, setLiveSessions] = useState([])
   const [me, setMe] = useState(null)
   const [enrolledCourseIds, setEnrolledCourseIds] = useState([])
+  const [subscriptionPlans, setSubscriptionPlans] = useState([])
   const tenantId = localStorage.getItem('lms_tenant_id')
 
   const loadLiveClasses = async () => {
     try {
-      const [classesRes, coursesRes, enrollRes] = await Promise.all([
+      const [classesRes, coursesRes, enrollRes, plansRes] = await Promise.all([
         api('/lms/live-classes?limit=300').catch(() => ({ items: [] })),
         api('/lms/courses?limit=500').catch(() => ({ items: [] })),
         api('/lms/enrollments?limit=500').catch(() => ({ items: [] })),
+        api('/lms/plans?limit=300&active_only=true').catch(() => ({ items: [] })),
       ])
+
+      const activePlans = (plansRes.items || []).filter((p) => Boolean(p?.active ?? true)).map((p) => ({
+        id: p?._id,
+        name: p?.name || 'Plan',
+        period: p?.billing_period || 'monthly',
+        price: Number(p?.price || 0),
+      }))
+      setSubscriptionPlans(activePlans)
 
       const courseMap = new Map((coursesRes.items || []).map((c) => [c._id, c]))
       const enrollmentRows = enrollRes.items || []
@@ -532,12 +578,28 @@ export default function StudentLiveClasses() {
       setLiveSessions(mapped)
     } catch {
       setLiveSessions([])
+      setSubscriptionPlans([])
     }
   }
 
   useEffect(() => {
-    api('/auth/me').then(setMe).catch(() => setMe(null))
-    loadLiveClasses()
+    let mounted = true
+    api('/auth/me')
+      .then((data) => {
+        if (mounted) setMe(data)
+      })
+      .catch(() => {
+        if (mounted) setMe(null)
+      })
+
+    const timer = setTimeout(() => {
+      loadLiveClasses()
+    }, 0)
+
+    return () => {
+      mounted = false
+      clearTimeout(timer)
+    }
   }, [])
 
   useRealtime(tenantId ? `tenant:${tenantId}` : '', () => loadLiveClasses())
@@ -697,6 +759,7 @@ export default function StudentLiveClasses() {
       {enrollModal && (
         <EnrollmentModal
           session={enrollModal}
+          plans={subscriptionPlans}
           me={me}
           onClose={() => setEnrollModal(null)}
           onSuccess={handleEnrollSuccess}

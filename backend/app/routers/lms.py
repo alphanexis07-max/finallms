@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -27,6 +28,7 @@ from app.schemas.lms import (
     UserUpdateIn,
 )
 from app.services.payments import verify_razorpay_signature, verify_webhook_signature
+from app.services.email import send_transactional_email
 from app.services.realtime import ws_manager
 from app.services.zoom import create_zoom_meeting
 from app.utils.security import hash_password
@@ -60,6 +62,76 @@ async def paged(collection, query: dict, sort_field: str, sort_dir: int, skip: i
     total = await collection.count_documents(query)
     items = [as_dict(x) async for x in collection.find(query).sort(sort_field, sort_dir).skip(skip).limit(limit)]
     return {"items": items, "total": total, "skip": skip, "limit": limit}
+
+
+async def _tenant_user_ids(tenant_id: str, roles: list[str] | None = None, exclude_ids: set[str] | None = None) -> list[str]:
+    query = {"tenant_id": tenant_id}
+    if roles:
+        query["role"] = {"$in": roles}
+    users = [x async for x in db.users.find(query, {"_id": 1})]
+    ids = [str(x.get("_id")) for x in users if x.get("_id")]
+    if exclude_ids:
+        ids = [uid for uid in ids if uid not in exclude_ids]
+    return ids
+
+
+async def _create_user_notifications(
+    *,
+    tenant_id: str,
+    user_ids: list[str],
+    title: str,
+    message: str,
+    meta: dict | None = None,
+):
+    unique_user_ids = [uid for uid in dict.fromkeys([str(x) for x in user_ids if x])]
+    if not unique_user_ids:
+        return
+
+    now = datetime.now(timezone.utc)
+    docs = [
+        {
+            "tenant_id": tenant_id,
+            "user_id": uid,
+            "title": title,
+            "message": message,
+            "meta": meta or {},
+            "read": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+        for uid in unique_user_ids
+    ]
+    await db.notifications.insert_many(docs)
+
+    await ws_manager.broadcast(
+        f"tenant:{tenant_id}",
+        {"type": "notification.created", "data": {"title": title, "message": message, "meta": meta or {}}},
+    )
+    for uid in unique_user_ids:
+        await ws_manager.broadcast(
+            f"user:{uid}",
+            {"type": "notification.created", "data": {"title": title, "message": message, "meta": meta or {}}},
+        )
+
+    object_ids = [ObjectId(uid) for uid in unique_user_ids if ObjectId.is_valid(uid)]
+    if not object_ids:
+        return
+    recipients = [
+        x
+        async for x in db.users.find(
+            {"tenant_id": tenant_id, "_id": {"$in": object_ids}},
+            {"email": 1, "full_name": 1},
+        )
+    ]
+    tasks = []
+    subject = f"{settings.app_name}: {title}"
+    for rec in recipients:
+        email = str(rec.get("email") or "").strip()
+        if not email:
+            continue
+        tasks.append(send_transactional_email(email, subject, message))
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 @router.post("/tenants")
@@ -102,7 +174,7 @@ async def update_tenant(tenant_id: str, payload: TenantUpdateIn, _=Depends(requi
 async def create_user(
     payload: UserIn,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
 ):
     now = datetime.now(timezone.utc)
     data = payload.model_dump()
@@ -124,7 +196,7 @@ async def list_users(
     limit: int = 100,
     q: str | None = None,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
 ):
     query = {"tenant_id": tenant_id} if tenant_id else {}
     if role:
@@ -145,7 +217,7 @@ async def update_user(
     user_id: str,
     payload: UserUpdateIn,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
 ):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not updates:
@@ -167,7 +239,7 @@ async def update_user(
 async def delete_user(
     user_id: str,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
 ):
     query = {"_id": ObjectId(user_id)}
     if tenant_id:
@@ -183,7 +255,7 @@ async def reset_password(
     user_id: str,
     payload: ResetPasswordIn,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
 ):
     query = {"_id": ObjectId(user_id)}
     if tenant_id:
@@ -208,6 +280,14 @@ async def create_course(payload: CourseIn, tenant_id: str = Depends(get_tenant_i
     }
     res = await db.courses.insert_one(data)
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "course.created", "data": {"title": data["title"]}})
+    recipient_ids = await _tenant_user_ids(tenant_id, exclude_ids={str(user.get("sub") or "")})
+    await _create_user_notifications(
+        tenant_id=tenant_id,
+        user_ids=recipient_ids,
+        title="New course published",
+        message=f"{data['title']} is now available in your LMS.",
+        meta={"course_title": data["title"]},
+    )
     return inserted_response(data, res.inserted_id)
 
 
@@ -303,35 +383,14 @@ async def create_live_class(
     recipients = {payload.instructor_id, *payload.attendee_ids} if payload.instructor_id else set(payload.attendee_ids)
     recipients = {rid for rid in recipients if rid and rid != user.get("sub")}
     if recipients:
-        note_docs = [
-            {
-                "tenant_id": tenant_id,
-                "user_id": uid,
-                "title": "New live class scheduled",
-                "message": f"{payload.title} at {payload.start_at.isoformat()}",
-                "meta": {"live_class_id": class_id, "course_id": payload.course_id, "join_url": data.get("join_url", "")},
-                "created_at": now,
-                "updated_at": now,
-            }
-            for uid in recipients
-        ]
-        await db.notifications.insert_many(note_docs)
-        for uid in recipients:
-            await ws_manager.broadcast(
-                f"user:{uid}",
-                {
-                    "type": "notification.created",
-                    "data": {"live_class_id": class_id, "title": payload.title, "join_url": data.get("join_url", "")},
-                },
-            )
+        await _create_user_notifications(
+            tenant_id=tenant_id,
+            user_ids=list(recipients),
+            title="New live class scheduled",
+            message=f"{payload.title} at {payload.start_at.isoformat()}",
+            meta={"live_class_id": class_id, "course_id": payload.course_id, "join_url": data.get("join_url", "")},
+        )
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.created", "data": {"title": data["title"]}})
-    await ws_manager.broadcast(
-        f"tenant:{tenant_id}",
-        {
-            "type": "notification.created",
-            "data": {"live_class_id": class_id, "title": payload.title, "join_url": data.get("join_url", "")},
-        },
-    )
     response = inserted_response(data, res.inserted_id)
     if zoom_error:
         response["message"] = "Live class created but Zoom link generation failed"
@@ -369,6 +428,17 @@ async def update_live_class(
         raise HTTPException(status_code=404, detail="Live class not found")
     item = await db.live_classes.find_one({"_id": ObjectId(live_class_id)})
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.updated", "data": {"id": live_class_id}})
+    if item:
+        recipients = {item.get("instructor_id"), *(item.get("attendee_ids") or [])}
+        recipients = [uid for uid in recipients if uid]
+        if recipients:
+            await _create_user_notifications(
+                tenant_id=tenant_id,
+                user_ids=recipients,
+                title="Live class updated",
+                message=f"{item.get('title', 'Live class')} schedule/details were updated.",
+                meta={"live_class_id": live_class_id, "join_url": item.get("join_url", "")},
+            )
     return as_dict(item)
 
 
@@ -442,6 +512,18 @@ async def cancel_live_class(
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Live class not found")
+    cancelled = await db.live_classes.find_one({"_id": ObjectId(live_class_id), "tenant_id": tenant_id})
+    if cancelled:
+        recipients = {cancelled.get("instructor_id"), *(cancelled.get("attendee_ids") or [])}
+        recipients = [uid for uid in recipients if uid]
+        if recipients:
+            await _create_user_notifications(
+                tenant_id=tenant_id,
+                user_ids=recipients,
+                title="Live class cancelled",
+                message=f"{cancelled.get('title', 'A live class')} has been cancelled.",
+                meta={"live_class_id": live_class_id},
+            )
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.cancelled", "data": {"id": live_class_id}})
     return {"message": "Live class cancelled"}
 
@@ -452,6 +534,17 @@ async def create_enrollment(payload: EnrollmentIn, tenant_id: str = Depends(get_
     data = payload.model_dump() | {"tenant_id": tenant_id, "created_at": now, "updated_at": now}
     res = await db.enrollments.insert_one(data)
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "enrollment.created", "data": data})
+    admin_ids = await _tenant_user_ids(
+        tenant_id,
+        roles=[Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value, Role.INSTRUCTOR.value],
+    )
+    await _create_user_notifications(
+        tenant_id=tenant_id,
+        user_ids=[payload.student_id, *admin_ids],
+        title="Enrollment update",
+        message="A new enrollment has been completed successfully.",
+        meta={"course_id": payload.course_id, "student_id": payload.student_id},
+    )
     return inserted_response(data, res.inserted_id)
 
 
@@ -469,7 +562,7 @@ async def list_enrollments(
 
 
 @router.get("/dashboard/admin")
-async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN))):
+async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUB_ADMIN))):
     students = await db.users.count_documents({"tenant_id": tenant_id, "role": "student"})
     instructors = await db.users.count_documents({"tenant_id": tenant_id, "role": "instructor"})
     courses = await db.courses.count_documents({"tenant_id": tenant_id})
@@ -590,6 +683,14 @@ async def create_event(
     data = payload.model_dump() | {"tenant_id": tenant_id, "created_at": now, "updated_at": now}
     res = await db.events.insert_one(data)
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "event.created", "data": {"title": data["title"]}})
+    recipient_ids = await _tenant_user_ids(tenant_id)
+    await _create_user_notifications(
+        tenant_id=tenant_id,
+        user_ids=recipient_ids,
+        title="New school event",
+        message=f"{data['title']} has been announced.",
+        meta={"event_id": str(res.inserted_id), "starts_at": data["starts_at"].isoformat()},
+    )
     return inserted_response(data, res.inserted_id)
 
 
@@ -601,20 +702,41 @@ async def list_events(tenant_id: str = Depends(get_tenant_id), skip: int = 0, li
 @router.post("/notifications")
 async def create_notification(payload: NotificationIn, tenant_id: str = Depends(get_tenant_id)):
     now = datetime.now(timezone.utc)
-    data = payload.model_dump() | {"tenant_id": tenant_id, "read": False, "created_at": now}
+    data = payload.model_dump() | {"tenant_id": tenant_id, "read": False, "created_at": now, "updated_at": now}
     res = await db.notifications.insert_one(data)
     await ws_manager.broadcast(f"user:{payload.user_id}", {"type": "notification", "data": data})
+    await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "notification.created", "data": data})
+    if ObjectId.is_valid(payload.user_id):
+        recipient = await db.users.find_one({"_id": ObjectId(payload.user_id), "tenant_id": tenant_id}, {"email": 1})
+        if recipient and recipient.get("email"):
+            await send_transactional_email(
+                str(recipient.get("email")),
+                f"{settings.app_name}: {payload.title}",
+                payload.message,
+            )
     return inserted_response(data, res.inserted_id)
 
 
 @router.get("/notifications")
 async def list_notifications(user=Depends(get_current_user), skip: int = 0, limit: int = 100):
-    return await paged(db.notifications, {"user_id": user["sub"]}, "created_at", -1, skip, limit)
+    role = user.get("role")
+    tenant_id = user.get("tenant_id")
+    if role in {Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value}:
+        query = {"tenant_id": tenant_id} if tenant_id else {"user_id": user["sub"]}
+    else:
+        query = {"user_id": user["sub"]}
+    return await paged(db.notifications, query, "created_at", -1, skip, limit)
 
 
 @router.patch("/notifications/read-all")
 async def mark_notifications_read(user=Depends(get_current_user)):
-    await db.notifications.update_many({"user_id": user["sub"], "read": False}, {"$set": {"read": True}})
+    role = user.get("role")
+    tenant_id = user.get("tenant_id")
+    if role in {Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value} and tenant_id:
+        query = {"tenant_id": tenant_id, "read": False}
+    else:
+        query = {"user_id": user["sub"], "read": False}
+    await db.notifications.update_many(query, {"$set": {"read": True, "updated_at": datetime.now(timezone.utc)}})
     return {"message": "Marked all as read"}
 
 
@@ -712,6 +834,14 @@ async def verify_payment(payload: RazorpayVerifyIn, tenant_id: str = Depends(get
     await ws_manager.broadcast(
         f"tenant:{tenant_id}",
         {"type": "payment.captured", "data": {"amount": payment["amount"], "user_id": user["sub"]}},
+    )
+    admin_ids = await _tenant_user_ids(tenant_id, roles=[Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value])
+    await _create_user_notifications(
+        tenant_id=tenant_id,
+        user_ids=[payment.get("user_id", ""), *admin_ids],
+        title="Payment successful",
+        message=f"Payment of INR {payment['amount']} was captured successfully.",
+        meta={"order_id": payload.razorpay_order_id, "payment_id": payload.razorpay_payment_id},
     )
     return {"message": "Payment verified"}
 

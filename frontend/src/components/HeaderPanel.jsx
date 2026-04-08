@@ -81,6 +81,7 @@ const getPageTitle = (pathname) => {
 const roleLabelMap = {
   super_admin: 'Super Admin',
   admin: 'Institute Owner',
+  sub_admin: 'Sub Admin',
   instructor: 'Lead Instructor',
   student: 'Learner',
 }
@@ -88,6 +89,7 @@ const roleLabelMap = {
 const panelLabelMap = {
   super_admin: 'Super Admin Panel',
   admin: 'Admin Panel',
+  sub_admin: 'Admin Panel',
   instructor: 'Instructor Panel',
   student: 'Student Panel',
 }
@@ -130,7 +132,7 @@ export default function HeaderPanel({ onMenuToggle }) {
   let profilePath = '/profile'
   let notificationPath = ''
   if (resolvedRole === 'super_admin') profilePath = '/superadmin/profile'
-  else if (resolvedRole === 'admin') {
+  else if (resolvedRole === 'admin' || resolvedRole === 'sub_admin') {
     profilePath = '/admin/profile'
     notificationPath = '/admin/notification'
   } else if (resolvedRole === 'instructor') {

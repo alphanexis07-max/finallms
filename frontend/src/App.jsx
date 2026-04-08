@@ -7,6 +7,7 @@ import AdminSignup from './components/AdminSignup'
 import InstructorSignup from './components/InstructorSignup'
 import SuperAdminSignup from './components/SuperAdminSignup'
 import ForgetPassword from './components/forgetPassword'
+import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
 import Features from './pages/Features'
 import Pricing from './pages/Pricing'
@@ -81,6 +82,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
         <Route path="/superadmin-signup" element={<SuperAdminSignup />} />
         <Route path="/admin-signup" element={<AdminSignup />} />
@@ -96,7 +98,7 @@ function App() {
           <Route path="platform-settings" element={<SuperAdminSettings />} />
           <Route path="profile" element={<SuperAdminProfile />} />
         </Route>
-        <Route path="/admin" element={<ProtectedPanel allowedRoles={['admin']}><AdminLayout /></ProtectedPanel>}>
+        <Route path="/admin" element={<ProtectedPanel allowedRoles={['admin', 'sub_admin']}><AdminLayout /></ProtectedPanel>}>
           <Route index element={<AdminDashboard />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="course-management" element={<AdminCourseManagement />} />

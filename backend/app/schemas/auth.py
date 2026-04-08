@@ -20,3 +20,17 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: Role
     tenant_id: str | None = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8, max_length=72)
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    email: str

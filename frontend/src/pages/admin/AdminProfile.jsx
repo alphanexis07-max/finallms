@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Search, Upload, Bell, Settings, Shield, Mail, Globe, Save, X, 
   Users, BookOpen, Wallet, BarChart3, GraduationCap, Plus, 
   Trash2, Edit2, MoreVertical, CheckCircle, AlertCircle, 
-  UserPlus, UserCog, Eye, Lock, Unlock 
+  UserPlus, UserCog, Eye, Lock, Unlock, Copy
 } from "lucide-react";
+import { api } from "../../lib/api";
 
 const Avatar = ({ name, size = "md" }) => {
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2);
@@ -149,7 +150,7 @@ const SubAdminCard = ({ admin, onEdit, onDelete, onToggleStatus, currentUser }) 
 };
 
 // Create/Edit Sub-admin Modal
-const SubAdminModal = ({ isOpen, onClose, onSave, editingAdmin, currentUser }) => {
+const SubAdminModal = ({ isOpen, onClose, onSave, editingAdmin, currentUser, saving = false }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -273,14 +274,14 @@ const SubAdminModal = ({ isOpen, onClose, onSave, editingAdmin, currentUser }) =
           </button>
           <button 
             onClick={handleSubmit}
-            disabled={!formData.name || !formData.email}
+            disabled={!formData.name || !formData.email || saving}
             className={`rounded-[6px] px-4 py-2 text-[13px] font-semibold transition-colors ${
-              formData.name && formData.email
+              formData.name && formData.email && !saving
                 ? 'bg-[#5b3df6] text-white hover:bg-[#4a2ed8]'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {editingAdmin ? 'Save Changes' : 'Create Sub-admin'}
+            {saving ? 'Saving...' : (editingAdmin ? 'Save Changes' : 'Create Sub-admin')}
           </button>
         </div>
       </div>
@@ -288,8 +289,85 @@ const SubAdminModal = ({ isOpen, onClose, onSave, editingAdmin, currentUser }) =
   );
 };
 
+// Credentials Display Modal
+const CredentialsModal = ({ isOpen, onClose, credentials }) => {
+  const [copied, setCopied] = useState(false)
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (!isOpen || !credentials) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="relative w-full max-w-md bg-white rounded-[16px] shadow-xl">
+        <div className="p-6 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+            <CheckCircle className="h-6 w-6 text-emerald-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-[#0f172a] mb-2">Sub-admin Created Successfully!</h3>
+          <p className="text-[13px] text-[#64748b] mb-6">
+            Share these login credentials with the sub-admin. They can login directly from the login page.
+          </p>
+          
+          <div className="bg-[#f8fafc] rounded-[8px] p-4 mb-4 text-left border border-black/[0.08]">
+            <div className="mb-4">
+              <p className="text-[11px] text-[#94a3b8] mb-1">Email</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[13px] font-mono text-[#0f172a] flex-1 break-all">{credentials.email}</p>
+                <button
+                  onClick={() => copyToClipboard(credentials.email)}
+                  className="p-2 rounded-[6px] hover:bg-white transition-colors"
+                  title="Copy email"
+                >
+                  <Copy className="h-4 w-4 text-[#5b3df6]" />
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] text-[#94a3b8] mb-1">Temporary Password</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[13px] font-mono text-[#0f172a] flex-1 break-all">{credentials.password}</p>
+                <button
+                  onClick={() => copyToClipboard(credentials.password)}
+                  className="p-2 rounded-[6px] hover:bg-white transition-colors"
+                  title="Copy password"
+                >
+                  <Copy className="h-4 w-4 text-[#5b3df6]" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 rounded-[8px] p-3 mb-6 text-left border border-amber-200">
+            <p className="text-[11px] text-amber-800">
+              <span className="font-semibold">Important:</span> The sub-admin must change this password immediately after first login for security.
+            </p>
+          </div>
+
+          {copied && (
+            <div className="mb-4 text-[12px] text-emerald-600 font-medium">
+              ✓ Copied to clipboard!
+            </div>
+          )}
+          
+          <button
+            onClick={onClose}
+            className="w-full rounded-[6px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#4a2ed8]"
+          >
+            Got it, thanks!
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Delete Confirmation Modal
-const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, adminName }) => {
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, adminName, saving = false }) => {
   if (!isOpen) return null;
 
   return (
@@ -305,11 +383,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, adminName }) => {
             This action cannot be undone.
           </p>
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 rounded-[6px] border border-black/[0.08] px-4 py-2 text-[13px] font-medium text-[#64748b] hover:bg-gray-50">
+            <button onClick={onClose} disabled={saving} className="flex-1 rounded-[6px] border border-black/[0.08] px-4 py-2 text-[13px] font-medium text-[#64748b] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
               Cancel
             </button>
-            <button onClick={onConfirm} className="flex-1 rounded-[6px] bg-red-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-red-700">
-              Delete
+            <button onClick={onConfirm} disabled={saving} className="flex-1 rounded-[6px] bg-red-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+              {saving ? 'Deleting...' : 'Delete'}
             </button>
           </div>
         </div>
@@ -320,101 +398,189 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, adminName }) => {
 
 // Main Component
 export default function ProfileSettings() {
-  // Current logged-in user (in real app, this would come from auth context)
-  const [currentUser] = useState({
-    id: 'owner_1',
-    name: 'Rahul Mehta',
-    email: 'rahul.mehta@lmsinstitute.com',
-    role: 'owner',
-    instituteId: 'inst_001',
-  });
+  // Real-world integration via APIs
+  const [currentUser, setCurrentUser] = useState(null)
+  const [subAdmins, setSubAdmins] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  // Sub-admins state - each sub-admin is linked to the admin who created them
-  const [subAdmins, setSubAdmins] = useState([
-    {
-      id: 'sub_1',
-      name: 'Priya Sharma',
-      email: 'priya.sharma@institute.com',
-      role: 'Sub-admin',
-      permissions: ['students', 'instructors', 'payments'],
-      status: 'active',
-      createdBy: 'owner_1',
-      createdByName: 'Rahul Mehta',
-      createdAt: '2024-03-15',
-      lastLogin: '2024-03-20',
-    },
-    {
-      id: 'sub_2',
-      name: 'Amit Kumar',
-      email: 'amit.kumar@institute.com',
-      role: 'Manager',
-      permissions: ['students', 'instructors', 'courses', 'reports'],
-      status: 'active',
-      createdBy: 'owner_1',
-      createdByName: 'Rahul Mehta',
-      createdAt: '2024-03-10',
-      lastLogin: '2024-03-19',
-    },
-    {
-      id: 'sub_3',
-      name: 'Neha Gupta',
-      email: 'neha.gupta@institute.com',
-      role: 'Viewer',
-      permissions: ['students', 'reports'],
-      status: 'inactive',
-      createdBy: 'owner_1',
-      createdByName: 'Rahul Mehta',
-      createdAt: '2024-03-05',
-      lastLogin: '2024-03-15',
-    },
-  ]);
+  useEffect(() => {
+    let cancelled = false
+
+    const loadData = async () => {
+      setLoading(true)
+      setError('')
+
+      try {
+        const [profile, usersList] = await Promise.all([
+          api('/auth/me'),
+          api('/lms/users?role=sub_admin&limit=100').catch(() => ({ items: [] })),
+        ])
+
+        if (cancelled) return
+
+        setCurrentUser(profile || null)
+        
+        // Format sub-admins data from API response
+        const admins = Array.isArray(usersList.items) ? usersList.items : []
+        setSubAdmins(admins.map(admin => ({
+          id: admin._id || admin.id,
+          name: admin.full_name || admin.name || '',
+          email: admin.email || '',
+          role: admin.role || 'Sub-admin',
+          permissions: admin.permissions || ['students', 'instructors'],
+          status: admin.is_active ? 'active' : 'inactive',
+          createdBy: admin.created_by || profile?._id || 'unknown',
+          createdByName: admin.created_by_name || profile?.full_name || 'Owner',
+          createdAt: admin.created_at ? new Date(admin.created_at).toLocaleDateString() : '-',
+          lastLogin: admin.last_login ? new Date(admin.last_login).toLocaleDateString() : null,
+        })))
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || 'Unable to load profile data.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadData()
+
+    return () => {
+      cancelled = true
+    }
+  }, []);
 
   const [prefs, setPrefs] = useState({
     email: true,
     mobile: true,
     quiet: false,
-  });
+  })
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [editingAdmin, setEditingAdmin] = useState(null);
-  const [deletingAdminId, setDeletingAdminId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [editingAdmin, setEditingAdmin] = useState(null)
+  const [deletingAdminId, setDeletingAdminId] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [credentialsModal, setCredentialsModal] = useState(null) // { email, password }
 
-  const togglePref = (key) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
+  const togglePref = (key) => setPrefs((p) => ({ ...p, [key]: !p[key] }))
 
-  // Filter sub-admins to only show those created by current user
-  const mySubAdmins = subAdmins.filter(admin => admin.createdBy === currentUser.id);
+  // Filter sub-admins to only show those manageable by current user
+  const mySubAdmins = subAdmins
 
-  const handleCreateSubAdmin = (newAdmin) => {
-    const adminWithId = {
-      ...newAdmin,
-      id: `sub_${Date.now()}`,
-      status: 'active',
-      lastLogin: null,
-    };
-    setSubAdmins([...subAdmins, adminWithId]);
-  };
+  const handleCreateSubAdmin = async (newAdmin) => {
+    setSaving(true)
+    setError('')
+    setSuccess('')
 
-  const handleEditSubAdmin = (updatedAdmin) => {
-    setSubAdmins(subAdmins.map(admin => 
-      admin.id === updatedAdmin.id ? { ...admin, ...updatedAdmin } : admin
-    ));
-    setEditingAdmin(null);
-  };
+    try {
+      const response = await api('/lms/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          full_name: newAdmin.full_name || newAdmin.name,
+          email: newAdmin.email,
+          role: 'sub_admin',
+          password: 'ChangeMe@123', // Temporary - user will reset
+        }),
+      })
+      
+      const adminWithId = {
+        id: response._id || response.id,
+        name: response.full_name || response.name,
+        email: response.email,
+        role: response.role || 'Sub-admin',
+        permissions: newAdmin.permissions || ['students', 'instructors'],
+        status: response.is_active ? 'active' : 'inactive',
+        createdBy: currentUser?._id || 'owner',
+        createdByName: currentUser?.full_name || 'Owner',
+        createdAt: new Date().toLocaleDateString(),
+        lastLogin: null,
+      }
+      
+      setSubAdmins([...subAdmins, adminWithId])
+      setCredentialsModal({ email: newAdmin.email, password: 'ChangeMe@123' })
+      setSuccess('Sub-admin created successfully.')
+      setSaving(false)
+    } catch (err) {
+      setError(err?.message || 'Unable to create sub-admin.')
+      setSaving(false)
+    }
+  }
 
-  const handleDeleteSubAdmin = () => {
-    setSubAdmins(subAdmins.filter(admin => admin.id !== deletingAdminId));
-    setIsDeleteModalOpen(false);
-    setDeletingAdminId(null);
-  };
+  const handleEditSubAdmin = async (updatedAdmin) => {
+    setSaving(true)
+    setError('')
+    setSuccess('')
 
-  const handleToggleStatus = (adminId) => {
-    setSubAdmins(subAdmins.map(admin =>
-      admin.id === adminId 
-        ? { ...admin, status: admin.status === 'active' ? 'inactive' : 'active' }
-        : admin
-    ));
-  };
+    try {
+      await api(`/lms/users/${updatedAdmin.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          full_name: updatedAdmin.name,
+          email: updatedAdmin.email,
+          role: updatedAdmin.role.toLowerCase().replace(' ', '_'),
+          is_active: updatedAdmin.status === 'active',
+        }),
+      })
+
+      setSubAdmins(subAdmins.map(admin => 
+        admin.id === updatedAdmin.id ? updatedAdmin : admin
+      ))
+      setEditingAdmin(null)
+      setSuccess('Sub-admin updated successfully.')
+      setSaving(false)
+    } catch (err) {
+      setError(err?.message || 'Unable to update sub-admin.')
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteSubAdmin = async () => {
+    setSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      await api(`/lms/users/${deletingAdminId}`, { method: 'DELETE' })
+      setSubAdmins(subAdmins.filter(admin => admin.id !== deletingAdminId))
+      setIsDeleteModalOpen(false)
+      setDeletingAdminId(null)
+      setSuccess('Sub-admin deleted successfully.')
+      setSaving(false)
+    } catch (err) {
+      setError(err?.message || 'Unable to delete sub-admin.')
+      setSaving(false)
+    }
+  }
+
+  const handleToggleStatus = async (adminId) => {
+    const admin = subAdmins.find(a => a.id === adminId)
+    if (!admin) return
+
+    setSaving(true)
+    setError('')
+
+    try {
+      await api(`/lms/users/${adminId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          is_active: admin.status === 'inactive', // Toggle
+        }),
+      })
+
+      setSubAdmins(subAdmins.map(a =>
+        a.id === adminId 
+          ? { ...a, status: a.status === 'active' ? 'inactive' : 'active' }
+          : a
+      ))
+      setSaving(false)
+    } catch (err) {
+      setError(err?.message || 'Unable to toggle status.')
+      setSaving(false)
+    }
+  }
 
   const openEditModal = (admin) => {
     setEditingAdmin(admin);
@@ -434,17 +600,26 @@ export default function ProfileSettings() {
   return (
     <div className="min-h-full bg-[#F7FAFD]">
       <div className="flex flex-col gap-[24px] h-full p-[28px]">
+        {error && <div className="mb-4 rounded-[8px] bg-red-50 p-4 text-[13px] text-red-600">{error}</div>}
+        {success && <div className="mb-4 rounded-[8px] bg-emerald-50 p-4 text-[13px] text-emerald-700">{success}</div>}
+
+        {loading ? (
+          <div className="rounded-[8px] bg-white p-12 text-center text-[#64748b]">Loading profile...</div>
+        ) : !currentUser ? (
+          <div className="rounded-[8px] bg-white p-12 text-center text-[#64748b]">Unable to load profile</div>
+        ) : (
+          <>
         {/* Hero card */}
         <div className="border border-black/[0.08] border-solid flex flex-col items-start pb-[23px] pt-[25px] px-[25px] relative rounded-[8px] shrink-0 w-full bg-gradient-to-br from-white to-[#e8f5ff]">
           <div className="flex items-center justify-between w-full flex-wrap gap-4">
             <div className="flex items-center gap-[16px]">
-              <Avatar name={currentUser.name} size="md" />
+              <Avatar name={currentUser.full_name || currentUser.name || 'Admin'} size="md" />
               <div>
                 <div className="flex items-center gap-[8px] mb-[8px] flex-wrap">
-                  <Badge color="blue">👑 Owner account</Badge>
+                  <Badge color="blue">👑 {currentUser.role === 'admin' ? 'Institute Admin' : 'Owner account'}</Badge>
                   <Badge color="green">🎓 Institute Admin</Badge>
                 </div>
-                <h2 className="text-[28px] font-bold text-[#0f172a]">{currentUser.name}</h2>
+                <h2 className="text-[28px] font-bold text-[#0f172a]">{currentUser.full_name || currentUser.name || 'Admin'}</h2>
                 <p className="text-[14px] text-[#94a3b8] mt-[4px] max-w-md">
                   Manage your personal details, security, notification preferences, and sub-admin accounts.
                 </p>
@@ -520,9 +695,9 @@ export default function ProfileSettings() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-[16px] w-full">
             {[
               { label: "Managed teams", value: mySubAdmins.length.toString() },
-              { label: "Institute role", value: "Owner" },
+              { label: "Institute role", value: currentUser.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : "Admin" },
               { label: "Permissions", value: "Full access" },
-              { label: "Last updated", value: "2d ago" },
+              { label: "Last updated", value: currentUser.updated_at ? new Date(currentUser.updated_at).toLocaleDateString() : "-" },
             ].map(({ label, value }) => (
               <div key={label} className="bg-[#f8fafc] rounded-[8px] p-[14px] border border-black/[0.08]">
                 <p className="text-[11px] text-[#94a3b8] mb-[4px]">{label}</p>
@@ -547,17 +722,17 @@ export default function ProfileSettings() {
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-[12px] w-full">
-              <InfoField label="Full name" value={currentUser.name} />
-              <InfoField label="Role" value="Institute Owner" />
-              <InfoField label="Email address" value={currentUser.email} />
-              <InfoField label="Phone number" value="+91 98765 43210" />
-              <InfoField label="Timezone" value="GMT+5:30 · India Standard Time" />
-              <InfoField label="Language" value="English" />
+              <InfoField label="Full name" value={currentUser.full_name || currentUser.name || '-'} />
+              <InfoField label="Role" value={currentUser.role ? currentUser.role.replace('_', ' ').charAt(0).toUpperCase() + currentUser.role.replace('_', ' ').slice(1) : 'Admin'} />
+              <InfoField label="Email address" value={currentUser.email || '-'} />
+              <InfoField label="Phone number" value={currentUser.phone || currentUser.mobile || currentUser.phone_number || '-'} />
+              <InfoField label="Timezone" value={currentUser.timezone || 'GMT+5:30 · India Standard Time'} />
+              <InfoField label="Language" value={currentUser.language || 'English'} />
             </div>
             <div className="bg-[#f8fafc] rounded-[8px] p-[12px] border border-black/[0.08] w-full">
               <p className="text-[11px] text-[#94a3b8] mb-[4px]">Bio</p>
               <p className="text-[13px] text-[#0f172a] leading-relaxed">
-                Leading operations, admissions, and curriculum growth for the institute. Focused on scaling student success and instructor quality.
+                {currentUser.bio || 'No bio provided yet.'}
               </p>
             </div>
           </div>
@@ -612,27 +787,34 @@ export default function ProfileSettings() {
                 <p className="text-[13px] text-[#94a3b8] mt-[4px]">A quick view of your latest account events</p>
               </div>
               <div className="flex flex-col w-full">
-                <ActivityItem
-                  icon="→"
-                  title="New login from Mumbai"
-                  subtitle="Today · 9:12 AM · Chrome on macOS"
-                  badge="Approved"
-                  badgeColor="green"
-                />
-                <ActivityItem
-                  icon="🔒"
-                  title="2-factor check completed"
-                  subtitle="Yesterday · 7:48 PM · Authenticator code accepted"
-                  badge="Logged"
-                  badgeColor="slate"
-                />
-                <ActivityItem
-                  icon="👥"
-                  title={`New sub-admin "${mySubAdmins[mySubAdmins.length-1]?.name || '...'}" added`}
-                  subtitle={mySubAdmins.length > 0 ? `${mySubAdmins[mySubAdmins.length-1].createdAt}` : 'No recent additions'}
-                  badge="Complete"
-                  badgeColor="slate"
-                />
+                {mySubAdmins.length > 0 ? (
+                  <>
+                    <ActivityItem
+                      icon="→"
+                      title={`New sub-admin "${mySubAdmins[mySubAdmins.length-1]?.name || 'User'}" added`}
+                      subtitle={`${mySubAdmins[mySubAdmins.length-1].createdAt || 'Recently'}`}
+                      badge="Complete"
+                      badgeColor="slate"
+                    />
+                    {mySubAdmins.length > 1 && (
+                      <ActivityItem
+                        icon="👥"
+                        title={`Total sub-admins: ${mySubAdmins.length}`}
+                        subtitle="Manage your team from the sub-admin section"
+                        badge="Active"
+                        badgeColor="green"
+                      />
+                    )}
+                  </>
+                ) : (
+                  <ActivityItem
+                    icon="👥"
+                    title="No sub-admins yet"
+                    subtitle="Create your first sub-admin to distribute admin tasks"
+                    badge="Pending"
+                    badgeColor="slate"
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -673,18 +855,21 @@ export default function ProfileSettings() {
             <span className="text-white text-[14px] font-medium">Save changes</span>
           </button>
         </div>
+          </>
+        )}
       </div>
 
       {/* Modals */}
       <SubAdminModal 
         isOpen={isModalOpen}
         onClose={() => {
-          setIsModalOpen(false);
-          setEditingAdmin(null);
+          setIsModalOpen(false)
+          setEditingAdmin(null)
         }}
         onSave={editingAdmin ? handleEditSubAdmin : handleCreateSubAdmin}
         editingAdmin={editingAdmin}
         currentUser={currentUser}
+        saving={saving}
       />
       
       <DeleteConfirmModal 
@@ -692,6 +877,13 @@ export default function ProfileSettings() {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteSubAdmin}
         adminName={getDeletingAdminName()}
+        saving={saving}
+      />
+      
+      <CredentialsModal
+        isOpen={credentialsModal !== null}
+        onClose={() => setCredentialsModal(null)}
+        credentials={credentialsModal}
       />
     </div>
   );

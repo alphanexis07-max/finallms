@@ -24,6 +24,15 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173"
     platform_commission_percent: float = 20.0
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = ""
+    frontend_url: str = "http://localhost:5173"
+
+    @property
+    def secret_key(self) -> str:
+        """Alias for jwt_secret for compatibility"""
+        return self.jwt_secret
+
 
 
 settings = Settings()

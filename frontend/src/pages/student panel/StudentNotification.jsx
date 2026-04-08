@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CheckCheck, BookOpen, Calendar, Award, CreditCard } from 'lucide-react'
+import { Search, Bell, CheckCheck, Filter, BookOpen, Calendar, Award, CreditCard } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
+
+const AVATAR = 'https://www.figma.com/api/mcp/asset/5b24609b-97ad-4bea-af20-b4f4df404b75'
 
 function iconFor(type) {
   if (type === 'class') return Calendar
@@ -40,7 +42,7 @@ export default function Notification() {
   const filtered = useMemo(() => {
     if (tab === 'unread') return items.filter((x) => x.unread)
     return items
-  }, [tab, items])
+  }, [tab])
 
   return (
     <div className="min-h-full bg-[#f8fbff]">

@@ -84,7 +84,7 @@ export async function api(path, options = {}) {
 
 export function getDashboardPathByRole(role) {
   if (role === 'super_admin') return '/superadmin'
-  if (role === 'admin') return '/admin'
+  if (role === 'admin' || role === 'sub_admin') return '/admin'
   if (role === 'instructor') return '/instructor'
   return '/student-panel'
 }
