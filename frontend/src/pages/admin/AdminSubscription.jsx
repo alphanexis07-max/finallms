@@ -9,11 +9,14 @@ export default function AdminSubscription() {
   const role = localStorage.getItem('lms_role')
 
   const canCreatePlan = role === 'super_admin'
+  const canReadPlatformSettings = role === 'super_admin'
 
   const load = async () => {
     const [p, s] = await Promise.all([
       api('/lms/plans').catch(() => ({ items: [] })),
-      api('/lms/platform/settings').catch(() => null),
+      canReadPlatformSettings
+        ? api('/lms/platform/settings').catch(() => null)
+        : Promise.resolve(null),
     ])
     setPlans(p.items || [])
     setCommission(s?.commission_percent ?? null)

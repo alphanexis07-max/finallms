@@ -17,6 +17,35 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/api'
 
+function getYoutubeVideoId(url) {
+  if (!url) return ''
+
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.replace(/^www\./, '')
+
+    if (host === 'youtu.be') {
+      return parsed.pathname.split('/').filter(Boolean)[0] || ''
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const fromQuery = parsed.searchParams.get('v')
+      if (fromQuery) return fromQuery
+
+      const parts = parsed.pathname.split('/').filter(Boolean)
+      if (parts[0] === 'embed' || parts[0] === 'shorts') {
+        return parts[1] || ''
+      }
+    }
+  } catch {
+    // Fall back to simple parsing for non-standard strings.
+    const cleaned = String(url).trim().replace(/[?#].*$/, '')
+    return cleaned.split('/').filter(Boolean).pop() || ''
+  }
+
+  return ''
+}
+
 // ─────────────────────────────────────────────
 // SMALL SHARED COMPONENTS
 // ─────────────────────────────────────────────
@@ -437,6 +466,11 @@ export default function AdminCourseManagement() {
     return matchSearch && matchFilter
   })
 
+  const getYoutubeThumbnail = (url) => {
+    const videoId = getYoutubeVideoId(url)
+    return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : ''
+  }
+
   const stats = {
     total: courses.length,
     paid: courses.filter(c => c.course_type === 'paid').length,
@@ -524,7 +558,7 @@ export default function AdminCourseManagement() {
               <div className="relative h-40 bg-gradient-to-br from-[#5b3df6]/20 to-[#ede9ff] flex items-center justify-center">
                 {course.youtube_url ? (
                   <img 
-                    src={`https://img.youtube.com/vi/${course.youtube_url.split('v=')[1]?.split('&')[0] || course.youtube_url.split('/').pop()}/mqdefault.jpg`} 
+                    src={getYoutubeThumbnail(course.youtube_url)}
                     alt={course.title} 
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=400&q=80' }}

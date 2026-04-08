@@ -53,7 +53,22 @@ export async function api(path, options = {}) {
       runtimeApiBase = base
       localStorage.setItem('lms_api_base', base)
       if (!response.ok) {
-        throw new Error(data.detail || 'Request failed')
+        let message = 'Request failed'
+        if (typeof data?.detail === 'string') {
+          message = data.detail
+        } else if (Array.isArray(data?.detail)) {
+          message = data.detail
+            .map((item) => {
+              if (typeof item === 'string') return item
+              if (item?.msg && Array.isArray(item?.loc)) return `${item.loc.join('.')} - ${item.msg}`
+              if (item?.msg) return item.msg
+              return JSON.stringify(item)
+            })
+            .join('; ')
+        } else if (data?.detail && typeof data.detail === 'object') {
+          message = data.detail.msg || JSON.stringify(data.detail)
+        }
+        throw new Error(message)
       }
       return data
     } catch (error) {

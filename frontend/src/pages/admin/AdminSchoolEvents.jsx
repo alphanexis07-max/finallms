@@ -8,6 +8,7 @@ export default function AdminSchoolEvents() {
   const [events, setEvents] = useState([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
@@ -20,6 +21,8 @@ export default function AdminSchoolEvents() {
       .then((res) => setEvents(res.items || []))
       .catch(() => setEvents([]))
 
+  const getEventDate = (event) => event?.starts_at || event?.date || null
+
   useEffect(() => {
     loadEvents()
   }, [])
@@ -31,8 +34,8 @@ export default function AdminSchoolEvents() {
   const upcoming = useMemo(
     () =>
       events
-        .filter((e) => e.date)
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .filter((e) => getEventDate(e))
+        .sort((a, b) => new Date(getEventDate(a)) - new Date(getEventDate(b)))
         .slice(0, 12),
     [events],
   )
@@ -41,18 +44,21 @@ export default function AdminSchoolEvents() {
     if (!eventForm.title.trim() || !eventForm.date) return
     try {
       setLoading(true)
+      setError('')
       await api('/lms/events', {
         method: 'POST',
         body: JSON.stringify({
           title: eventForm.title.trim(),
           description: eventForm.description.trim(),
-          date: new Date(eventForm.date).toISOString(),
+          starts_at: new Date(eventForm.date).toISOString(),
           location: eventForm.location.trim(),
         }),
       })
       setShowCreateModal(false)
       setEventForm({ title: '', description: '', date: '', location: '' })
       loadEvents()
+    } catch (err) {
+      setError(err?.message || 'Unable to create event.')
     } finally {
       setLoading(false)
     }
@@ -77,6 +83,11 @@ export default function AdminSchoolEvents() {
       </section>
 
       <section className="mt-4 rounded-[8px] border border-black/[0.08] bg-white p-5">
+        {error && (
+          <div className="mb-3 rounded-[6px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+            {error}
+          </div>
+        )}
         <div className="mb-3 text-[14px] font-semibold text-[#0f172a]">
           Upcoming Events ({upcoming.length})
         </div>
@@ -88,11 +99,11 @@ export default function AdminSchoolEvents() {
               <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-[#94a3b8]">
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {event.date ? new Date(event.date).toLocaleDateString() : '-'}
+                  {getEventDate(event) ? new Date(getEventDate(event)).toLocaleDateString() : '-'}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {event.date ? new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                  {getEventDate(event) ? new Date(getEventDate(event)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3 w-3" />

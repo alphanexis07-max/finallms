@@ -8,8 +8,17 @@ export default function useRealtime(room, onMessage) {
   useEffect(() => {
     if (!room) return undefined
     let ws
-    const timer = window.setTimeout(() => {
+    let reconnectTimer
+    let manuallyClosed = false
+    let attempts = 0
+
+    const connect = () => {
       ws = createRoomSocket(room)
+
+      ws.onopen = () => {
+        attempts = 0
+      }
+
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data)
@@ -18,12 +27,33 @@ export default function useRealtime(room, onMessage) {
           // ignore malformed messages
         }
       }
-    }, 0)
+
+      ws.onclose = () => {
+        if (manuallyClosed) return
+        const delayMs = Math.min(1000 * (2 ** attempts), 10000)
+        attempts += 1
+        reconnectTimer = window.setTimeout(connect, delayMs)
+      }
+
+      ws.onerror = () => {
+        // Let the browser/socket lifecycle emit close naturally.
+      }
+    }
+
+    connect()
 
     return () => {
-      window.clearTimeout(timer)
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      manuallyClosed = true
+      window.clearTimeout(reconnectTimer)
+      if (!ws) return
+
+      if (ws.readyState === WebSocket.OPEN) {
         ws.close()
+      }
+
+      if (ws.readyState === WebSocket.CONNECTING) {
+        // Avoid forcing close during handshake, which triggers noisy console warnings.
+        ws.onopen = () => ws.close()
       }
     }
   }, [room])
