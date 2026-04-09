@@ -6,15 +6,16 @@ import logging
 import time
 import uuid
 from app.core.config import settings
-from app.db.mongo import connect_db, close_db
+from app.db.mongo import connect_db, close_db, ensure_indexes
 from app.routers.auth import router as auth_router
 from app.routers.lms import router as lms_router
 from app.routers.ws import router as ws_router
-
+from app.routers import instructor
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await connect_db()
+    await ensure_indexes()
     yield
     await close_db()
 
@@ -46,7 +47,8 @@ app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[x.strip() for x in settings.cors_origins.split(",") if x.strip()],
+    # allow_origins=[x.strip() for x in settings.cors_origins.split(",") if x.strip()],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,3 +63,4 @@ async def health():
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(lms_router, prefix=settings.api_prefix)
 app.include_router(ws_router)
+app.include_router(instructor.router, prefix=settings.api_prefix)

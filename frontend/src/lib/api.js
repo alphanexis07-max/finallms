@@ -1,5 +1,6 @@
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
-const FALLBACK_API_BASES = ['http://localhost:8000/api/v1', 'http://localhost:8001/api/v1']
+// const FALLBACK_API_BASES = ['http://localhost:8000/api/v1', 'http://localhost:8001/api/v1']
+const FALLBACK_API_BASES = []
 let runtimeApiBase = localStorage.getItem('lms_api_base') || DEFAULT_API_BASE
 
 function deriveWsBaseFromApi(apiBase) {
@@ -18,7 +19,12 @@ function getWsBase() {
 }
 
 export function getToken() {
-  return localStorage.getItem('lms_token') || ''
+  return (
+    localStorage.getItem('lms_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('access_token') ||
+    ''
+  )
 }
 
 export function setAuthSession(token, role, tenantId) {
@@ -53,22 +59,7 @@ export async function api(path, options = {}) {
       runtimeApiBase = base
       localStorage.setItem('lms_api_base', base)
       if (!response.ok) {
-        let message = 'Request failed'
-        if (typeof data?.detail === 'string') {
-          message = data.detail
-        } else if (Array.isArray(data?.detail)) {
-          message = data.detail
-            .map((item) => {
-              if (typeof item === 'string') return item
-              if (item?.msg && Array.isArray(item?.loc)) return `${item.loc.join('.')} - ${item.msg}`
-              if (item?.msg) return item.msg
-              return JSON.stringify(item)
-            })
-            .join('; ')
-        } else if (data?.detail && typeof data.detail === 'object') {
-          message = data.detail.msg || JSON.stringify(data.detail)
-        }
-        throw new Error(message)
+        throw new Error(data.detail || 'Request failed')
       }
       return data
     } catch (error) {

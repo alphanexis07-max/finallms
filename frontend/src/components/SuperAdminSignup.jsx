@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Shield, Building2, Mail, Lock, User, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { api, getDashboardPathByRole, setAuthSession } from '../lib/api'
 
 const DECORATIVE_IMG = 'https://www.figma.com/api/mcp/asset/ce009895-65be-4c55-8e2c-8114666b793d'
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 const PHONE_REGEX = /^\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{4}$/
+
+function isDuplicateEmailError(error) {
+	return (error?.message || '').toLowerCase().includes('email already exists')
+}
 
 export default function SuperAdminSignup() {
 	const navigate = useNavigate()
@@ -58,31 +62,23 @@ export default function SuperAdminSignup() {
 		if (!isFormValid) return
 		try {
 			setLoading(true)
-			let data
-			try {
-				data = await api('/auth/register', {
-					method: 'POST',
-					body: JSON.stringify({
-						full_name: formData.fullName,
-						email: formData.email,
-						password: formData.password,
-						role: 'super_admin',
-						tenant_id: null,
-					}),
-				})
-			} catch (registerErr) {
-				if ((registerErr?.message || '').toLowerCase().includes('email already exists')) {
-					data = await api('/auth/login', {
-						method: 'POST',
-						body: JSON.stringify({ email: formData.email, password: formData.password }),
-					})
-				} else {
-					throw registerErr
-				}
-			}
+			const data = await api('/auth/register', {
+				method: 'POST',
+				body: JSON.stringify({
+					full_name: formData.fullName.trim(),
+					email: formData.email.trim().toLowerCase(),
+					password: formData.password,
+					role: 'super_admin',
+					tenant_id: null,
+				}),
+			})
 			setAuthSession(data.access_token, data.role, data.tenant_id)
 			navigate(getDashboardPathByRole(data.role))
 		} catch (err) {
+			if (isDuplicateEmailError(err)) {
+				setError('An account already exists for this email. Please sign in instead.')
+				return
+			}
 			setError(err.message || 'Super admin signup failed')
 		} finally {
 			setLoading(false)
@@ -132,6 +128,10 @@ export default function SuperAdminSignup() {
 					<div className="relative flex w-full flex-col rounded-2xl bg-white p-5 shadow-2xl sm:p-8 lg:h-full lg:max-h-[820px] lg:p-10">
 						<h2 className="m-0 text-[#0b1020] text-[30px] leading-[1.15] font-extrabold">Sign up as Super Admin</h2>
 						<p className="mt-2 text-[#6b7480] text-sm">Fill details to set up your super admin account.</p>
+
+						<div className="mt-4 rounded-xl border border-[#dbe4ff] bg-[#f8fbff] px-4 py-3 text-sm text-[#334155]">
+							Already have an account? <Link to="/login" className="font-semibold text-[#5b3df6] hover:underline">Sign in</Link> instead.
+						</div>
 
 						<div className="mt-6 flex-1 overflow-y-auto pr-1">
 						<form onSubmit={handleSubmit} className="flex flex-col gap-4">

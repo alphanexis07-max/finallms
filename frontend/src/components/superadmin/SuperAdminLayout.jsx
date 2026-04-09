@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Shield,
   LayoutDashboard,
@@ -10,8 +10,10 @@ import {
   CreditCard,
   Settings,
   User,
+  LogOut,
 } from 'lucide-react'
 import HeaderPanel from '../../components/HeaderPanel'
+import { clearAuthSession } from '../../lib/api'
 
 const links = [
   { to: '/superadmin', label: 'Overview', end: true, icon: LayoutDashboard },
@@ -26,8 +28,15 @@ const links = [
 
 export default function SuperAdminLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const showProfileNav = location.pathname === '/superadmin/profile'
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+  const handleLogout = () => {
+    clearAuthSession()
+    setIsSidebarOpen(false)
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="flex h-screen w-full min-w-0 overflow-hidden bg-[#f6f8fa] text-[#0f172a]">
@@ -142,6 +151,15 @@ export default function SuperAdminLayout() {
             </div>
             <p className="mt-2 text-[12px] text-[#94a3b8]">82% of quarterly target achieved</p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-[#fecaca] bg-[#fff1f2] px-3 py-2.5 text-sm font-semibold text-[#b91c1c] transition-colors hover:bg-[#ffe4e6]"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
         </div>
       </aside>
 
