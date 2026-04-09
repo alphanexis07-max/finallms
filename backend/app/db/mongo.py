@@ -5,11 +5,12 @@ client: AsyncIOMotorClient | None = None
 db: AsyncIOMotorDatabase | None = None
 
 
-async def connect_db() -> None:
+async def connect_db():
     global client, db
+    print("🔥 CONNECTING TO DB...")
     client = AsyncIOMotorClient(settings.mongo_uri)
     db = client[settings.mongo_db]
-    await ensure_indexes()
+    print("✅ DB CONNECTED")
 
 
 async def close_db() -> None:
@@ -27,3 +28,13 @@ async def ensure_indexes() -> None:
     await db.enrollments.create_index([("tenant_id", 1), ("student_id", 1)])
     await db.payments.create_index([("tenant_id", 1), ("created_at", -1)])
     await db.notifications.create_index([("user_id", 1), ("created_at", -1)])
+
+
+# ✅ ADD THIS
+async def get_database():
+    global db
+    if db is None:
+        await connect_db()
+    if db is None:
+        raise Exception("Database not initialized. connect_db() not called")
+    return db
