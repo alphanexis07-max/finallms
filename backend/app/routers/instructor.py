@@ -3,6 +3,7 @@ from app.schemas.instructor import (
     CourseCreate,
     CourseUpdate,
     QuestionCreate,
+    QuestionUpdate,
     SubmitTest,
     TestCreate,
     TestUpdate,
@@ -108,6 +109,16 @@ async def get_tests(
     return await service.get_tests(db, get_user_id(user))
 
 
+@router.get("/tests/{test_id}")
+async def get_test_by_id(
+    test_id: str,
+    db=Depends(get_database),
+    user=Depends(get_current_user)
+):
+    instructor_required(user)
+    return await service.get_test_by_id(db, test_id, get_user_id(user))
+
+
 # UPDATE TEST (publish also here)
 @router.put("/tests/{test_id}")
 async def update_test(
@@ -119,6 +130,16 @@ async def update_test(
     instructor_required(user)
     return await service.update_test(db, test_id, data, get_user_id(user))
 
+
+@router.delete("/tests/{test_id}")
+async def delete_test(
+    test_id: str,
+    db=Depends(get_database),
+    user=Depends(get_current_user)
+):
+    instructor_required(user)
+    return await service.delete_test(db, test_id, get_user_id(user))
+
 # ADD QUESTION
 @router.post("/questions")
 async def add_question(
@@ -127,7 +148,28 @@ async def add_question(
     user=Depends(get_current_user)
 ):
     instructor_required(user)
-    return await service.add_question(db, data)
+    return await service.add_question(db, data, get_user_id(user))
+
+
+@router.patch("/questions/{question_id}")
+async def update_question(
+    question_id: str,
+    data: QuestionUpdate,
+    db=Depends(get_database),
+    user=Depends(get_current_user)
+):
+    instructor_required(user)
+    return await service.update_question(db, question_id, data, get_user_id(user))
+
+
+@router.delete("/questions/{question_id}")
+async def delete_question(
+    question_id: str,
+    db=Depends(get_database),
+    user=Depends(get_current_user)
+):
+    instructor_required(user)
+    return await service.delete_question(db, question_id, get_user_id(user))
 
 
 # GET QUESTIONS
@@ -157,6 +199,15 @@ async def test_analytics(
 ):
     instructor_required(user)
     return await service.get_test_analytics(db, test_id)
+
+
+@router.get("/weekly-tests/overview")
+async def weekly_test_overview(
+    db=Depends(get_database),
+    user=Depends(get_current_user)
+):
+    instructor_required(user)
+    return await service.get_weekly_test_overview(db, get_user_id(user))
 
 @router.get("/dashboard")
 async def dashboard(

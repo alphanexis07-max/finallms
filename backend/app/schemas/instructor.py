@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 
@@ -35,22 +35,51 @@ class ClassOut(BaseModel):
 class TestCreate(BaseModel):
     title: str
     course_id: str
-    duration: int  # in minutes
-    total_questions: int
-    scheduled_at: datetime
+    duration: int = 45  # in minutes
+    total_questions: int = 0
+    scheduled_at: Optional[datetime] = None
+    description: Optional[str] = None
+    class_name: Optional[str] = None
+    subject: Optional[str] = None
+    deadline_at: Optional[datetime] = None
+    attempts_allowed: int = 1
+    shuffle_questions: bool = False
+    show_results_instantly: bool = True
+    is_published: bool = False
 
 
 class TestUpdate(BaseModel):
     title: Optional[str] = None
+    course_id: Optional[str] = None
     duration: Optional[int] = None
     scheduled_at: Optional[datetime] = None
+    description: Optional[str] = None
+    class_name: Optional[str] = None
+    subject: Optional[str] = None
+    deadline_at: Optional[datetime] = None
+    attempts_allowed: Optional[int] = None
+    shuffle_questions: Optional[bool] = None
+    show_results_instantly: Optional[bool] = None
+    total_questions: Optional[int] = None
     is_published: Optional[bool] = None
 
 class QuestionCreate(BaseModel):
     test_id: str
     question: str
-    options: list[str]
-    correct_answer: str
+    options: list[str] = Field(default_factory=list)
+    correct_answer: str = ""
+    points: int = 1
+    question_type: str = "multiple-choice"
+    order: int = 0
+
+
+class QuestionUpdate(BaseModel):
+    question: Optional[str] = None
+    options: Optional[list[str]] = None
+    correct_answer: Optional[str] = None
+    points: Optional[int] = None
+    question_type: Optional[str] = None
+    order: Optional[int] = None
 
 class SubmitTest(BaseModel):
     test_id: str
