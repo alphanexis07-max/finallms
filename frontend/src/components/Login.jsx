@@ -40,8 +40,9 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#352071] via-[#1b1142] to-[#100a2c] p-4 font-['Inter',_system-ui,_sans-serif] sm:p-6 lg:p-8">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#0e7c67] via-[#1a5c3a] to-[#0e5c4a] p-4 font-['Inter',_system-ui,_sans-serif] sm:p-6 lg:p-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1280px] flex-col items-center justify-center gap-8 lg:min-h-[calc(100vh-4rem)] lg:flex-row lg:justify-between lg:gap-12">
+        {/* Left Side - Brand Section */}
         <div className="w-full max-w-[600px] text-center lg:text-left">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[13px] font-medium text-white/90 backdrop-blur-sm">
             <Sparkles className="h-4 w-4 text-[#ff8a33]" />
@@ -69,37 +70,38 @@ export default function Login() {
           </ul>
         </div>
 
+        {/* Right Side - Login Form */}
         <div className="w-full max-w-[480px]">
           <div className="rounded-2xl border border-white/10 bg-white p-6 shadow-2xl sm:p-8">
             <div className="mb-8 flex gap-1.5 rounded-xl bg-gray-100 p-1.5">
               <button
                 type="button"
-                className="flex-1 rounded-lg bg-[#ff8a33] px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+                className="flex-1 rounded-lg bg-[#ff8a33] px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#e57a23]"
               >
                 Login
               </button>
               <Link
                 to="/signup"
-                className="flex-1 rounded-lg px-3 py-2.5 text-center text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200"
+                className="flex-1 rounded-lg px-3 py-2.5 text-center text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200 hover:text-gray-900"
               >
                 Sign Up
               </Link>
             </div>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-extrabold text-gray-900 sm:text-3xl">Welcome back</h2>
-              <p className="mt-2 text-sm text-gray-500">Enter your details to access your account.</p>
+              <h2 className="text-2xl font-extrabold text-[#111b2f] sm:text-3xl">Welcome back</h2>
+              <p className="mt-2 text-sm text-slate-500">Enter your details to access your account.</p>
             </div>
 
             <form onSubmit={onSubmit} className="space-y-5">
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-900">Email Address</label>
+                <label className="mb-1.5 block text-sm font-semibold text-[#111b2f]">Email Address</label>
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   type="email"
                   placeholder="Enter your email address"
-                  className="h-12 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 outline-none transition-all focus:border-[#ff8a33] focus:ring-2 focus:ring-[#ff8a33]/20"
+                  className="h-12 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20"
                 />
                 {submitted && !isEmailValid && (
                   <p className="mt-1.5 text-xs font-medium text-red-500">Enter a valid email address.</p>
@@ -107,19 +109,19 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-900">Password</label>
+                <label className="mb-1.5 block text-sm font-semibold text-[#111b2f]">Password</label>
                 <div className="relative">
                   <input
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
-                    className="h-12 w-full rounded-xl border border-gray-200 px-4 pr-11 text-sm text-gray-900 outline-none transition-all focus:border-[#ff8a33] focus:ring-2 focus:ring-[#ff8a33]/20"
+                    className="h-12 w-full rounded-xl border border-gray-200 px-4 pr-11 text-sm text-gray-900 outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#ff8a33]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors hover:text-[#0b8276]"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -132,11 +134,11 @@ export default function Login() {
                   <input
                     type="checkbox"
                     defaultChecked
-                    className="h-4 w-4 rounded border-gray-300 text-[#ff8a33] focus:ring-[#ff8a33]/20"
+                    className="h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
                   />
                   Remember me
                 </label>
-                <Link to="/forgetpassword" className="text-sm font-semibold text-[#ff8a33] hover:underline">
+                <Link to="/forgetpassword" className="text-sm font-semibold text-[#0b8276] transition-colors hover:text-[#096b61] hover:underline">
                   Forgot password?
                 </Link>
               </div>

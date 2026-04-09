@@ -48,7 +48,8 @@ function EnrollmentModal({ session, plans, me, onClose, onSuccess }) {
   }, [plans, selectedPlanId])
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) || null
-  const payableAmount = selectedPlan ? Number(selectedPlan.price || 0) : Number(session.priceAmount || 0)
+  const classAmount = Number(session.priceAmount || 0)
+  const payableAmount = classAmount > 0 ? classAmount : Number(selectedPlan?.price || 0)
   const payableLabel = `₹${Number(payableAmount || 0).toLocaleString('en-IN')}`
 
   const handlePay = async () => {
@@ -400,6 +401,18 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick }) {
       {isLive && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#ef4444] to-[#f97316]" />}
 
       <div className="p-4">
+        {session.image ? (
+          <img
+            src={session.image}
+            alt={session.title}
+            className="mb-3 h-36 w-full rounded-[10px] border border-black/[0.08] object-cover"
+          />
+        ) : (
+          <div className="mb-3 flex h-36 w-full items-center justify-center rounded-[10px] border border-dashed border-black/[0.12] bg-[#f8fafc] text-[11px] font-medium text-[#94a3b8]">
+            No class image
+          </div>
+        )}
+
         {/* Top: Status + Enrolled badge */}
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <StatusBadge status={session.status} />
@@ -543,7 +556,7 @@ export default function StudentLiveClasses() {
       const mapped = rows.map((r, idx) => {
         const course = courseMap.get(r.course_id) || {}
         const startAt = r.start_at ? new Date(r.start_at) : new Date()
-        const numericPrice = Number(course.price || 0)
+        const numericPrice = Number(r.amount ?? course.price ?? 0)
         const status = r.status === 'live' || r.status === 'recent' ? r.status : 'upcoming'
         const tags = [
           status === 'live' ? 'Live today' : 'Upcoming',
@@ -552,6 +565,7 @@ export default function StudentLiveClasses() {
         return {
           id: r._id,
           courseId: r.course_id,
+          image: r.image_url || course.image_url || course.thumbnail_url || course.cover_image || '',
           title: r.title || 'Live Class',
           course: course.title || 'Course',
           instructor: r.instructor_id || 'Instructor',

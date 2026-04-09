@@ -56,6 +56,8 @@ class LiveClassIn(BaseModel):
     attendee_ids: list[str] = Field(default_factory=list)
     start_at: datetime
     duration_minutes: int = 60
+    amount: float = 0
+    image_url: str = ""
     repeat_daily: bool = False
 
 
@@ -64,6 +66,8 @@ class LiveClassUpdateIn(BaseModel):
     instructor_id: str | None = None
     start_at: datetime | None = None
     duration_minutes: int | None = None
+    amount: float | None = None
+    image_url: str | None = None
     status: str | None = None
 
 

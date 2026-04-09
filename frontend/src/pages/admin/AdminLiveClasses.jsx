@@ -23,6 +23,8 @@ export default function AdminLiveClasses() {
     attendee_ids: [],
     start_at: '',
     duration_minutes: 60,
+    amount: '',
+    image_url: '',
   })
 
   const loadClasses = async () => {
@@ -80,6 +82,7 @@ export default function AdminLiveClasses() {
     setCreateError('')
     const title = form.title.trim()
     const courseId = form.course_id.trim()
+    const imageUrl = form.image_url.trim()
     const assignedInstructor = form.instructor_id.trim()
     const instructorId = hostMode === 'self' ? currentUser?._id || '' : assignedInstructor
 
@@ -103,17 +106,40 @@ export default function AdminLiveClasses() {
           attendee_ids: form.attendee_ids,
           start_at: new Date(form.start_at).toISOString(),
           duration_minutes: Number(form.duration_minutes) || 60,
+          amount: Number(form.amount || 0),
+          image_url: imageUrl,
           repeat_daily: false,
         }),
       })
       setShowCreate(false)
-      setForm({ title: '', course_id: '', instructor_id: '', attendee_ids: [], start_at: '', duration_minutes: 60 })
+      setForm({
+        title: '',
+        course_id: '',
+        instructor_id: '',
+        attendee_ids: [],
+        start_at: '',
+        duration_minutes: 60,
+        amount: '',
+        image_url: '',
+      })
       await loadClasses()
     } catch (error) {
       setCreateError(error?.message || 'Unable to create live class. Check Zoom credentials and try again.')
     } finally {
       setCreating(false)
     }
+  }
+
+  const handleImageSelect = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setForm((f) => ({ ...f, image_url: reader.result }))
+      }
+    }
+    reader.readAsDataURL(file)
   }
 
   const cancelClass = async (id) => {
@@ -165,29 +191,46 @@ export default function AdminLiveClasses() {
             <p>{actionError}</p>
           </div>
         ) : null}
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {classes.map((c) => (
-            <div key={c._id} className="flex flex-col gap-2 rounded-[10px] border border-black/[0.07] p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-[14px] font-semibold text-[#0f172a]">{c.title}</div>
-                <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-[#64748b]">
-                  <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />{c.start_at ? new Date(c.start_at).toLocaleString() : '-'}</span>
-                  <span className="inline-flex items-center gap-1"><Video className="h-3 w-3" />{c.status || 'upcoming'}</span>
-                  <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{c.duration_minutes || 60} mins</span>
-                  {c.join_url ? (
-                    <a className="inline-flex items-center gap-1 text-[#4f46e5] underline" href={c.join_url} target="_blank" rel="noreferrer">
-                      <Link2 className="h-3 w-3" />
-                      Join Link
-                    </a>
-                  ) : (
-                    <span>No join link</span>
-                  )}
+            <div key={c._id} className="flex h-full flex-col rounded-[12px] border border-black/[0.07] bg-white p-3 shadow-[0_10px_24px_-20px_rgba(2,6,23,0.6)]">
+              {c.image_url ? (
+                <img
+                  src={c.image_url}
+                  alt={c.title}
+                  className="h-32 w-full rounded-[10px] border border-black/[0.08] object-cover"
+                />
+              ) : (
+                <div className="flex h-32 w-full items-center justify-center rounded-[10px] border border-dashed border-black/[0.12] bg-[#f8fafc] text-[11px] font-medium text-[#94a3b8]">
+                  No class image
+                </div>
+              )}
+
+              <div className="mt-3">
+                <div className="line-clamp-2 text-[15px] font-semibold text-[#0f172a]">{c.title}</div>
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#475569]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2 py-1"><CalendarDays className="h-3 w-3" />{c.start_at ? new Date(c.start_at).toLocaleString() : '-'}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2 py-1"><Video className="h-3 w-3" />{c.status || 'upcoming'}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2 py-1"><Clock3 className="h-3 w-3" />{c.duration_minutes || 60} mins</span>
+                  <span className="inline-flex items-center rounded-full bg-[#eef2ff] px-2 py-1 font-semibold text-[#4338ca]">Amount: {Number(c.amount || 0).toFixed(2)}</span>
                 </div>
                 {c.zoom_error ? (
-                  <p className="mt-1 text-[11px] text-[#b45309]">Zoom issue: {c.zoom_error}</p>
+                  <p className="mt-2 text-[11px] text-[#b45309]">Zoom issue: {c.zoom_error}</p>
                 ) : null}
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="mt-4 flex items-center gap-2">
+                {c.join_url ? (
+                  <a className="inline-flex h-8 items-center gap-1 rounded-[8px] border border-[#c7d2fe] bg-[#eef2ff] px-3 text-[12px] font-medium text-[#4338ca]" href={c.join_url} target="_blank" rel="noreferrer">
+                    <Link2 className="h-3 w-3" />
+                    Join Link
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-[#64748b]">No join link</span>
+                )}
+              </div>
+
+              <div className="mt-2 flex items-center gap-2">
                 {!c.join_url ? (
                   <button
                     onClick={() => regenerateZoom(c._id)}
@@ -238,6 +281,18 @@ export default function AdminLiveClasses() {
                   />
                 </InputLabel>
 
+                <InputLabel label="Amount">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="h-11 w-full rounded-[10px] border border-black/[0.08] px-3 text-[13px] outline-none focus:border-[#4f46e5]"
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  />
+                </InputLabel>
+
                 <div>
                   <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#475569]">Who will host?</p>
                   <div className="grid grid-cols-2 gap-2 rounded-[12px] bg-[#f1f5f9] p-1">
@@ -279,6 +334,31 @@ export default function AdminLiveClasses() {
               </div>
 
               <div className="space-y-3">
+                <InputLabel label="Class image">
+                  <div className="space-y-2">
+                    {form.image_url ? (
+                      <img
+                        src={form.image_url}
+                        alt="Class preview"
+                        className="h-24 w-36 rounded-[8px] border border-black/[0.08] object-cover"
+                      />
+                    ) : null}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="w-full rounded-[10px] border border-black/[0.08] px-3 py-2 text-[12px] file:mr-3 file:rounded file:border-0 file:bg-[#4f46e5] file:px-3 file:py-1 file:text-white"
+                    />
+                    <input
+                      type="url"
+                      placeholder="or paste image URL"
+                      className="h-11 w-full rounded-[10px] border border-black/[0.08] px-3 text-[13px] outline-none focus:border-[#4f46e5]"
+                      value={form.image_url}
+                      onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
+                    />
+                  </div>
+                </InputLabel>
+
                 <InputLabel label="Start Date & Time">
                   <input
                     type="datetime-local"

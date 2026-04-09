@@ -7,75 +7,70 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   
   const navItems = [
-    { path: "/home", label: "Home" },
+    { path: "/home", label: "Home" }, 
     { path: "/features", label: "Features" },
     { path: "/pricing", label: "Pricing" },
     { path: "/about", label: "About Us" },
-    { path: "/contact", label: "Contact" }
+    { path: "/contact", label: "Contact Us" }
   ];
 
   const isActive = (path) => location.pathname === path;
+  const isHomePage = location.pathname === "/" || location.pathname === "/home";
 
   return (
-    <header
-      className="sticky top-0 z-50 w-full border-b border-white/10"
-      style={{
-        background: "linear-gradient(180deg, #110C3B, #2B1F8F)",
-      }}
-    >
-      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-3 sm:px-6 lg:px-10 xl:px-16">
-        <Link to="/" className="flex shrink-0 items-center no-underline" onClick={() => setMenuOpen(false)}>
-          <img
-            src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/ffSyZzeazd/z2t1y5k3_expires_30_days.png"}
-            className="mr-2 h-9 w-9 object-fill sm:mr-3 sm:h-10 sm:w-10"
-            alt="LMS Logo"
-          />
-          <span className="text-2xl font-bold text-white sm:text-[28px]">LMS</span>
-        </Link>
-
-        <div className="hidden items-center gap-6 lg:flex xl:gap-8">
-          {navItems.map((item) => (
-            <Link key={item.path} to={item.path} className="no-underline">
-              <span className={`text-sm xl:text-base ${isActive(item.path) ? "text-[#FF9A3C]" : "text-white"}`}>
-                {item.label}
-              </span>
+    <header className="relative z-30 w-full">
+      <div className={`${isHomePage ? "bg-[linear-gradient(90deg,#FEF6EE_942px,#0e7c67_943px)]" : "bg-white border-b border-slate-200"}`}>
+        <div className="mx-auto flex w-full max-w-[1340px] items-center justify-between px-4 py-5 sm:px-8 lg:px-12">
+          <div className="flex items-center gap-8 xl:gap-10 pr-10">
+            <Link to="/home" className="flex shrink-0 items-center no-underline" onClick={() => setMenuOpen(false)}>
+              <span className="mr-2 text-xl leading-none text-[#04776d]">◉</span>
+              <span className="text-[38px] font-extrabold leading-none text-[#f4824c]">Edubox</span>
             </Link>
-          ))}
-        </div>
 
-        <div className="hidden items-center gap-4 lg:flex xl:gap-5">
-          <Link to="/login" className="no-underline">
-            <span className={`text-sm xl:text-base ${isActive('/login') ? 'text-[#FF9A3C]' : 'text-white'}`}>Login</span>
-          </Link>
-          <Link
-            to="/signup"
-            className={`rounded border border-solid border-[#FFFFFF33] px-5 py-2.5 no-underline ${
-              isActive('/signup') ? 'bg-[#FF9A3C]' : 'bg-[#FFFFFF1A]'
-            }`}
+            <nav className="hidden items-center gap-7 lg:flex">
+              {navItems.map((item) => (
+                <Link key={item.path} to={item.path} className={`text-[18px] font-semibold no-underline pt-2 ${isActive(item.path) ? "text-[#04776d]" : "text-slate-700"}`}>
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div className="hidden items-center gap-4 lg:flex">
+            <Link
+              to="/login"
+              className={`rounded-xl border px-8 py-3 text-lg font-semibold no-underline ${isHomePage ? "border-[#e5f7f3] text-white" : "border-slate-300 text-slate-700"}`}
+            >
+              Log in
+            </Link>
+            <Link
+              to="/signup"
+              className="rounded-xl bg-[#f4824c] px-8 py-3 text-lg font-semibold text-white no-underline"
+            >
+              Register
+            </Link>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-md border lg:hidden ${isHomePage ? "border-[#e5f7f3] text-white" : "border-slate-300 text-slate-700"}`}
+            aria-label="Toggle navigation menu"
           >
-            <span className="text-sm font-bold text-white xl:text-base">Signup</span>
-          </Link>
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setMenuOpen((prev) => !prev)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white lg:hidden"
-          aria-label="Toggle navigation menu"
-        >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
       </div>
 
       {menuOpen ? (
-        <div className="border-t border-white/10 bg-[#1b1454] px-4 py-4 sm:px-6 lg:hidden">
+        <div className={`px-4 py-4 sm:px-6 lg:hidden ${isHomePage ? "bg-[#04776d]" : "bg-white border-b border-slate-200"}`}>
           <div className="flex flex-col gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setMenuOpen(false)}
-                className={`rounded-md px-3 py-2.5 text-sm no-underline ${isActive(item.path) ? 'bg-white/10 text-[#FF9A3C]' : 'text-white'}`}
+                className={`rounded-md px-3 py-2.5 text-sm no-underline ${isActive(item.path) ? "bg-white/20 text-white" : isHomePage ? "text-white" : "text-slate-700"}`}
               >
                 {item.label}
               </Link>
@@ -85,16 +80,16 @@ export default function Header() {
             <Link
               to="/login"
               onClick={() => setMenuOpen(false)}
-              className="rounded-md border border-white/20 bg-white/5 px-3 py-2.5 text-center text-sm text-white no-underline"
+              className={`rounded-md border px-3 py-2.5 text-center text-sm no-underline ${isHomePage ? "border-white/60 text-white" : "border-slate-300 text-slate-700"}`}
             >
-              Login
+              Log in
             </Link>
             <Link
               to="/signup"
               onClick={() => setMenuOpen(false)}
-              className="rounded-md bg-[#FF9A3C] px-3 py-2.5 text-center text-sm font-semibold text-white no-underline"
+              className="rounded-md bg-[#f4824c] px-3 py-2.5 text-center text-sm font-semibold text-white no-underline"
             >
-              Signup
+              Register
             </Link>
           </div>
         </div>
