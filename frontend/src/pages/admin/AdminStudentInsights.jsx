@@ -47,34 +47,19 @@ export default function AdminStudentInsights() {
   const [dashboard, setDashboard] = useState(null)
   const [insightsSummary, setInsightsSummary] = useState({ total_students: 0, top_performers: 0, needs_support: 0 })
   const [students, setStudents] = useState([])
-  // --- State for courses and enrollments ---
   const [courses, setCourses] = useState([])
-  const [enrollments, setEnrollments] = useState([])
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [certificateCourseId, setCertificateCourseId] = useState('')
   const [certificateTitle, setCertificateTitle] = useState('')
+  const [courseSelectError, setCourseSelectError] = useState('')
 
-  // Show only enrolled courses for the selected student
   const certificateCourses = useMemo(() => {
-    if (!selectedStudent?.student_id) return [];
-    const studentEnrollmentIds = new Set(
-      Array.isArray(enrollments)
-        ? enrollments
-            .filter((e) => e?.student_id === selectedStudent.student_id)
-            .map((e) => String(e?.course_id || '').trim())
-            .filter(Boolean)
-        : []
-    );
-    const list = Array.isArray(courses) ? courses : [];
+    const list = Array.isArray(courses) ? courses : []
+    console.log('Available courses for admin:', list) // Debug log
     return [...list]
-      .filter(
-        (course) =>
-          Boolean(course?._id) &&
-          Boolean(course?.title) &&
-          studentEnrollmentIds.has(String(course._id).trim())
-      )
-      .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
-  }, [courses, enrollments, selectedStudent?.student_id]);
+      .filter((course) => Boolean(course?._id) && Boolean(course?.title))
+      .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
+  }, [courses])
 
   const statusOptions = useMemo(() => {
     return ['top_performer', 'average', 'needs_support']
@@ -84,11 +69,11 @@ export default function AdminStudentInsights() {
     try {
       setLoading(true)
       setError('')
-      const [insightsRes, dashboardRes, coursesRes, enrollmentsRes] = await Promise.all([
-        api('/lms/admin/students/insights'),
-        api('/lms/dashboard/admin'),
-        api('/lms/courses?limit=500'),
-        api('/lms/enrollments?limit=500'),
+      // Use instructor endpoints since admin endpoints do not exist
+      const [insightsRes, dashboardRes, courseRes] = await Promise.all([
+        api('/admin/students/insights'),
+        api('/admin/dashboard'),
+        api('/admin/courses'),
       ])
 
       const studentsFromApi = Array.isArray(insightsRes?.students) ? insightsRes.students : []
@@ -106,15 +91,25 @@ export default function AdminStudentInsights() {
       setInsightsSummary(insightsRes?.summary || { total_students: 0, top_performers: 0, needs_support: 0 })
       setStudents(normalizedStudents)
       setDashboard(dashboardRes || {})
-      setCourses(Array.isArray(coursesRes?.items) ? coursesRes.items : [])
-      setEnrollments(Array.isArray(enrollmentsRes?.items) ? enrollmentsRes.items : [])
+
+      let coursesList = []
+      if (Array.isArray(courseRes)) {
+        coursesList = courseRes
+      } else if (courseRes?.courses && Array.isArray(courseRes.courses)) {
+        coursesList = courseRes.courses
+      } else if (courseRes?.data && Array.isArray(courseRes.data)) {
+        coursesList = courseRes.data
+      }
+      setCourses(coursesList)
+      if (coursesList.length > 0) {
+        setCertificateCourseId(coursesList[0]._id)
+      }
     } catch (err) {
       setError(err?.message || 'Failed to load student insights')
       setInsightsSummary({ total_students: 0, top_performers: 0, needs_support: 0 })
       setStudents([])
       setDashboard(null)
       setCourses([])
-      setEnrollments([])
     } finally {
       setLoading(false)
     }
@@ -162,36 +157,74 @@ export default function AdminStudentInsights() {
     setShowFilterModal(false)
   }
 
+  // Fetch enrolled courses for a student
+  const fetchStudentCourses = async (studentId) => {
+    try {
+      setCourses([])
+      setCourseSelectError('')
+      if (!studentId) {
+        setCourseSelectError('No student selected.')
+        return
+      }
+      const res = await api(`/admin/student-courses?student_id=${studentId}`)
+      if (Array.isArray(res)) {
+        setCourses(res)
+        if (res.length > 0) {
+          setCertificateCourseId(res[0]._id)
+        } else {
+          setCertificateCourseId('')
+          setCourseSelectError('No courses available for this student.')
+        }
+      } else {
+        setCourses([])
+        setCertificateCourseId('')
+        setCourseSelectError('No courses available for this student.')
+      }
+    } catch (err) {
+      setCourses([])
+      setCertificateCourseId('')
+      setCourseSelectError('Failed to fetch courses.')
+    }
+  }
+
   const openCertificateModal = (student) => {
-    setSelectedStudent(student);
-    setUploadError('');
-    // After selectedStudent is set, certificateCourses will update due to useMemo
-    setTimeout(() => {
-      setCertificateCourseId(
-        (Array.isArray(certificateCourses) && certificateCourses[0]?._id) || ''
-      );
-    }, 0);
-    setCertificateTitle('');
-    setShowCertificateModal(true);
-  } 
+    setSelectedStudent(student)
+    setUploadError('')
+    setCourseSelectError('')
+    setCertificateTitle('')
+    setShowCertificateModal(true)
+    fetchStudentCourses(student.student_id)
+  }
 
   const closeCertificateModal = () => {
     setShowCertificateModal(false)
     setSelectedStudent(null)
     setUploadError('')
+    setCourseSelectError('')
     setUploadSaving(false)
   }
 
   const handleUploadCertificate = async () => {
-    if (!selectedStudent?.student_id || !certificateCourseId || !certificateTitle.trim()) {
-      setUploadError('Please select course and certificate title.')
+    if (!selectedStudent?.student_id) {
+      setUploadError('Student information missing.')
+      return
+    }
+    
+    if (!certificateCourseId) {
+      setUploadError('Please select a course.')
+      return
+    }
+    
+    if (!certificateTitle.trim()) {
+      setUploadError('Please enter certificate title.')
       return
     }
 
     setUploadSaving(true)
     setUploadError('')
     try {
-      await api('/lms/admin/certificates', {
+      // Use instructor certificates endpoint
+      await api('/admin/certificates', {
         method: 'POST',
         body: JSON.stringify({
           student_id: selectedStudent.student_id,
@@ -200,7 +233,10 @@ export default function AdminStudentInsights() {
         }),
       })
       closeCertificateModal()
+      // Optional: Show success message
+      alert('Certificate uploaded successfully!')
     } catch (err) {
+      console.error('Upload error:', err)
       setUploadError(err?.message || 'Failed to upload certificate')
       setUploadSaving(false)
     }
@@ -214,7 +250,7 @@ export default function AdminStudentInsights() {
             <div className="flex min-w-0 flex-1 flex-col gap-[11px] items-start">
               <div className="flex flex-wrap gap-2">
                 <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#e8f5ff] text-[#0f172a]">
-                  Instructor insights
+                  Admin Insights
                 </span>
                 <span className="inline-flex h-[28px] items-center px-[10px] rounded-[12px] text-[12px] font-medium bg-[#2dd4bf] text-[#023b33]">
                   {insightsSummary?.total_students || 0} tracked students
@@ -224,7 +260,7 @@ export default function AdminStudentInsights() {
                 Student performance and engagement overview
               </div>
               <div className="text-[13px] leading-relaxed text-[#94a3b8] sm:text-[14px]">
-                Live data from instructor insights API. Filters apply to real student performance records.
+                Live data from admin insights API. Filters apply to real student performance records.
               </div>
               <div className="flex flex-col gap-2 text-[12px] text-[#94a3b8] sm:text-[13px] xl:flex-row xl:flex-wrap xl:gap-4">
                 <span className="inline-flex items-center gap-1">
@@ -288,7 +324,7 @@ export default function AdminStudentInsights() {
             <div className="px-[21px] pt-[21px] pb-[16px] flex justify-between items-start gap-4">
               <div>
                 <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Student highlights</h3>
-                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Live records from `/instructor/students/insights`.</p>
+                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Live records from `/admin/students/insights`.</p>
               </div>
               <div className="relative min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
@@ -456,10 +492,32 @@ export default function AdminStudentInsights() {
 
               <div>
                 <label className="mb-1 block text-[12px] font-semibold text-[#334155]">Course</label>
-                <div className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 flex items-center bg-gray-50 text-[13px]">
-                  {certificateCourses.find((c) => c._id === certificateCourseId)?.title || 'No course found'}
-                </div>
-                <p className="mt-1 text-[11px] text-[#94a3b8]">Only courses where the student is enrolled are shown here.</p>
+                {courseSelectError ? (
+                  <div className="rounded-[6px] border border-yellow-200 bg-yellow-50 px-3 py-2 text-[12px] text-yellow-700">
+                    {courseSelectError}
+                  </div>
+                ) : certificateCourses.length === 0 ? (
+                  <div className="rounded-[6px] border border-yellow-200 bg-yellow-50 px-3 py-2 text-[12px] text-yellow-700">
+                    No courses available. Please ensure you have access to courses.
+                  </div>
+                ) : (
+                  <select
+                    value={certificateCourseId}
+                    onChange={(e) => setCertificateCourseId(e.target.value)}
+                    className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30 bg-white"
+                  >
+                    {certificateCourses.map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="mt-1 text-[11px] text-[#94a3b8]">
+                  {certificateCourses.length > 0 
+                    ? `Select a course from ${certificateCourses.length} available course(s)` 
+                    : 'No courses available for certificate assignment'}
+                </p>
               </div>
 
               <div>
@@ -486,8 +544,8 @@ export default function AdminStudentInsights() {
               </button>
               <button
                 onClick={handleUploadCertificate}
-                disabled={uploadSaving}
-                className="h-10 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-medium text-white hover:bg-[#4a2ed8] disabled:opacity-60"
+                disabled={uploadSaving || certificateCourses.length === 0}
+                className="h-10 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-medium text-white hover:bg-[#4a2ed8] disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {uploadSaving ? 'Uploading...' : 'Upload Certificate'}
               </button>
