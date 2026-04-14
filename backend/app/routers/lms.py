@@ -28,6 +28,7 @@ from app.schemas.lms import (
     UserIn,
     UserUpdateIn,
 )
+from app.schemas.instructor import CertificateUploadIn
 from app.services.payments import verify_razorpay_signature, verify_webhook_signature
 from app.services.email import send_transactional_email
 from app.services.realtime import ws_manager
@@ -812,6 +813,234 @@ async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(req
     }
 
 
+@router.get("/admin/students/insights")
+async def admin_student_insights(
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUB_ADMIN)),
+):
+    def _id_variants(value: str | None) -> list:
+        raw = str(value or "").strip()
+        if not raw:
+            return []
+        variants = [raw]
+        if ObjectId.is_valid(raw):
+            variants.append(ObjectId(raw))
+        return variants
+
+    course_query: dict = {}
+    if tenant_id:
+        course_query["tenant_id"] = tenant_id
+    courses = await db.courses.find(course_query, {"_id": 1}).to_list(None)
+    tenant_course_ids = []
+    tenant_course_variants = []
+    seen_course_variants: set[str] = set()
+    for course in courses:
+        course_id = course.get("_id")
+        if not course_id:
+            continue
+        course_id_text = str(course_id)
+        tenant_course_ids.append(course_id_text)
+        for variant in _id_variants(course_id_text):
+            key = str(variant)
+            if key in seen_course_variants:
+                continue
+            seen_course_variants.add(key)
+            tenant_course_variants.append(variant)
+
+    enrollments = []
+    if tenant_id:
+        enrollments.extend(await db.enrollments.find({"tenant_id": tenant_id}).to_list(None))
+        if tenant_course_variants:
+            legacy_query = {
+                "$or": [
+                    {"tenant_id": None},
+                    {"tenant_id": {"$exists": False}},
+                ],
+                "course_id": {"$in": tenant_course_variants},
+            }
+            legacy_enrollments = await db.enrollments.find(legacy_query).to_list(None)
+            if legacy_enrollments:
+                existing_ids = {
+                    str(item.get("_id"))
+                    for item in enrollments
+                    if item.get("_id") is not None
+                }
+                for enrollment in legacy_enrollments:
+                    enrollment_id = str(enrollment.get("_id") or "")
+                    if enrollment_id and enrollment_id not in existing_ids:
+                        enrollments.append(enrollment)
+    else:
+        enrollments = await db.enrollments.find({}).to_list(None)
+
+    student_ids: list[str] = []
+    seen_students: set[str] = set()
+    for enrollment in enrollments:
+        sid = str(enrollment.get("student_id") or "").strip()
+        if not sid or sid in seen_students:
+            continue
+        seen_students.add(sid)
+        student_ids.append(sid)
+
+    if not student_ids:
+        return {
+            "summary": {
+                "total_students": 0,
+                "top_performers": 0,
+                "needs_support": 0,
+            },
+            "students": [],
+        }
+
+    student_id_variants = []
+    seen_variants: set[str] = set()
+    for sid in student_ids:
+        for variant in _id_variants(sid):
+            key = str(variant)
+            if key in seen_variants:
+                continue
+            seen_variants.add(key)
+            student_id_variants.append(variant)
+
+    attempts = await db.test_attempts.find({"student_id": {"$in": student_id_variants}}).to_list(None)
+
+    student_scores: dict[str, dict] = {}
+    for attempt in attempts:
+        sid = str(attempt.get("student_id") or "").strip()
+        if not sid:
+            continue
+
+        total = attempt.get("total") or 0
+        score = attempt.get("score") or 0
+        if sid not in student_scores:
+            student_scores[sid] = {"total": 0, "score": 0}
+
+        student_scores[sid]["total"] += total
+        student_scores[sid]["score"] += score
+
+    insights = []
+    for sid in student_ids:
+        summary = student_scores.get(sid, {"total": 0, "score": 0})
+        percentage = 0
+        if summary["total"] > 0:
+            percentage = (summary["score"] / summary["total"]) * 100
+
+        insights.append(
+            {
+                "student_id": sid,
+                "performance": round(percentage, 2),
+                "flag": (
+                    "top_performer"
+                    if percentage >= 80
+                    else "needs_support"
+                    if percentage < 40
+                    else "average"
+                ),
+            }
+        )
+
+    top_performers = len([item for item in insights if item["flag"] == "top_performer"])
+    needs_support = len([item for item in insights if item["flag"] == "needs_support"])
+
+    return {
+        "summary": {
+            "total_students": len(student_ids),
+            "top_performers": top_performers,
+            "needs_support": needs_support,
+        },
+        "students": insights,
+    }
+
+
+@router.post("/admin/certificates")
+async def admin_upload_certificate(
+    payload: CertificateUploadIn,
+    tenant_id: str = Depends(get_tenant_id),
+    user=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUB_ADMIN)),
+):
+    def _id_variants(value: str | None) -> list:
+        raw = str(value or "").strip()
+        if not raw:
+            return []
+        variants = [raw]
+        if ObjectId.is_valid(raw):
+            variants.append(ObjectId(raw))
+        return variants
+
+    course_variants = _id_variants(payload.course_id)
+    student_variants = _id_variants(payload.student_id)
+    if not course_variants or not student_variants:
+        raise HTTPException(status_code=400, detail="Invalid certificate payload")
+
+    course_query: dict = {"_id": {"$in": course_variants}}
+    if tenant_id:
+        course_query["tenant_id"] = tenant_id
+
+    course = await db.courses.find_one(course_query)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Try to find enrollment with tenant_id first, then fall back to legacy (no tenant_id)
+    enrollment_query: dict = {
+        "course_id": {"$in": course_variants},
+        "student_id": {"$in": student_variants},
+    }
+    if tenant_id:
+        enrollment_query["tenant_id"] = tenant_id
+        enrollment = await db.enrollments.find_one(enrollment_query)
+        # If not found with tenant_id, try legacy enrollments (null tenant_id)
+        if not enrollment:
+            enrollment_query_legacy = {
+                "course_id": {"$in": course_variants},
+                "student_id": {"$in": student_variants},
+                "tenant_id": None,
+            }
+            enrollment = await db.enrollments.find_one(enrollment_query_legacy)
+    else:
+        enrollment = await db.enrollments.find_one(enrollment_query)
+
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Student is not enrolled in this course")
+
+    now = datetime.utcnow()
+    cert = {
+        "tenant_id": tenant_id,
+        "admin_id": str(user.get("sub") or ""),
+        "issued_by": str(user.get("role") or Role.ADMIN.value),
+        "student_id": str(payload.student_id),
+        "course_id": str(payload.course_id),
+        "title": str(payload.title).strip(),
+        "file_url": str(payload.file_url or "").strip(),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    result = await db.certificates.insert_one(cert)
+    cert["_id"] = str(result.inserted_id)
+
+    notification = {
+        "tenant_id": tenant_id,
+        "user_id": str(payload.student_id),
+        "title": "Certificate issued",
+        "message": f"A certificate for {cert['title']} is now available.",
+        "type": "achievement",
+        "meta": {
+            "certificate_id": cert["_id"],
+            "course_id": cert["course_id"],
+            "student_id": cert["student_id"],
+        },
+        "read": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.notifications.insert_one(notification)
+    await ws_manager.broadcast(f"user:{payload.student_id}", {"type": "notification.created", "data": notification})
+    if tenant_id:
+        await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "notification.created", "data": notification})
+
+    return cert
+
+
 @router.get("/dashboard/super-admin")
 async def super_admin_dashboard(_=Depends(require_roles(Role.SUPER_ADMIN))):
     total_tenants = await db.tenants.count_documents({})
@@ -876,6 +1105,25 @@ async def student_dashboard(user=Depends(require_roles(Role.STUDENT))):
         "certificates_earned": certificates,
         "unread_notifications": notifications_unread,
     }
+
+
+@router.get("/certificates")
+async def list_certificates(
+    user=Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    skip: int = 0,
+    limit: int = 100,
+):
+    role = user.get("role")
+    query: dict = {"tenant_id": tenant_id} if tenant_id else {}
+
+    if role == Role.STUDENT.value:
+        query["student_id"] = user.get("sub")
+    elif role in {Role.INSTRUCTOR.value, Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value}:
+        if not tenant_id:
+            query = {}
+
+    return await paged(db.certificates, query, "created_at", -1, skip, limit)
 
 
 @router.post("/coupons")

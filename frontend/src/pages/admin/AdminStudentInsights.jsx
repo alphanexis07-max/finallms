@@ -30,7 +30,7 @@ function maskStudentName(studentId) {
   return `Student ${id.slice(-6).toUpperCase()}`
 }
 
-export default function InstructorStudentInsights() {
+export default function AdminStudentInsights() {
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -47,17 +47,34 @@ export default function InstructorStudentInsights() {
   const [dashboard, setDashboard] = useState(null)
   const [insightsSummary, setInsightsSummary] = useState({ total_students: 0, top_performers: 0, needs_support: 0 })
   const [students, setStudents] = useState([])
+  // --- State for courses and enrollments ---
   const [courses, setCourses] = useState([])
+  const [enrollments, setEnrollments] = useState([])
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [certificateCourseId, setCertificateCourseId] = useState('')
   const [certificateTitle, setCertificateTitle] = useState('')
 
+  // Show only enrolled courses for the selected student
   const certificateCourses = useMemo(() => {
-    const list = Array.isArray(courses) ? courses : []
+    if (!selectedStudent?.student_id) return [];
+    const studentEnrollmentIds = new Set(
+      Array.isArray(enrollments)
+        ? enrollments
+            .filter((e) => e?.student_id === selectedStudent.student_id)
+            .map((e) => String(e?.course_id || '').trim())
+            .filter(Boolean)
+        : []
+    );
+    const list = Array.isArray(courses) ? courses : [];
     return [...list]
-      .filter((course) => Boolean(course?._id) && Boolean(course?.title))
-      .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
-  }, [courses])
+      .filter(
+        (course) =>
+          Boolean(course?._id) &&
+          Boolean(course?.title) &&
+          studentEnrollmentIds.has(String(course._id).trim())
+      )
+      .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+  }, [courses, enrollments, selectedStudent?.student_id]);
 
   const statusOptions = useMemo(() => {
     return ['top_performer', 'average', 'needs_support']
@@ -67,10 +84,11 @@ export default function InstructorStudentInsights() {
     try {
       setLoading(true)
       setError('')
-      const [insightsRes, dashboardRes, courseRes] = await Promise.all([
-        api('/instructor/students/insights'),
-        api('/instructor/dashboard'),
-        api('/instructor/courses'),
+      const [insightsRes, dashboardRes, coursesRes, enrollmentsRes] = await Promise.all([
+        api('/lms/admin/students/insights'),
+        api('/lms/dashboard/admin'),
+        api('/lms/courses?limit=500'),
+        api('/lms/enrollments?limit=500'),
       ])
 
       const studentsFromApi = Array.isArray(insightsRes?.students) ? insightsRes.students : []
@@ -88,13 +106,15 @@ export default function InstructorStudentInsights() {
       setInsightsSummary(insightsRes?.summary || { total_students: 0, top_performers: 0, needs_support: 0 })
       setStudents(normalizedStudents)
       setDashboard(dashboardRes || {})
-      setCourses(Array.isArray(courseRes) ? courseRes : [])
+      setCourses(Array.isArray(coursesRes?.items) ? coursesRes.items : [])
+      setEnrollments(Array.isArray(enrollmentsRes?.items) ? enrollmentsRes.items : [])
     } catch (err) {
       setError(err?.message || 'Failed to load student insights')
       setInsightsSummary({ total_students: 0, top_performers: 0, needs_support: 0 })
       setStudents([])
       setDashboard(null)
       setCourses([])
+      setEnrollments([])
     } finally {
       setLoading(false)
     }
@@ -143,13 +163,17 @@ export default function InstructorStudentInsights() {
   }
 
   const openCertificateModal = (student) => {
-    setSelectedStudent(student)
-    setUploadError('')
-    // Auto-select the first course (or you can adjust logic to pick based on student)
-    setCertificateCourseId(certificateCourses[0]?._id || '')
-    setCertificateTitle('')
-    setShowCertificateModal(true)
-  }
+    setSelectedStudent(student);
+    setUploadError('');
+    // After selectedStudent is set, certificateCourses will update due to useMemo
+    setTimeout(() => {
+      setCertificateCourseId(
+        (Array.isArray(certificateCourses) && certificateCourses[0]?._id) || ''
+      );
+    }, 0);
+    setCertificateTitle('');
+    setShowCertificateModal(true);
+  } 
 
   const closeCertificateModal = () => {
     setShowCertificateModal(false)
@@ -167,7 +191,7 @@ export default function InstructorStudentInsights() {
     setUploadSaving(true)
     setUploadError('')
     try {
-      await api('/instructor/certificates', {
+      await api('/lms/admin/certificates', {
         method: 'POST',
         body: JSON.stringify({
           student_id: selectedStudent.student_id,
@@ -435,7 +459,7 @@ export default function InstructorStudentInsights() {
                 <div className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 flex items-center bg-gray-50 text-[13px]">
                   {certificateCourses.find((c) => c._id === certificateCourseId)?.title || 'No course found'}
                 </div>
-                <p className="mt-1 text-[11px] text-[#94a3b8]">Only courses uploaded by you are shown here.</p>
+                <p className="mt-1 text-[11px] text-[#94a3b8]">Only courses where the student is enrolled are shown here.</p>
               </div>
 
               <div>

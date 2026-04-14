@@ -21,6 +21,7 @@ const nav = [
   { to: '/admin/course-management', label: 'Course Management', icon: BookOpen },
   { to: '/admin/instructor-management', label: 'Instructor Management', icon: Users },
   { to: '/admin/student-management', label: 'Student Management', icon: GraduationCap },
+  { to: '/admin/student-insights', label: 'Student Insights', icon: Users },
   { to: '/admin/school-events', label: 'School Events', icon: Calendar },
   { to: '/admin/payments-coupons', label: 'Payments & Coupons', icon: Wallet },
   { to: '/admin/live-classes', label: 'Live Classes', icon: Video },

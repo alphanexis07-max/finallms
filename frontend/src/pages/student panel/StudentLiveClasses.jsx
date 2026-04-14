@@ -22,7 +22,7 @@ const STATUS_CONFIG = {
   recent: { label: 'Completed', bg: 'bg-[#dcfce7]', text: 'text-[#14532d]', dot: 'bg-[#22c55e]' },
 }
 
-const FILTERS = ['All Sessions', 'Live Now', 'Upcoming', 'Recent', 'Enrolled']
+const FILTERS = ['All Sessions', 'Live Now', 'Upcoming', 'Complete', 'Enrolled']
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000
 
 const LIVE_SUBSCRIPTION_TEMPLATES = [
@@ -178,6 +178,28 @@ function getSessionStatus(rawStatus, startAtValue, durationMinutes) {
 
   if (now > endMs) return 'recent'
   return 'upcoming'
+}
+
+function getObjectIdTimestampMs(value) {
+  const raw = String(value || '').trim()
+  if (!/^[a-f0-9]{24}$/i.test(raw)) return 0
+  const seconds = Number.parseInt(raw.slice(0, 8), 16)
+  return Number.isFinite(seconds) ? seconds * 1000 : 0
+}
+
+function getLiveClassSortTimestamp(row) {
+  const directDate =
+    parseServerDateAsUtc(row?.created_at) ||
+    parseServerDateAsUtc(row?.createdAt) ||
+    parseServerDateAsUtc(row?.updated_at) ||
+    parseServerDateAsUtc(row?.updatedAt) ||
+    parseServerDateAsUtc(row?.start_at)
+
+  if (directDate && !Number.isNaN(directDate.getTime())) {
+    return directDate.getTime()
+  }
+
+  return getObjectIdTimestampMs(row?._id)
 }
 
 function StatusBadge({ status }) {
@@ -809,8 +831,9 @@ export default function StudentLiveClasses() {
           priceAmount: numericPrice,
           rating: Number(r.avg_rating || r.rating || 0) > 0 ? Number(r.avg_rating || r.rating || 0).toFixed(1) : '',
           ratingCount: Number(r.rating_count || 0),
+          sortTimestamp: getLiveClassSortTimestamp(r),
         }
-      })
+      }).sort((a, b) => Number(b.sortTimestamp || 0) - Number(a.sortTimestamp || 0))
       setEnrolledSessionIds([...enrolledSet])
       setLiveSessions(mapped)
     } catch {
@@ -871,7 +894,7 @@ export default function StudentLiveClasses() {
       (activeFilter === 'All Sessions' && (s.status === 'live' || s.status === 'upcoming')) ||
       (activeFilter === 'Live Now' && s.status === 'live') ||
       (activeFilter === 'Upcoming' && s.status === 'upcoming') ||
-      (activeFilter === 'Recent' && s.status === 'recent') ||
+      (activeFilter === 'Complete' && s.status === 'recent') ||
       (activeFilter === 'Enrolled' && enrolledSessionIds.includes(s.id))
     const matchCourse = selectedCourse === 'all courses' || s.course.toLowerCase() === selectedCourse
     const matchSearch =
@@ -897,7 +920,7 @@ export default function StudentLiveClasses() {
                 <Video className="h-3.5 w-3.5" /> Instructor-led Live Sessions
               </div>
               <h1 className="mt-3 text-[26px] font-bold leading-tight text-[#0f172a]">Join live classes, reserve seats, and grow your skills in real-time.</h1>
-              <p className="mt-2 text-[13px] text-[#94a3b8]">Enrolled courses seedha join karo. Naye courses ke liye enroll aur payment karo — phir class join karo.</p>
+              <p className="mt-2 text-[13px] text-[#94a3b8]">Join enrolled courses directly. For new courses, enroll and make payment — then join the class.</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {[
                   `${liveCount} live now`,
@@ -983,7 +1006,7 @@ export default function StudentLiveClasses() {
                   {f === 'Live Now' && (
                     <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#ef4444] text-[9px] font-bold text-white">{liveCount}</span>
                   )}
-                  {f === 'Recent' && (
+                  {f === 'Complete' && (
                     <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#16a34a] text-[9px] font-bold text-white">{recentCount}</span>
                   )}
                   {f === 'Enrolled' && (
@@ -1001,7 +1024,7 @@ export default function StudentLiveClasses() {
             <h2 className="text-[18px] font-bold text-[#0f172a]">
               {activeFilter === 'Enrolled'
                 ? 'My Enrolled Sessions'
-                : activeFilter === 'Recent'
+                : activeFilter === 'Complete'
                   ? 'Recently Completed Sessions'
                   : activeFilter === 'Live Now'
                     ? 'Live Sessions'

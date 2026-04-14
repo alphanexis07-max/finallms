@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Search, Bell, Menu } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import useRealtime from '../hooks/useRealtime'
 
 function Avatar({ src, alt = '', name = '', className = '' }) {
   const initials = useMemo(() => {
@@ -46,6 +47,7 @@ const getPageTitle = (pathname) => {
   if (pathname === '/admin/course-management') return 'Course Management'
   if (pathname === '/admin/instructor-management') return 'Instructor Management'
   if (pathname === '/admin/student-management') return 'Student Management'
+  if (pathname === '/admin/student-insights') return 'Student Insights'
   if (pathname === '/admin/payments-coupons') return 'Payments & Coupons'
   if (pathname === '/admin/live-classes') return 'Live Classes'
   if (pathname === '/admin/e-library') return 'E-Library'
@@ -112,10 +114,13 @@ export default function HeaderPanel({ onMenuToggle }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [currentUser, setCurrentUser] = useState(null)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const routeRole = getRoleFromPath(location.pathname)
   const storedRole = localStorage.getItem('lms_role') || ''
   const resolvedRole = currentUser?.role || storedRole || routeRole
+  const tenantId = localStorage.getItem('lms_tenant_id') || ''
+  const currentUserId = String(currentUser?._id || currentUser?.sub || '').trim()
 
   const panelLabel = formatPanelLabel(resolvedRole)
   const userName = currentUser?.full_name || currentUser?.email || 'User'
@@ -137,8 +142,7 @@ export default function HeaderPanel({ onMenuToggle }) {
   if (resolvedRole === 'super_admin') {
     profilePath = '/superadmin/profile'
     notificationPath = '/superadmin/notifications'
-  }
-  else if (resolvedRole === 'admin' || resolvedRole === 'sub_admin') {
+  } else if (resolvedRole === 'admin' || resolvedRole === 'sub_admin') {
     profilePath = '/admin/profile'
     notificationPath = '/admin/notifications'
   } else if (resolvedRole === 'instructor') {
@@ -148,6 +152,17 @@ export default function HeaderPanel({ onMenuToggle }) {
     profilePath = '/student-panel/profile'
     notificationPath = '/student-panel/notifications'
   }
+
+  const loadUnreadCount = () =>
+    api('/lms/notifications?skip=0&limit=200')
+      .then((res) => {
+        const items = res?.items || []
+        const unread = items.reduce((count, item) => count + (item?.read ? 0 : 1), 0)
+        setUnreadCount(unread)
+      })
+      .catch(() => {
+        setUnreadCount(0)
+      })
 
   useEffect(() => {
     let isMounted = true
@@ -163,12 +178,27 @@ export default function HeaderPanel({ onMenuToggle }) {
 
     if (localStorage.getItem('lms_token')) {
       loadCurrentUser()
+      loadUnreadCount()
+    } else {
+      setUnreadCount(0)
     }
 
     return () => {
       isMounted = false
     }
   }, [location.pathname])
+
+  const notificationRoom =
+    resolvedRole === 'admin' || resolvedRole === 'sub_admin' || resolvedRole === 'super_admin'
+      ? (tenantId ? `tenant:${tenantId}` : '')
+      : (currentUserId ? `user:${currentUserId}` : '')
+
+  useRealtime(notificationRoom, (payload) => {
+    const eventType = String(payload?.type || '').toLowerCase()
+    if (!eventType || eventType.includes('notification')) {
+      loadUnreadCount()
+    }
+  })
 
   return (
     <header className="flex min-h-[72px] items-center justify-between border-b border-black/[0.08] bg-white px-4 py-3 sm:px-6 lg:px-7">
@@ -202,10 +232,15 @@ export default function HeaderPanel({ onMenuToggle }) {
 
         <button
           onClick={() => notificationPath && navigate(notificationPath)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center gap-[8px] rounded-[6px] border border-black/[0.08] bg-white px-[10px] py-[0.25px]"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center gap-[8px] rounded-[6px] border border-black/[0.08] bg-white px-[10px] py-[0.25px]"
           disabled={!notificationPath}
         >
           <Bell className="h-[18px] w-[18px] text-[#0f172a]" />
+          {unreadCount > 0 ? (
+            <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ef4444] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          ) : null}
         </button>
 
         <button

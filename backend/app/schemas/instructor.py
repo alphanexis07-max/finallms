@@ -178,3 +178,10 @@ class SubmitTest(BaseModel):
     test_id: str
     answers: dict  # {question_id: selected_option}
 
+
+class CertificateUploadIn(BaseModel):
+    student_id: str
+    course_id: str
+    title: str
+    file_url: Optional[str] = None
+

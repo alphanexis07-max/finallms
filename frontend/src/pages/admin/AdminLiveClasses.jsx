@@ -19,7 +19,7 @@ import {
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
 
-const FILTERS = ['All Classes', 'Live', 'Upcoming', 'Recent', 'Cancelled']
+const FILTERS = ['All Classes', 'Live', 'Upcoming', 'Completed', 'Cancelled']
 
 const STATUS_CONFIG = {
   live: { label: 'Live', bg: 'bg-[#fee2e2]', text: 'text-[#991b1b]', dot: 'bg-[#ef4444]' },
@@ -562,10 +562,10 @@ export default function AdminLiveClasses() {
     const selectedCourse = activeCourseFilter.trim().toLowerCase()
     return sessions.filter((s) => {
       const matchFilter =
-        (activeFilter === 'All Classes' && s.status !== 'cancelled') ||
+        (activeFilter === 'All Classes' && (s.status === 'live' || s.status === 'upcoming')) ||
         (activeFilter === 'Live' && s.status === 'live') ||
         (activeFilter === 'Upcoming' && s.status === 'upcoming') ||
-        (activeFilter === 'Recent' && s.status === 'recent') ||
+        (activeFilter === 'Completed' && s.status === 'recent') ||
         (activeFilter === 'Cancelled' && s.status === 'cancelled')
 
       const matchCourse = selectedCourse === 'all courses' || s.course.toLowerCase() === selectedCourse

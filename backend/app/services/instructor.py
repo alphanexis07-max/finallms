@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
+from app.services.realtime import ws_manager
 
 
 # CREATE
@@ -9,6 +10,7 @@ async def create_course(db, data, instructor_id):
         "description": data.description,
         "price": data.price,
         "instructor_id": str(instructor_id),
+        "created_by": str(instructor_id),
         "created_at": datetime.utcnow()
     }
 
@@ -21,7 +23,13 @@ async def create_course(db, data, instructor_id):
 # GET ALL
 async def get_courses(db, instructor_id):
     courses = []
-    cursor = db["courses"].find({"instructor_id": str(instructor_id)})
+    instructor_key = str(instructor_id)
+    cursor = db["courses"].find({
+        "$or": [
+            {"instructor_id": instructor_key},
+            {"created_by": instructor_key},
+        ]
+    })
 
     async for doc in cursor:
         doc["_id"] = str(doc["_id"])
@@ -336,31 +344,187 @@ async def get_dashboard(db, instructor_id):
             "events": 0
         }
 
-async def get_student_insights(db, instructor_id):
-    # 🔥 Get all courses of instructor
-    courses = await db["courses"].find({
-        "instructor_id": str(instructor_id)
-    }).to_list(None)
 
-    course_ids = [str(c["_id"]) for c in courses]
+async def upload_certificate(db, instructor_id, tenant_id, payload):
+    instructor_variants = _id_variants(instructor_id)
+    course_variants = _id_variants(payload.course_id)
+    student_variants = _id_variants(payload.student_id)
 
-    # 🔥 Get enrolled students
-    enrollments = await db["enrollments"].find({
-        "course_id": {"$in": course_ids}
-    }).to_list(None)
+    if not instructor_variants or not course_variants or not student_variants:
+        raise ValueError("Invalid certificate payload")
 
-    student_ids = list(set(e["student_id"] for e in enrollments))
+    course_query = {
+        "_id": {"$in": course_variants},
+        "$or": [
+            {"instructor_id": {"$in": instructor_variants}},
+            {"created_by": {"$in": instructor_variants}},
+        ],
+    }
+    if tenant_id:
+        course_query["tenant_id"] = tenant_id
 
-    # 🔥 Get test attempts
-    attempts = await db["test_attempts"].find({
-        "student_id": {"$in": student_ids}
-    }).to_list(None)
+    course = await db["courses"].find_one(course_query)
+    if not course:
+        raise PermissionError("You can upload certificates only for your own courses")
+
+    enrollment_query = {
+        "course_id": {"$in": course_variants},
+        "student_id": {"$in": student_variants},
+    }
+    if tenant_id:
+        enrollment_query["tenant_id"] = tenant_id
+
+    enrollment = await db["enrollments"].find_one(enrollment_query)
+    if not enrollment:
+        raise LookupError("Student is not enrolled in this course")
+
+    now = datetime.utcnow()
+    cert = {
+        "tenant_id": tenant_id,
+        "instructor_id": str(instructor_id),
+        "student_id": str(payload.student_id),
+        "course_id": str(payload.course_id),
+        "title": str(payload.title).strip(),
+        "file_url": str(payload.file_url or '').strip(),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    result = await db["certificates"].insert_one(cert)
+    cert["_id"] = str(result.inserted_id)
+
+    notification = {
+        "tenant_id": tenant_id,
+        "user_id": str(payload.student_id),
+        "title": "Certificate issued",
+        "message": f"A certificate for {cert['title']} is now available.",
+        "type": "achievement",
+        "meta": {
+            "certificate_id": cert["_id"],
+            "course_id": cert["course_id"],
+            "student_id": cert["student_id"],
+        },
+        "read": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db["notifications"].insert_one(notification)
+    await ws_manager.broadcast(f"user:{payload.student_id}", {"type": "notification.created", "data": notification})
+    if tenant_id:
+        await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "notification.created", "data": notification})
+
+    return cert
+
+def _id_variants(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return []
+    variants = [raw]
+    if ObjectId.is_valid(raw):
+        variants.append(ObjectId(raw))
+    return variants
+
+
+async def get_student_insights(db, instructor_id, tenant_id=None):
+    instructor_variants = _id_variants(instructor_id)
+    if not instructor_variants:
+        return {
+            "summary": {
+                "total_students": 0,
+                "top_performers": 0,
+                "needs_support": 0,
+            },
+            "students": [],
+        }
+
+    # Collect all courses effectively taught by this instructor.
+    course_ids = set()
+
+    course_or = [{"instructor_id": {"$in": instructor_variants}}, {"created_by": {"$in": instructor_variants}}]
+    course_query = {"$or": course_or}
+    if tenant_id:
+        course_query["tenant_id"] = tenant_id
+
+    courses = await db["courses"].find(course_query).to_list(None)
+    for course in courses:
+        cid = course.get("_id")
+        if cid:
+            course_ids.add(str(cid))
+
+    # Also include courses referenced by instructor's live classes.
+    live_query = {"instructor_id": {"$in": instructor_variants}}
+    if tenant_id:
+        live_query["tenant_id"] = tenant_id
+    live_classes = await db["live_classes"].find(live_query, {"course_id": 1}).to_list(None)
+    for live_class in live_classes:
+        course_id = str(live_class.get("course_id") or "").strip()
+        if course_id:
+            course_ids.add(course_id)
+
+    if not course_ids:
+        return {
+            "summary": {
+                "total_students": 0,
+                "top_performers": 0,
+                "needs_support": 0,
+            },
+            "students": [],
+        }
+
+    course_id_variants = []
+    seen_course_variants = set()
+    for course_id in course_ids:
+        for variant in _id_variants(course_id):
+            key = str(variant)
+            if key in seen_course_variants:
+                continue
+            seen_course_variants.add(key)
+            course_id_variants.append(variant)
+
+    enrollment_query = {"course_id": {"$in": course_id_variants}}
+    if tenant_id:
+        enrollment_query["tenant_id"] = tenant_id
+
+    enrollments = await db["enrollments"].find(enrollment_query).to_list(None)
+
+    student_ids = []
+    seen_students = set()
+    for enrollment in enrollments:
+        sid = str(enrollment.get("student_id") or "").strip()
+        if not sid or sid in seen_students:
+            continue
+        seen_students.add(sid)
+        student_ids.append(sid)
+
+    if not student_ids:
+        return {
+            "summary": {
+                "total_students": 0,
+                "top_performers": 0,
+                "needs_support": 0,
+            },
+            "students": [],
+        }
+
+    student_id_variants = []
+    seen_student_variants = set()
+    for sid in student_ids:
+        for variant in _id_variants(sid):
+            key = str(variant)
+            if key in seen_student_variants:
+                continue
+            seen_student_variants.add(key)
+            student_id_variants.append(variant)
+
+    attempts = await db["test_attempts"].find({"student_id": {"$in": student_id_variants}}).to_list(None)
 
     # 🧠 Calculate performance
     student_scores = {}
 
     for a in attempts:
-        sid = a["student_id"]
+        sid = str(a.get("student_id") or "").strip()
+        if not sid:
+            continue
 
         if sid not in student_scores:
             student_scores[sid] = {"total": 0, "score": 0}

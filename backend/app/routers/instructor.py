@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.instructor import (
+    CertificateUploadIn,
     CourseCreate,
     CourseUpdate,
     QuestionCreate,
@@ -223,4 +224,21 @@ async def student_insights(
     user=Depends(get_current_user)
 ):
     instructor_required(user)
-    return await service.get_student_insights(db, get_user_id(user))
+    return await service.get_student_insights(db, get_user_id(user), user.get("tenant_id"))
+
+
+@router.post("/certificates")
+async def upload_certificate(
+    payload: CertificateUploadIn,
+    db=Depends(get_database),
+    user=Depends(get_current_user),
+):
+    instructor_required(user)
+    try:
+        return await service.upload_certificate(db, get_user_id(user), user.get("tenant_id"), payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

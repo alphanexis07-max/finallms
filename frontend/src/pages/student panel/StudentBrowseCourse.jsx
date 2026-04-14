@@ -450,15 +450,21 @@ export default function StudentBrowseCourse() {
           throw new Error('Unable to load Razorpay checkout script.')
         }
 
-        if (!order?.key_id || !order?.order_id) {
+        const razorpayKeyId = order?.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || ''
+
+        if (!razorpayKeyId || !order?.order_id) {
           throw new Error('Payment gateway is not configured correctly.')
+        }
+
+        if (typeof window.Razorpay !== 'function') {
+          throw new Error('Razorpay checkout is not available in this browser.')
         }
 
         const prefill = parseUserMetaFromToken()
 
         await new Promise((resolve, reject) => {
           const razorpay = new window.Razorpay({
-            key: order.key_id,
+            key: razorpayKeyId,
             amount: order.amount,
             currency: order.currency || 'INR',
             name: 'LMS',
@@ -485,7 +491,12 @@ export default function StudentBrowseCourse() {
               }
             },
           })
-          razorpay.open()
+
+          try {
+            razorpay.open()
+          } catch (openError) {
+            reject(openError)
+          }
         })
       }
 
