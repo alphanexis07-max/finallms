@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from app.db.mongo import get_database
@@ -23,7 +24,7 @@ async def get_student_tests(db=Depends(get_database), user=Depends(get_current_u
 async def debug_student_tests(db=Depends(get_database), user=Depends(get_current_user)):
     """
     Dev-only helper to diagnose why student tests list is empty.
-    Returns computed enrollment course_ids + matched published tests.
+    Mirrors the matching logic used by `get_tests_for_student`.
     """
     if user.get("role") != Role.STUDENT.value:
         raise HTTPException(status_code=403, detail="Only students can access their tests.")
@@ -31,76 +32,130 @@ async def debug_student_tests(db=Depends(get_database), user=Depends(get_current
     student_id = user.get("sub")
 
     def _id_variants(raw_id: str) -> list:
-        raw = str(raw_id)
+        raw = str(raw_id).strip()
+        if not raw:
+            return []
         variants = [raw]
         if ObjectId.is_valid(raw):
             variants.append(ObjectId(raw))
         return variants
 
-    student_variants = _id_variants(str(student_id))
-    enrollments = await db["enrollments"].find({"student_id": {"$in": student_variants}}).to_list(None)
+    def _norm(value: str) -> str:
+        return str(value or "").strip().lower()
 
-    # Collect unique course ids in both string and ObjectId forms.
+    student_id_text = str(student_id).strip()
+    enrollments = await db["enrollments"].find(
+        {"student_id": student_id_text},
+        {"course_id": 1, "tenant_id": 1, "created_at": 1},
+    ).to_list(500)
+
+    live_classes = await db["live_classes"].find(
+        {},
+        {"attendee_ids": 1, "course_id": 1, "class_name": 1, "subject": 1, "tenant_id": 1, "start_at": 1},
+    ).to_list(500)
+    live_classes = [lc for lc in live_classes if student_id_text in [str(x) for x in (lc.get("attendee_ids") or [])]]
+
     course_id_variants: list = []
-    seen_keys: set[str] = set()
+    seen_course_variants: set[str] = set()
+    class_name_values: set[str] = set()
+    subject_values: set[str] = set()
     enrolled_course_ids_raw: list[str] = []
-    for e in enrollments:
-        cid = e.get("course_id")
-        if not cid:
-            continue
-        enrolled_course_ids_raw.append(str(cid))
-        for v in _id_variants(str(cid)):
-            key = str(v)
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            course_id_variants.append(v)
 
-    tests_found = []
-    tests_any_found = []
+    for enr in enrollments:
+        cid_raw = str(enr.get("course_id") or "").strip()
+        if not cid_raw:
+            continue
+        enrolled_course_ids_raw.append(cid_raw)
+        for variant in _id_variants(cid_raw):
+            key = str(variant)
+            if key in seen_course_variants:
+                continue
+            seen_course_variants.add(key)
+            course_id_variants.append(variant)
+        if not ObjectId.is_valid(cid_raw):
+            subject_values.add(cid_raw)
+
+    for lc in live_classes:
+        cid_raw = str(lc.get("course_id") or "").strip()
+        if cid_raw:
+            for variant in _id_variants(cid_raw):
+                key = str(variant)
+                if key in seen_course_variants:
+                    continue
+                seen_course_variants.add(key)
+                course_id_variants.append(variant)
+        cname = str(lc.get("class_name") or "").strip()
+        if cname:
+            class_name_values.add(cname)
+        subj = str(lc.get("subject") or "").strip()
+        if subj:
+            subject_values.add(subj)
+
+    # NOTE: This backend may not support operators like `$in` / `$or`.
+    # We will fetch published tests and filter locally.
+    or_clauses = {"course_id_variants": course_id_variants, "class_names": list(class_name_values), "subjects": list(subject_values)}
+
     tests_any_count = 0
     tests_published_count = 0
-    if course_id_variants:
-        # Total tests for these course ids (any publish status)
-        cursor_any = db["tests"].find({"course_id": {"$in": course_id_variants}})
-        async for doc in cursor_any:
-            tests_any_count += 1
-            if len(tests_any_found) < 25:
-                doc["_id"] = str(doc["_id"])
-                tests_any_found.append(
+    tests_found_sample: list[dict] = []
+    tests_any_sample: list[dict] = []
+
+    class_name_values_lc = {_norm(x) for x in class_name_values}
+    subject_values_lc = {_norm(x) for x in subject_values}
+
+    cursor_any = db["tests"].find({})
+    async for doc in cursor_any:
+        tests_any_count += 1
+        if len(tests_any_sample) < 10:
+            tests_any_sample.append(
+                {
+                    "_id": str(doc.get("_id")),
+                    "title": doc.get("title"),
+                    "course_id": doc.get("course_id"),
+                    "class_name": doc.get("class_name"),
+                    "subject": doc.get("subject"),
+                    "is_published": doc.get("is_published"),
+                }
+            )
+
+    cursor_pub = db["tests"].find({"is_published": True}).sort("created_at", -1)
+    async for doc in cursor_pub:
+        course_id_text = str(doc.get("course_id") or "").strip()
+        class_name_text = _norm(doc.get("class_name") or "")
+        subject_text = _norm(doc.get("subject") or "")
+        if (
+            (course_id_text and course_id_text in seen_course_variants)
+            or (class_name_text and class_name_text in class_name_values_lc)
+            or (subject_text and subject_text in subject_values_lc)
+        ):
+            tests_published_count += 1
+            if len(tests_found_sample) < 10:
+                tests_found_sample.append(
                     {
-                        "_id": doc["_id"],
+                        "_id": str(doc.get("_id")),
                         "title": doc.get("title"),
                         "course_id": doc.get("course_id"),
+                        "class_name": doc.get("class_name"),
+                        "subject": doc.get("subject"),
                         "is_published": doc.get("is_published"),
                     }
                 )
 
-        cursor = db["tests"].find(
-            {"course_id": {"$in": course_id_variants}, "is_published": True}
-        )
-        async for doc in cursor:
-            doc["_id"] = str(doc["_id"])
-            tests_published_count += 1
-            tests_found.append(
-                {
-                    "_id": doc["_id"],
-                    "title": doc.get("title"),
-                    "course_id": doc.get("course_id"),
-                    "is_published": doc.get("is_published"),
-                }
-            )
-            if len(tests_found) >= 25:
-                break
-
     return {
         "student_id": student_id,
         "enrollments_count": len(enrollments),
+        "live_classes_count": len(live_classes),
         "enrolled_course_ids_raw": enrolled_course_ids_raw,
         "course_id_variants_used": [str(x) for x in course_id_variants[:50]],
+        "class_name_values": sorted(list(class_name_values))[:50],
+        "subject_values": sorted(list(subject_values))[:50],
+        "or_clauses": or_clauses,
         "tests_any_count": tests_any_count,
         "tests_published_count": tests_published_count,
-        "tests_found_count": len(tests_found),
-        "tests_found_sample": tests_found,
-        "tests_any_sample": tests_any_found,
+        "tests_found_sample": tests_found_sample,
+        "tests_any_sample": tests_any_sample,
+        "norm_preview": {
+            "class_name_values_lc": sorted({_norm(x) for x in class_name_values})[:50],
+            "subject_values_lc": sorted({_norm(x) for x in subject_values})[:50],
+        },
     }

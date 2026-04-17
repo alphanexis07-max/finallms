@@ -22,13 +22,14 @@ export default function StudentDashboard() {
   const [liveClasses, setLiveClasses] = useState([])
   const [libraryResources, setLibraryResources] = useState([])
   const [notifications, setNotifications] = useState([])
+  const [secondaryLoading, setSecondaryLoading] = useState(false)
 
-  const loadData = async () => {
+  const loadPrimaryData = async () => {
     try {
       setLoading(true)
       setError('')
 
-      const [dashboardRes, enrollmentsRes, coursesRes, liveClassesRes, resourcesRes, notificationsRes] = await Promise.all([
+      const [dashboardRes, enrollmentsRes, coursesRes] = await Promise.all([
         api('/lms/dashboard/student').catch(() => ({
           courses_in_progress: 0,
           live_classes_week: 0,
@@ -38,17 +39,11 @@ export default function StudentDashboard() {
         })),
         api('/lms/enrollments?limit=100').catch(() => ({ items: [] })),
         api('/lms/courses?limit=200').catch(() => ({ items: [] })),
-        api('/lms/live-classes?status=upcoming&limit=100').catch(() => ({ items: [] })),
-        api('/lms/library-resources?limit=100').catch(() => ({ items: [] })),
-        api('/lms/notifications?limit=100').catch(() => ({ items: [] })),
       ])
 
       setStatsData(dashboardRes || {})
       setEnrollments(enrollmentsRes?.items || [])
       setCourses(coursesRes?.items || [])
-      setLiveClasses(liveClassesRes?.items || [])
-      setLibraryResources(resourcesRes?.items || [])
-      setNotifications(notificationsRes?.items || [])
     } catch (err) {
       setError(err?.message || 'Unable to load student dashboard data.')
     } finally {
@@ -56,12 +51,37 @@ export default function StudentDashboard() {
     }
   }
 
+  const loadSecondaryData = async () => {
+    try {
+      setSecondaryLoading(true)
+      const [liveClassesRes, resourcesRes, notificationsRes] = await Promise.all([
+        api('/lms/live-classes?status=upcoming&limit=100').catch(() => ({ items: [] })),
+        api('/lms/library-resources?limit=100').catch(() => ({ items: [] })),
+        api('/lms/notifications?limit=100').catch(() => ({ items: [] })),
+      ])
+      setLiveClasses(liveClassesRes?.items || [])
+      setLibraryResources(resourcesRes?.items || [])
+      setNotifications(notificationsRes?.items || [])
+    } finally {
+      setSecondaryLoading(false)
+    }
+  }
+
   useEffect(() => {
-    loadData()
+    let cancelled = false
+    loadPrimaryData().then(() => {
+      if (!cancelled) {
+        loadSecondaryData()
+      }
+    })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useRealtime(tenantId ? `tenant:${tenantId}` : '', () => {
-    loadData()
+    loadPrimaryData()
+    loadSecondaryData()
   })
 
   const stats = useMemo(
@@ -229,6 +249,8 @@ export default function StudentDashboard() {
               <div className="flex flex-col w-full gap-[12px]">
                 {loading ? (
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">Loading library resources...</div>
+                ) : secondaryLoading && resourceRows.length === 0 ? (
+                  <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">Loading library resources...</div>
                 ) : resourceRows.length === 0 ? (
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No library resources available.</div>
                 ) : (
@@ -275,6 +297,8 @@ export default function StudentDashboard() {
               </div>
               <div className="flex flex-col w-full gap-[12px]">
                 {loading ? (
+                  <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">Loading live classes...</div>
+                ) : secondaryLoading && liveClassRows.length === 0 ? (
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">Loading live classes...</div>
                 ) : liveClassRows.length === 0 ? (
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No upcoming live classes.</div>

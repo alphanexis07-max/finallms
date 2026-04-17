@@ -2,6 +2,38 @@ const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:
 // const FALLBACK_API_BASES = ['http://localhost:8000/api/v1', 'http://localhost:8001/api/v1']
 const FALLBACK_API_BASES = []
 let runtimeApiBase = localStorage.getItem('lms_api_base') || DEFAULT_API_BASE
+const GET_CACHE_TTL_MS = 15_000
+const responseCache = new Map()
+const inflightRequests = new Map()
+const parsedConcurrency = Number(import.meta.env.VITE_API_MAX_CONCURRENCY)
+const MAX_CONCURRENT_REQUESTS = Number.isFinite(parsedConcurrency) && parsedConcurrency > 0
+  ? Math.floor(parsedConcurrency)
+  : 4
+let activeRequestCount = 0
+const pendingRequestQueue = []
+
+function scheduleRequest(task) {
+  return new Promise((resolve, reject) => {
+    pendingRequestQueue.push({ task, resolve, reject })
+    runNextQueuedRequest()
+  })
+}
+
+function runNextQueuedRequest() {
+  if (activeRequestCount >= MAX_CONCURRENT_REQUESTS) return
+  const nextRequest = pendingRequestQueue.shift()
+  if (!nextRequest) return
+
+  activeRequestCount += 1
+  Promise.resolve()
+    .then(nextRequest.task)
+    .then(nextRequest.resolve)
+    .catch(nextRequest.reject)
+    .finally(() => {
+      activeRequestCount = Math.max(0, activeRequestCount - 1)
+      runNextQueuedRequest()
+    })
+}
 
 function deriveWsBaseFromApi(apiBase) {
   try {
@@ -40,6 +72,21 @@ export function clearAuthSession() {
 }
 
 export async function api(path, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase()
+  const canCache = method === 'GET'
+  const cacheKey = canCache ? `${runtimeApiBase}${path}` : ''
+  const now = Date.now()
+
+  if (canCache) {
+    const cached = responseCache.get(cacheKey)
+    if (cached && cached.expiresAt > now) {
+      return cached.data
+    }
+    if (inflightRequests.has(cacheKey)) {
+      return inflightRequests.get(cacheKey)
+    }
+  }
+
   const token = getToken()
   const headers = {
     'Content-Type': 'application/json',
@@ -49,28 +96,48 @@ export async function api(path, options = {}) {
   const candidates = [runtimeApiBase, ...FALLBACK_API_BASES.filter((x) => x !== runtimeApiBase)]
   let lastError
 
-  for (const base of candidates) {
-    try {
-      const response = await fetch(`${base}${path}`, {
-        ...options,
-        headers,
-      })
-      const data = await response.json().catch(() => ({}))
-      runtimeApiBase = base
-      localStorage.setItem('lms_api_base', base)
-      if (!response.ok) {
-        throw new Error(data.detail || 'Request failed')
-      }
-      return data
-    } catch (error) {
-      lastError = error
-      // Retry next base only for network issues where fetch itself fails.
-      if (!(error instanceof TypeError)) {
-        break
+  const requestPromise = scheduleRequest(async () => {
+    for (const base of candidates) {
+      try {
+        const response = await fetch(`${base}${path}`, {
+          ...options,
+          headers,
+        })
+        const data = await response.json().catch(() => ({}))
+        runtimeApiBase = base
+        localStorage.setItem('lms_api_base', base)
+        if (!response.ok) {
+          throw new Error(data.detail || 'Request failed')
+        }
+        if (canCache) {
+          responseCache.set(cacheKey, { data, expiresAt: Date.now() + GET_CACHE_TTL_MS })
+        } else {
+          // Conservative invalidation: writes can stale any cached GET.
+          responseCache.clear()
+        }
+        return data
+      } catch (error) {
+        lastError = error
+        // Retry next base only for network issues where fetch itself fails.
+        if (!(error instanceof TypeError)) {
+          break
+        }
       }
     }
+    throw lastError || new Error('Request failed')
+  })
+
+  if (canCache) {
+    inflightRequests.set(cacheKey, requestPromise)
   }
-  throw lastError || new Error('Request failed')
+
+  try {
+    return await requestPromise
+  } finally {
+    if (canCache) {
+      inflightRequests.delete(cacheKey)
+    }
+  }
 }
 
 export function getDashboardPathByRole(role) {

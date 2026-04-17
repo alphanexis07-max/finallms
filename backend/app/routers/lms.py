@@ -50,50 +50,42 @@ async def student_tests(
     limit: int = 100,
 ):
     student_id = user.get("sub")
-    # Get all enrollments for this student
-    enrollments = await db.enrollments.find({"student_id": student_id}).to_list(None)
-    # Collect all possible course_ids and subjects
+    # Only use live_classes for mapping
     enrolled_course_ids = set()
-    enrolled_subjects = set()
     enrolled_class_names = set()
-    subject_names_for_mapping = set()
+    subject_candidates = set()
+    live_classes = await db.live_classes.find({"attendee_ids": student_id}).to_list(None)
+    for lc in live_classes:
+        lc_cid = str(lc.get("course_id", "")).strip()
+        if lc_cid:
+            enrolled_course_ids.add(lc_cid)
+            subject_candidates.add(lc_cid.lower())
+        lc_cname = str(lc.get("class_name", "")).strip()
+        if lc_cname:
+            enrolled_class_names.add(lc_cname)
+            subject_candidates.add(lc_cname.lower())
+        lc_subject = str(lc.get("subject", "")).strip()
+        if lc_subject:
+            subject_candidates.add(lc_subject.lower())
 
-    for e in enrollments:
-        if e.get("course_id"):
-            cid = str(e["course_id"])
-            # If course_id looks like a subject name (not ObjectId), collect for mapping
-            if len(cid) < 24:
-                subject_names_for_mapping.add(cid)
-            else:
-                enrolled_course_ids.add(cid)
-        if e.get("subject"):
-            enrolled_subjects.add(str(e["subject"]))
-        if e.get("class_name"):
-            enrolled_class_names.add(str(e["class_name"]))
-
-    # Map subject names to course ObjectIds
-    if subject_names_for_mapping:
-        courses = await db.courses.find({"subject": {"$in": list(subject_names_for_mapping)}}).to_list(None)
-        for c in courses:
-            enrolled_course_ids.add(str(c["_id"]))
-
-    # Build query: match tests where course_id OR subject OR class_name matches
     test_query = {"is_published": True}
     or_clauses = []
     if enrolled_course_ids:
         or_clauses.append({"course_id": {"$in": list(enrolled_course_ids)}})
-    if enrolled_subjects:
-        or_clauses.append({"subject": {"$in": list(enrolled_subjects)}})
     if enrolled_class_names:
         or_clauses.append({"class_name": {"$in": list(enrolled_class_names)}})
+    if subject_candidates:
+        # Case-insensitive subject match
+        or_clauses.append({"subject": {"$in": list(subject_candidates)}})
     if or_clauses:
         test_query["$or"] = or_clauses
     else:
-        # No enrollments, return empty
         return {"items": [], "total": 0, "skip": skip, "limit": limit}
 
-    total = await db.tests.count_documents(test_query)
-    items = [as_dict(x) async for x in db.tests.find(test_query).sort("created_at", -1).skip(skip).limit(limit)]
+    # Case-insensitive subject match in query
+    items = [as_dict(x) async for x in db.tests.find(test_query).sort("created_at", -1).skip(skip).limit(limit)
+             if x.get("subject", "").strip().lower() in subject_candidates or not subject_candidates]
+    total = len(items)
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 import asyncio

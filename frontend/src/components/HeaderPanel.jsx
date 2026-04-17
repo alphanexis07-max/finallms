@@ -111,10 +111,41 @@ const getRoleFromPath = (pathname) => {
 const formatRole = (role) => roleLabelMap[role] || role || 'User'
 const formatPanelLabel = (role, fallback = 'LMS') => panelLabelMap[role] || fallback
 
+function getCachedUser() {
+  try {
+    const raw = localStorage.getItem('lms_user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function sanitizeUserForStorage(user) {
+  if (!user || typeof user !== 'object') return null
+  const image =
+    typeof user.profile_image_url === 'string' && user.profile_image_url.startsWith('data:')
+      ? ''
+      : (user.profile_image_url || user.avatar_url || user.image_url || '')
+  return {
+    _id: user._id || user.sub || '',
+    sub: user.sub || user._id || '',
+    full_name: user.full_name || user.name || '',
+    name: user.name || user.full_name || '',
+    email: user.email || '',
+    role: user.role || '',
+    tenant_id: user.tenant_id || '',
+    profile_image_url: image,
+    avatar_url: image,
+    image_url: image,
+  }
+}
+
 export default function HeaderPanel({ onMenuToggle }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState(() => getCachedUser())
   const [unreadCount, setUnreadCount] = useState(0)
 
   const routeRole = getRoleFromPath(location.pathname)
@@ -171,9 +202,19 @@ export default function HeaderPanel({ onMenuToggle }) {
     const loadCurrentUser = async () => {
       try {
         const data = await api('/auth/me')
-        if (isMounted) setCurrentUser(data)
+        if (isMounted) {
+          setCurrentUser(data)
+          const compact = sanitizeUserForStorage(data)
+          if (compact) {
+            try {
+              localStorage.setItem('lms_user', JSON.stringify(compact))
+            } catch {
+              // Ignore storage errors; UI still has live data.
+            }
+          }
+        }
       } catch {
-        if (isMounted) setCurrentUser(null)
+        if (isMounted) setCurrentUser(getCachedUser())
       }
     }
 

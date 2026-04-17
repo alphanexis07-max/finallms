@@ -70,12 +70,35 @@ async def login(payload: LoginRequest):
     if mongo.db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
     normalized_email = payload.email.strip().lower()
-    users = await mongo.db.users.find(
-        {
-            "email": email_match_query(normalized_email),
-            "is_active": {"$ne": False},
-        }
-    ).to_list(length=20)
+    projection = {
+        "_id": 1,
+        "role": 1,
+        "tenant_id": 1,
+        "password_hash": 1,
+        "password": 1,
+        "updated_at": 1,
+        "created_at": 1,
+    }
+    users: list[dict] = []
+
+    # Fast path (index-friendly): exact normalized email match.
+    exact_user = await mongo.db.users.find_one(
+        {"email": normalized_email, "is_active": {"$ne": False}},
+        projection,
+    )
+    if exact_user:
+        users.append(exact_user)
+
+    # Legacy fallback for old rows that may contain whitespace/case variants.
+    if not users:
+        users = await mongo.db.users.find(
+            {
+                "email": email_match_query(normalized_email),
+                "is_active": {"$ne": False},
+            },
+            projection,
+        ).to_list(length=5)
+
     if not users:
         logger.info("login_failed reason=user_not_found email=%s", normalized_email)
         raise HTTPException(status_code=401, detail="Invalid credentials")

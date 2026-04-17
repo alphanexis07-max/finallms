@@ -31,6 +31,70 @@ const LIVE_SUBSCRIPTION_TEMPLATES = [
   { key: 'full', name: 'Full', period: 'Full (until the full course is completed)', defaultFactor: 1 },
 ]
 
+function getCachedUser() {
+  try {
+    const raw = localStorage.getItem('lms_user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function sanitizeUserForStorage(user) {
+  if (!user || typeof user !== 'object') return null
+  const image =
+    typeof user.profile_image_url === 'string' && user.profile_image_url.startsWith('data:')
+      ? ''
+      : (user.profile_image_url || user.avatar_url || user.image_url || '')
+  return {
+    _id: user._id || user.sub || '',
+    sub: user.sub || user._id || '',
+    full_name: user.full_name || user.name || '',
+    name: user.name || user.full_name || '',
+    email: user.email || '',
+    role: user.role || '',
+    tenant_id: user.tenant_id || '',
+    profile_image_url: image,
+    avatar_url: image,
+    image_url: image,
+  }
+}
+
+function safeSetStorage(key, value) {
+  try {
+    localStorage.setItem(key, value)
+  } catch (err) {
+    if (err?.name === 'QuotaExceededError') {
+      localStorage.removeItem(key)
+    }
+  }
+}
+
+function getUserIdFromToken() {
+  try {
+    const token = localStorage.getItem('lms_token') || ''
+    const payload = token.split('.')[1]
+    if (!payload) return ''
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+    const decoded = JSON.parse(atob(padded))
+    return String(decoded?.sub || '').trim()
+  } catch {
+    return ''
+  }
+}
+
+function resolveUserId(user) {
+  const direct = String(user?._id || user?.sub || '').trim()
+  if (direct) return direct
+  const cached = getCachedUser()
+  const cachedId = String(cached?._id || cached?.sub || '').trim()
+  if (cachedId) return cachedId
+  return getUserIdFromToken()
+}
+
 function normalizePlanKey(name) {
   const normalized = String(name || '').trim().toLowerCase()
   if (!normalized) return ''
@@ -213,7 +277,7 @@ function StatusBadge({ status }) {
 }
 
 // Payment/Enrollment Modal
-function EnrollmentModal({ session, plans, me, onClose, onSuccess }) {
+function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSuccess }) {
   const [step, setStep] = useState('details') // details | success
   const [selectedPlanId, setSelectedPlanId] = useState('')
   const [modalError, setModalError] = useState('')
@@ -236,7 +300,8 @@ function EnrollmentModal({ session, plans, me, onClose, onSuccess }) {
     setModalError('')
     setLoading(true)
     try {
-      if (!me?._id) throw new Error('User not found')
+      const studentId = String(resolvedUserId || me?._id || me?.sub || '').trim()
+      if (!studentId) throw new Error('User not found')
 
       const amount = Number(payableAmount || 0)
       if (amount > 0) {
@@ -285,7 +350,7 @@ function EnrollmentModal({ session, plans, me, onClose, onSuccess }) {
         method: 'POST',
         body: JSON.stringify({
           course_id: session.courseId,
-          student_id: me._id,
+          student_id: studentId,
         }),
       })
 
@@ -737,7 +802,7 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
 
 export default function StudentLiveClasses() {
   const [liveSessions, setLiveSessions] = useState([])
-  const [me, setMe] = useState(null)
+  const [me, setMe] = useState(() => getCachedUser())
   const [enrolledSessionIds, setEnrolledSessionIds] = useState([])
   const [liveClassRatings, setLiveClassRatings] = useState({})
   const [ratingSavingFor, setRatingSavingFor] = useState('')
@@ -787,7 +852,7 @@ export default function StudentLiveClasses() {
       setLiveClassRatings(ratingMap)
 
       const courseMap = new Map((coursesRes.items || []).map((c) => [c._id, c]))
-      const currentStudentId = String(me?._id || me?.sub || '').trim()
+      const currentStudentId = resolveUserId(me)
       const enrolledSet = new Set()
       // --- Frontend fix: Also consider enrollments for enrolledSessionIds ---
       // Fetch enrollments for this student
@@ -857,7 +922,13 @@ export default function StudentLiveClasses() {
     let mounted = true
     api('/auth/me')
       .then((data) => {
-        if (mounted) setMe(data)
+        if (mounted) {
+          setMe(data)
+          const compactUser = sanitizeUserForStorage(data)
+          if (compactUser) {
+            safeSetStorage('lms_user', JSON.stringify(compactUser))
+          }
+        }
       })
       .catch(() => {
         if (mounted) setMe(null)
@@ -1078,6 +1149,7 @@ export default function StudentLiveClasses() {
           session={enrollModal}
           plans={subscriptionPlans}
           me={me}
+          resolvedUserId={resolveUserId(me)}
           onClose={() => setEnrollModal(null)}
           onSuccess={handleEnrollSuccess}
         />

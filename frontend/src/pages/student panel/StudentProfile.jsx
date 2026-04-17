@@ -1,4 +1,4 @@
-import { createElement, useEffect, useMemo, useState } from 'react'
+import { createElement, useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -8,6 +8,7 @@ import {
   Target,
   KeyRound,
   History,
+  Loader2,
 } from 'lucide-react'
 import { api } from '../../lib/api'
 
@@ -25,6 +26,15 @@ function DetailField({ label, value }) {
     <div className="rounded-[10px] bg-[#f3f4f6] px-3 py-2.5">
       <p className="text-[11px] font-medium text-[#94a3b8]">{label}</p>
       <p className="mt-0.5 text-[13px] font-semibold text-[#0f172a]">{value || '-'}</p>
+    </div>
+  )
+}
+
+function SkeletonLoader() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
+      <div className="h-64 bg-gray-200 rounded-lg"></div>
     </div>
   )
 }
@@ -51,9 +61,69 @@ function getInitials(name) {
     .toUpperCase()
 }
 
+// Cache keys for localStorage
+const CACHE_KEYS = {
+  PROFILE: 'student_profile_cache',
+  DASHBOARD: 'student_dashboard_cache',
+  NOTIFICATIONS: 'student_notifications_cache',
+  CACHE_TIME: 'student_cache_timestamp'
+}
+
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+function sanitizeUserForStorage(user) {
+  if (!user || typeof user !== 'object') return null
+  const image =
+    typeof user.profile_image_url === 'string' && user.profile_image_url.startsWith('data:')
+      ? ''
+      : (user.profile_image_url || user.avatar_url || user.image_url || '')
+  return {
+    _id: user._id || user.sub || '',
+    sub: user.sub || user._id || '',
+    full_name: user.full_name || user.name || '',
+    name: user.name || user.full_name || '',
+    email: user.email || '',
+    phone: user.phone || user.mobile || user.phone_number || '',
+    mobile: user.mobile || user.phone || '',
+    phone_number: user.phone_number || user.phone || '',
+    role: user.role || '',
+    tenant_id: user.tenant_id || '',
+    subscription_plan: user.subscription_plan || user.plan || '',
+    plan: user.plan || user.subscription_plan || '',
+    profile_image_url: image,
+    avatar_url: image,
+    image_url: image,
+    created_at: user.created_at || '',
+    is_active: Boolean(user.is_active),
+  }
+}
+
+function safeSetStorage(key, value) {
+  try {
+    localStorage.setItem(key, value)
+    return true
+  } catch (err) {
+    if (err?.name === 'QuotaExceededError') {
+      localStorage.removeItem(key)
+    }
+    return false
+  }
+}
+
+function getStoredUserFallback() {
+  try {
+    const raw = localStorage.getItem('lms_user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 export default function StudentProfile() {
   const navigate = useNavigate()
-  const [me, setMe] = useState(null)
+  const [me, setMe] = useState(() => getStoredUserFallback())
   const [stats, setStats] = useState({
     courses_in_progress: 0,
     live_classes_week: 0,
@@ -75,44 +145,174 @@ export default function StudentProfile() {
     profile_image_url: '',
   })
 
+  // Load cached data immediately
+  const loadCachedData = useCallback(() => {
+    try {
+      const cacheTime = localStorage.getItem(CACHE_KEYS.CACHE_TIME)
+      const isCacheValid = cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION
+      
+      if (isCacheValid) {
+        const cachedProfile = localStorage.getItem(CACHE_KEYS.PROFILE)
+        const cachedDashboard = localStorage.getItem(CACHE_KEYS.DASHBOARD)
+        const cachedNotifications = localStorage.getItem(CACHE_KEYS.NOTIFICATIONS)
+        
+        if (cachedProfile) {
+          const profile = JSON.parse(cachedProfile)
+          setMe(profile)
+          setForm({
+            full_name: profile?.full_name || profile?.name || '',
+            email: profile?.email || '',
+            phone: profile?.phone || profile?.mobile || profile?.phone_number || '',
+            profile_image_url: profile?.profile_image_url || profile?.avatar_url || profile?.image_url || '',
+          })
+        }
+        
+        if (cachedDashboard) {
+          const dashboard = JSON.parse(cachedDashboard)
+          setStats({
+            courses_in_progress: dashboard?.courses_in_progress ?? 0,
+            live_classes_week: dashboard?.live_classes_week ?? 0,
+            quiz_attempts: dashboard?.quiz_attempts ?? 0,
+            certificates_earned: dashboard?.certificates_earned ?? 0,
+            unread_notifications: dashboard?.unread_notifications ?? 0,
+          })
+        }
+        
+        if (cachedNotifications) {
+          const notes = JSON.parse(cachedNotifications)
+          setNotifications((notes?.items || []).slice(0, 6))
+        }
+        
+        return true
+      }
+      const fallbackUser = getStoredUserFallback()
+      if (fallbackUser) {
+        setMe(fallbackUser)
+        setForm({
+          full_name: fallbackUser?.full_name || fallbackUser?.name || '',
+          email: fallbackUser?.email || '',
+          phone: fallbackUser?.phone || fallbackUser?.mobile || fallbackUser?.phone_number || '',
+          profile_image_url: fallbackUser?.profile_image_url || fallbackUser?.avatar_url || fallbackUser?.image_url || '',
+        })
+      }
+    } catch (err) {
+      console.warn('Failed to load cache:', err)
+    }
+    return false
+  }, [])
+
+  // Save data to cache
+  const saveToCache = useCallback((profile, dashboard, notifications) => {
+    try {
+      if (profile) {
+        const compactProfile = sanitizeUserForStorage(profile)
+        if (compactProfile) safeSetStorage(CACHE_KEYS.PROFILE, JSON.stringify(compactProfile))
+      }
+      if (dashboard) safeSetStorage(CACHE_KEYS.DASHBOARD, JSON.stringify(dashboard))
+      if (notifications) safeSetStorage(CACHE_KEYS.NOTIFICATIONS, JSON.stringify(notifications))
+      safeSetStorage(CACHE_KEYS.CACHE_TIME, Date.now().toString())
+    } catch (err) {
+      console.warn('Failed to save cache:', err)
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
+    let timeoutId = null
+    let hardStopId = null
+
+    // Load cached data first for instant display
+    const hasCache = loadCachedData()
+    
+    if (hasCache) {
+      // Set a timeout to still show loading state briefly if needed
+      timeoutId = setTimeout(() => {
+        if (!cancelled && loading) {
+          setLoading(false)
+        }
+      }, 500)
+    }
+    // Never keep skeleton forever when backend is slow.
+    hardStopId = setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 12000)
 
     const loadData = async () => {
-      setLoading(true)
-      setError('')
-
       try {
-        const [profile, dashboard, notes] = await Promise.all([
+        // Use Promise.allSettled to handle individual failures
+        const results = await Promise.allSettled([
           api('/auth/me'),
-          api('/lms/dashboard/student').catch(() => ({})),
-          api('/lms/notifications?limit=20').catch(() => ({ items: [] })),
+          api('/lms/dashboard/student'),
+          api('/lms/notifications?limit=20')
         ])
 
         if (cancelled) return
 
-        setMe(profile || null)
-        setForm({
-          full_name: profile?.full_name || profile?.name || '',
-          email: profile?.email || '',
-          phone: profile?.phone || profile?.mobile || profile?.phone_number || '',
-          profile_image_url: profile?.profile_image_url || profile?.avatar_url || profile?.image_url || '',
-        })
-        setUploadedImageUrl('')
-        setStats({
-          courses_in_progress: dashboard?.courses_in_progress ?? 0,
-          live_classes_week: dashboard?.live_classes_week ?? 0,
-          quiz_attempts: dashboard?.quiz_attempts ?? 0,
-          certificates_earned: dashboard?.certificates_earned ?? 0,
-          unread_notifications: dashboard?.unread_notifications ?? 0,
-        })
-        setNotifications((notes?.items || []).slice(0, 6))
+        const [profileResult, dashboardResult, notesResult] = results
+        
+        let newProfile = null
+        let newDashboard = {}
+        let newNotifications = []
+
+        // Handle profile data
+        if (profileResult.status === 'fulfilled') {
+          newProfile = profileResult.value
+          setMe(newProfile)
+          const compactUser = sanitizeUserForStorage(newProfile)
+          if (compactUser) {
+            safeSetStorage('lms_user', JSON.stringify(compactUser))
+          }
+          setForm({
+            full_name: newProfile?.full_name || newProfile?.name || '',
+            email: newProfile?.email || '',
+            phone: newProfile?.phone || newProfile?.mobile || newProfile?.phone_number || '',
+            profile_image_url: newProfile?.profile_image_url || newProfile?.avatar_url || newProfile?.image_url || '',
+          })
+        } else if (profileResult.status === 'rejected') {
+          console.error('Profile fetch failed:', profileResult.reason)
+          const fallbackUser = getStoredUserFallback()
+          if (fallbackUser) {
+            setMe(fallbackUser)
+          } else if (!hasCache) {
+            setError('Unable to load profile data.')
+          }
+        }
+
+        // Handle dashboard data
+        if (dashboardResult.status === 'fulfilled') {
+          newDashboard = dashboardResult.value
+          setStats({
+            courses_in_progress: newDashboard?.courses_in_progress ?? 0,
+            live_classes_week: newDashboard?.live_classes_week ?? 0,
+            quiz_attempts: newDashboard?.quiz_attempts ?? 0,
+            certificates_earned: newDashboard?.certificates_earned ?? 0,
+            unread_notifications: newDashboard?.unread_notifications ?? 0,
+          })
+        }
+
+        // Handle notifications
+        if (notesResult.status === 'fulfilled') {
+          newNotifications = notesResult.value
+          setNotifications((newNotifications?.items || []).slice(0, 6))
+        }
+
+        // Save to cache
+        saveToCache(newProfile, newDashboard, newNotifications)
+        
+        // Clear any pending timeout
+        if (timeoutId) clearTimeout(timeoutId)
+        if (hardStopId) clearTimeout(hardStopId)
+        if (!cancelled) setLoading(false)
       } catch (err) {
         if (!cancelled) {
-          setError(err?.message || 'Unable to load profile data.')
+          console.error('Failed to load data:', err)
+          if (!hasCache) {
+            setError(err?.message || 'Unable to load profile data.')
+          }
+          if (timeoutId) clearTimeout(timeoutId)
+          if (hardStopId) clearTimeout(hardStopId)
+          setLoading(false)
         }
-      } finally {
-        if (!cancelled) setLoading(false)
       }
     }
 
@@ -120,8 +320,10 @@ export default function StudentProfile() {
 
     return () => {
       cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+      if (hardStopId) clearTimeout(hardStopId)
     }
-  }, [])
+  }, [loadCachedData, saveToCache])
 
   const displayName = me?.full_name || me?.name || 'Learner'
   const displayRole = me?.role ? me.role.replace('_', ' ') : 'student'
@@ -150,7 +352,8 @@ export default function StudentProfile() {
           profile_image_url: imageToSave,
         }),
       })
-      // Re-fetch source of truth to keep UI synced with backend.
+      
+      // Re-fetch source of truth to keep UI synced with backend
       const updated = await api('/auth/me')
       setMe(updated)
       setForm({
@@ -162,8 +365,15 @@ export default function StudentProfile() {
       setUploadedImageUrl('')
       setIsEditing(false)
       setSuccess('Profile updated successfully.')
+      
+      // Update cache
+      saveToCache(updated, null, null)
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       setError(err?.message || 'Unable to update profile.')
+      setTimeout(() => setError(''), 3000)
     } finally {
       setSaving(false)
     }
@@ -173,14 +383,61 @@ export default function StudentProfile() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result
-      if (typeof dataUrl === 'string') {
-        setUploadedImageUrl(dataUrl)
+    // Compress image if too large
+    if (file.size > 1024 * 1024) { // If larger than 1MB
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          
+          let width = img.width
+          let height = img.height
+          const maxDimension = 800
+          
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = (height * maxDimension) / width
+              width = maxDimension
+            } else {
+              width = (width * maxDimension) / height
+              height = maxDimension
+            }
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+          setUploadedImageUrl(dataUrl)
+        }
+        img.src = e.target?.result
       }
+      reader.readAsDataURL(file)
+    } else {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result
+        if (typeof dataUrl === 'string') {
+          setUploadedImageUrl(dataUrl)
+        }
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
+  }
+
+  if (loading && !me && !notifications.length) {
+    return (
+      <div className="min-h-full bg-[#f3f4f6]">
+        <div className="p-6">
+          <div className="mx-auto max-w-[1200px]">
+            <SkeletonLoader />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -194,6 +451,7 @@ export default function StudentProfile() {
                   src={profileImage}
                   alt={displayName}
                   className="h-[100px] w-[100px] rounded-full object-cover ring-4 ring-[#f3f4f6]"
+                  loading="lazy"
                 />
               ) : (
                 <div className="flex h-[100px] w-[100px] items-center justify-center rounded-full bg-gradient-to-br from-[#5b3df6] to-[#2dd4bf] text-[28px] font-bold text-white ring-4 ring-[#f3f4f6]">
@@ -230,7 +488,7 @@ export default function StudentProfile() {
               <button
                 type="button"
                 onClick={() => navigate('/forgetpassword')}
-                className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-black/[0.1] bg-white py-2.5 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
+                className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-black/[0.1] bg-white py-2.5 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
               >
                 <KeyRound className="h-4 w-4 text-[#64748b]" />
                 Change password
@@ -239,6 +497,7 @@ export default function StudentProfile() {
           </aside>
 
           <div className="min-w-0 flex-1 space-y-6">
+            {/* Personal Details Section */}
             <section className="rounded-[12px] bg-white p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -248,15 +507,14 @@ export default function StudentProfile() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
+                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
                 >
                   Edit profile
                 </button>
               </div>
 
-              {error ? <p className="mb-3 text-[13px] text-red-600">{error}</p> : null}
-              {success ? <p className="mb-3 text-[13px] text-emerald-700">{success}</p> : null}
-              {loading ? <p className="mb-3 text-[13px] text-[#64748b]">Loading profile...</p> : null}
+              {error && <p className="mb-3 text-[13px] text-red-600">{error}</p>}
+              {success && <p className="mb-3 text-[13px] text-emerald-700">{success}</p>}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <DetailField label="Full name" value={me?.full_name} />
@@ -268,6 +526,7 @@ export default function StudentProfile() {
               </div>
             </section>
 
+            {/* Learning Achievements Section */}
             <section className="rounded-[12px] bg-white p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -277,7 +536,7 @@ export default function StudentProfile() {
                 <button
                   type="button"
                   onClick={() => navigate('/student-panel/certificates')}
-                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
+                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
                 >
                   View certificates
                 </button>
@@ -304,7 +563,7 @@ export default function StudentProfile() {
                     iconBg: 'bg-emerald-100 text-emerald-600',
                   },
                 ].map(({ icon, title, desc, iconBg }) => (
-                  <div key={title} className="rounded-[10px] bg-[#f3f4f6] p-4">
+                  <div key={title} className="rounded-[10px] bg-[#f3f4f6] p-4 transition-all hover:shadow-md">
                     <div className={`mb-3 inline-flex rounded-lg p-2 ${iconBg}`}>
                       {createElement(icon, { className: 'h-5 w-5' })}
                     </div>
@@ -315,6 +574,7 @@ export default function StudentProfile() {
               </div>
             </section>
 
+            {/* Recent Activity Section */}
             <section className="rounded-[12px] bg-white p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -323,7 +583,7 @@ export default function StudentProfile() {
                 </div>
                 <button
                   type="button"
-                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
+                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <History className="h-4 w-4" />
@@ -354,6 +614,7 @@ export default function StudentProfile() {
               </div>
             </section>
 
+            {/* Membership Section */}
             <section className="rounded-[12px] bg-white p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -364,7 +625,7 @@ export default function StudentProfile() {
                   <button
                     type="button"
                     onClick={() => navigate('/forgetpassword')}
-                    className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
+                    className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
                   >
                     <span className="inline-flex items-center gap-1.5">
                       <KeyRound className="h-4 w-4" />
@@ -374,7 +635,7 @@ export default function StudentProfile() {
                   <button
                     type="button"
                     onClick={() => navigate('/student-panel/my-courses')}
-                    className="rounded-[8px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8]"
+                    className="rounded-[8px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8] transition-colors"
                   >
                     Manage plan
                   </button>
@@ -392,7 +653,8 @@ export default function StudentProfile() {
         </div>
       </div>
 
-      {isEditing ? (
+      {/* Edit Profile Modal */}
+      {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
           <div className="w-full max-w-[720px] max-h-[92vh] overflow-hidden rounded-[16px] bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-black/[0.06] px-5 py-4 sm:px-6">
@@ -403,7 +665,7 @@ export default function StudentProfile() {
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="rounded-full border border-black/[0.1] px-3 py-1 text-[12px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]"
+                className="rounded-full border border-black/[0.1] px-3 py-1 text-[12px] font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors"
               >
                 Close
               </button>
@@ -456,6 +718,7 @@ export default function StudentProfile() {
                             src={uploadedImageUrl || form.profile_image_url}
                             alt="Preview"
                             className="h-[110px] w-[110px] rounded-[10px] border border-black/[0.08] object-cover bg-white"
+                            loading="lazy"
                           />
                         ) : (
                           <div className="flex h-[110px] w-[110px] items-center justify-center rounded-[10px] border border-dashed border-black/[0.15] bg-white text-[11px] text-[#94a3b8]">
@@ -469,7 +732,7 @@ export default function StudentProfile() {
                           type="file"
                           accept="image/*"
                           onChange={handleImageFileSelect}
-                          className="w-full rounded-[10px] border border-black/[0.1] bg-white px-3 py-2.5 text-[13px] file:mr-3 file:rounded file:border-0 file:bg-[#5b3df6] file:px-3 file:py-1 file:text-[12px] file:font-semibold file:text-white hover:file:bg-[#4a2ed8]"
+                          className="w-full rounded-[10px] border border-black/[0.1] bg-white px-3 py-2.5 text-[13px] file:mr-3 file:rounded file:border-0 file:bg-[#5b3df6] file:px-3 file:py-1 file:text-[12px] file:font-semibold file:text-white hover:file:bg-[#4a2ed8] file:transition-colors"
                         />
                         <p className="text-[11px] text-[#64748b]">
                           {uploadedImageUrl ? 'New image selected. Click Save changes to apply.' : 'Upload an image or use a direct URL below.'}
@@ -493,22 +756,29 @@ export default function StudentProfile() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="rounded-[10px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc]"
+                  className="rounded-[10px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] hover:bg-[#f8fafc] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-[10px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="rounded-[10px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8] disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
                 >
-                  {saving ? 'Saving...' : 'Save changes'}
+                  {saving ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </span>
+                  ) : (
+                    'Save changes'
+                  )}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   )
 }
