@@ -23,7 +23,7 @@ export default function Header() {
         <div className="mx-auto flex w-full max-w-[1340px] items-center justify-between px-4 py-5 sm:px-8 lg:px-12">
           <div className="flex items-center gap-8 xl:gap-10 pr-10">
             <Link to="/home" className="flex shrink-0 items-center no-underline" onClick={() => setMenuOpen(false)}>
-              <img src="/shared image.jpg" alt="Logo" className="h-22 w-auto" />
+              <img src="/Image.jpg" alt="Logo" className="h-15 w-auto" />
             </Link>
 
             <nav className="hidden items-center gap-7 lg:flex">

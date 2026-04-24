@@ -198,25 +198,20 @@ export default (props) => {
                             <line x1="52" y1="7" x2="50" y2="18" stroke="#FF8A33" strokeWidth="2" strokeLinecap="round" />
                         </svg>
 
-                        {/* Badge */}
-                        <div className="flex items-center gap-2">
-                            <span style={{ color: "#FF8A33", fontSize: "17px", lineHeight: 1 }}>✳</span>
-                            <span className="text-slate-500 text-sm">30 Days free trial</span>
-                        </div>
-
                         {/* Headline */}
                         <div>
-                            <div className="text-[#1a5c3a] text-[50px] font-extrabold leading-[1.1]">Build Your Skills</div>
+                            <div className="text-[#1a5c3a] text-[50px] font-extrabold leading-[1.1]">Learn Smarter.</div>
                             <div className="flex items-center gap-3 flex-wrap leading-[1.1] mt-1">
-                                <span className="text-[#1a5c3a] text-[50px] font-extrabold">on the</span>
-                                <span className="inline-block bg-[#FF8A33] text-white text-[50px] font-extrabold px-4 rounded-xl leading-tight">Best</span>
+                                <span className="text-[#1a5c3a] text-[50px] font-extrabold">Grow Faster.</span>
                             </div>
-                            <div className="text-[#1a5c3a] text-[50px] font-extrabold leading-[1.1] mt-1">Platform</div>
+                            <span className="text-[#1a5c3a] text-[50px] pr-2 font-extrabold">Become the</span>
+                            <span className="inline-block bg-[#FF8A33] text-white text-[50px] font-extrabold px-4 rounded-xl leading-tight">Best</span>
+                            <div className="text-[#1a5c3a] text-[50px] font-extrabold leading-[1.1] mt-1">Version of You</div>
                         </div>
 
                         {/* Subtitle */}
                         <p className="text-slate-400 text-[15px] max-w-[360px] leading-relaxed mt-1">
-                            Find Unlimited Courses That Match Your Niche to Hasten the Process of Developing Your Skills
+                            Unlimited courses, expert mentors, and real-world skills everything you need to succeed in one place.
                         </p>
 
                         {/* CTAs */}
@@ -226,18 +221,6 @@ export default (props) => {
                                 onClick={() => navigate("/login")}
                             >
                                 Get Started
-                            </button>
-                            <button
-                                className="flex items-center gap-2 bg-transparent border-0 text-slate-700 text-sm font-semibold cursor-pointer"
-                                onClick={() => alert("Pressed!")}
-                            >
-                                <span
-                                    className="flex items-center justify-center w-10 h-10 rounded-full text-white text-xs"
-                                    style={{ background: "#FF8A33" }}
-                                >
-                                    ▶
-                                </span>
-                                Video Play
                             </button>
                         </div>
 
@@ -259,8 +242,8 @@ export default (props) => {
                                 ))}
                             </div>
                             <div>
-                                <div className="text-slate-800 text-sm font-bold">10.00+ Active</div>
-                                <div className="text-slate-800 text-sm font-bold">Student</div>
+                                <div className="text-slate-800 text-sm font-bold">Trusted by 10K+</div>
+                                <div className="text-slate-800 text-sm font-bold">active students worldwide 🌍</div>
                             </div>
                         </div>
                     </div>

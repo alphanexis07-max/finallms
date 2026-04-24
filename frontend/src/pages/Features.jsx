@@ -94,7 +94,7 @@ export default (props) => {
     <div className="flex flex-col bg-[#f7efeb]">
       <div className="self-stretch bg-[#f7efeb]">
         {/* Hero Section with gradient */}
-        <div className="self-stretch pt-[60px] pb-[78px] px-4 sm:px-8 md:px-16 lg:px-36"
+        <div className="self-stretch pt-[15px] pb-[78px] px-4 sm:px-8 md:px-16 lg:px-36"
           style={{
             background: "linear-gradient(135deg, #0e7c67 0%, #1a5c3a 100%)"
           }}>
@@ -108,12 +108,12 @@ export default (props) => {
               </button>
               <div className="flex flex-col items-start self-stretch pb-[1px] mb-5">
                 <span className="text-white text-4xl sm:text-5xl lg:text-[64px] font-bold max-w-full lg:w-[507px] leading-tight">
-                  {"Comprehensive suite of modern education services"}
+                  {"Everything you need to power modern learning all in one platform"}
                 </span>
               </div>
               <div className="flex flex-col self-stretch pt-0.5 mb-[21px]">
                 <span className="text-white/90 text-base sm:text-lg leading-relaxed">
-                  {"We offer a comprehensive suite of services designed to support modern education needs — from live classes and practical labs to teacher training and tutor marketplaces."}
+                  {"From live classes and practical labs to expert mentorship and performance tracking — we bring every essential learning tool together in one seamless experience."}
                 </span>
               </div>
               <div className="flex items-start self-stretch pt-4 mb-5 gap-[17px] flex-wrap">
@@ -145,7 +145,7 @@ export default (props) => {
                   <button className="flex flex-col shrink-0 items-start bg-[#5B3CFF1A] text-left py-2.5 px-3 rounded-xl border-0 cursor-pointer hover:bg-[#5B3CFF30] transition-colors"
                     onClick={() => alert("Pressed!")}>
                     <span className="text-[#5B3CFF] text-xs font-bold">
-                      {"Trusted by 50k+ students"}
+                      {"Loved by learners across India"}
                     </span>
                   </button>
                 </div>
@@ -162,7 +162,7 @@ export default (props) => {
                       </div>
                       <div className="flex flex-col items-start pb-[1px]">
                         <span className="text-slate-500 text-[13px]">
-                          {"From live classes to certification, everything in one place."}
+                          {"Access everything from structured courses to certifications — all in one place without switching platforms."}
                         </span>
                       </div>
                     </div>
@@ -177,7 +177,7 @@ export default (props) => {
                       </div>
                       <div className="flex flex-col items-start pb-[1px]">
                         <span className="text-slate-500 text-[13px]">
-                          {"Designed for individual learners and large institutions alike."}
+                          {"Whether you're an individual learner or an institution, our platform grows with your needs."}
                         </span>
                       </div>
                     </div>
@@ -194,7 +194,7 @@ export default (props) => {
                       </div>
                       <div className="flex flex-col items-start pb-[1px]">
                         <span className="text-slate-500 text-[13px]">
-                          {"Detailed analytics to monitor progress and outcomes."}
+                          {"Track progress, identify strengths, and improve continuously with smart analytics."}
                         </span>
                       </div>
                     </div>
@@ -209,7 +209,7 @@ export default (props) => {
                       </div>
                       <div className="flex flex-col items-start pb-[1px]">
                         <span className="text-slate-500 text-[13px]">
-                          {"Learn from industry experts and experienced teachers."}
+                          {"Learn directly from experienced mentors and industry professionals who guide you at every step."}
                         </span>
                       </div>
                     </div>
@@ -286,13 +286,13 @@ export default (props) => {
               </span>
             </button>
             <div className="flex flex-col items-center pb-[1px] mb-[29px]">
-              <span className="text-white text-3xl sm:text-4xl lg:text-[44px] font-bold text-center max-w-[654px]">
-                {"Making quality education accessible to all"}
+              <span className="text-white text-3xl sm:text-4xl lg:text-[44px] font-bold text-center max-w-[684px]">
+                {"Transforming education through technology and innovation"}
               </span>
             </div>
             <div className="flex flex-col items-center pb-[1px]">
               <span className="text-white/90 text-base text-center max-w-[710px]">
-                {"We are committed to transforming education through technology, innovation, and unwavering support for learners and educators."}
+                {"Our mission is to make learning smarter, more accessible, and impactful through cutting-edge technology and expert-driven content."}
               </span>
             </div>
           </div>

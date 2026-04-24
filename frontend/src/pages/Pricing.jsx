@@ -60,7 +60,7 @@ export default (props) => {
     <div className="flex flex-col bg-white">
       <div className="self-stretch bg-[#F7FCFF]">
         {/* Hero Section with gradient - Matching Features.jsx */}
-        <div className="self-stretch pt-[60px] pb-[78px] px-4 sm:px-8 md:px-16 lg:px-36 mb-[97px]"
+        <div className="self-stretch pt-[60px] pb-[78px] px-4 sm:px-8 md:px-16 lg:px-36"
           style={{
             background: "linear-gradient(135deg, #0e7c67 0%, #1a5c3a 100%)"
           }}>
@@ -70,30 +70,30 @@ export default (props) => {
                 <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[9px] px-3.5 rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
                   onClick={() => alert("Pressed!")}>
                   <span className="text-white text-[13px] font-bold">
-                    {"14-day free trial"}
+                    {"Start free. Upgrade when you're ready."}
                   </span>
                 </button>
                 <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[9px] px-[15px] rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
                   onClick={() => alert("Pressed!")}>
                   <span className="text-white text-[13px] font-bold">
-                    {"No setup fee"}
+                    {"Zero setup cost. Instant access."}
                   </span>
                 </button>
                 <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-2.5 px-[15px] rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
                   onClick={() => alert("Pressed!")}>
                   <span className="text-white text-[13px] font-bold">
-                    {"Built for course businesses"}
+                    {"Designed for modern educators & creators"}
                   </span>
                 </button>
               </div>
               <div className="flex flex-col items-start self-stretch pb-[1px] mb-7">
                 <span className="text-white text-4xl sm:text-5xl lg:text-[64px] font-bold max-w-full lg:w-[501px] leading-tight">
-                  {"Simple pricing to\nlaunch, sell, and\nscale your LMS"}
+                  {"Powerful pricing built to grow your learning business"}
                 </span>
               </div>
               <div className="flex flex-col items-start self-stretch pb-[1px] mb-7">
                 <span className="text-white/90 text-base sm:text-[17px] max-w-full lg:w-[531px] leading-relaxed">
-                  {"Choose a plan that fits your stage today, then upgrade as your learners, instructors, and revenue grow. Everything is designed for modern educational businesses that want clarity and speed."}
+                  {"Start small, scale fast, and manage everything in one place. Our pricing is crafted to support your journey—from your first student to thousands."}
                 </span>
               </div>
               <div className="flex items-center gap-4 flex-wrap">
@@ -364,11 +364,11 @@ export default (props) => {
                 </span>
               </button>
               <span className="text-[#111b2f] text-3xl sm:text-[38px] font-bold mb-3 text-center">
-                {"Everything you need, clearly compared"}
+                {"Compare plans. Choose with confidence."}
               </span>
               <div className="flex flex-col items-start py-[3px] px-2">
                 <span className="text-slate-500 text-base text-center max-w-[623px]">
-                  {"A simple side-by-side look at the LMS capabilities that matter most when choosing your plan."}
+                  {"Understand exactly what each plan offers and pick what fits your goals best."}
                 </span>
               </div>
             </div>
