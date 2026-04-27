@@ -46,6 +46,7 @@ async def ensure_indexes() -> None:
     await _create_index(db.payments, [("order_id", 1)])
     await _create_index(db.notifications, [("user_id", 1), ("created_at", -1)])
     await _create_index(db.notifications, [("tenant_id", 1), ("read", 1)])
+    await _create_index(db.blogs, [("tenant_id", 1), ("published", 1), ("created_at", -1)])
 
 
 # ✅ ADD THIS

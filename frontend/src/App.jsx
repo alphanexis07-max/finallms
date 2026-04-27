@@ -13,9 +13,11 @@ import Features from './pages/Features'
 import Pricing from './pages/Pricing'
 import About from './pages/About'
 import Contact from './pages/Contact'
+import Blogs from './pages/Blogs'
 import TermsAndCondition from './pages/Terms&Condition'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import RefundPolicy from './pages/RefundPolicy'
+import FAQ from './pages/FAQ'
 import SuperAdminLayout from './components/superadmin/SuperAdminLayout'
 import SuperAdminOverview from './pages/super admin/SuperAdminOverview'
 import SuperAdminDashboard from './pages/super admin/SuperAdminDashboard'
@@ -61,6 +63,7 @@ import StudentCertificates from './pages/student panel/StudentCertificates'
 import StudentProfile from './pages/student panel/StudentProfile'
 import StudentNotification from './pages/student panel/StudentNotification'
 import Inquire from './pages/admin/AdminInquire'
+import AdminBlogs from './pages/admin/AdminBlogs'
 
 function ProtectedPanel({ children, allowedRoles = [] }) {
   const token = localStorage.getItem('lms_token')
@@ -88,13 +91,16 @@ function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/blogs" element={<Blogs />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/terms-and-conditions" element={<TermsAndCondition />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/refund-policy" element={<RefundPolicy />} />        </Route>
+          <Route path="/refund-policy" element={<RefundPolicy />} />
+          <Route path="/faqs" element={<FAQ />} />
+        </Route>
         <Route path="/superadmin-signup" element={<SuperAdminSignup />} />
         <Route path="/admin-signup" element={<AdminSignup />} />
         <Route path="/instructor-signup" element={<InstructorSignup />} />
@@ -116,7 +122,7 @@ function App() {
           <Route path="instructor-management" element={<AdminInstructorManagement />} />
           <Route path="student-management" element={<AdminStudentManagement />} />
           <Route path="student-insights" element={<AdminStudentInsights />} />
-          <Route path="School-Events" element={<AdminSchoolEvents/>} />
+          <Route path="School-Events" element={<AdminSchoolEvents />} />
           <Route path="payments-coupons" element={<AdminPaymentsCupons />} />
           <Route path="live-classes" element={<AdminLiveClasses />} />
           <Route path="e-library" element={<AdminELibrary />} />
@@ -127,6 +133,7 @@ function App() {
           <Route path="notifications" element={<AdminNotification />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="inquire" element={<Inquire />} />
+          <Route path="blogs" element={<AdminBlogs />} />
         </Route>
         <Route path="/instructor" element={<ProtectedPanel allowedRoles={['instructor']}><InstructorLayout /></ProtectedPanel>}>
           <Route index element={<InstructorDashboard />} />

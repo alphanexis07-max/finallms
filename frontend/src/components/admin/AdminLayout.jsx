@@ -13,6 +13,7 @@ import {
   Library,
   BadgePercent,
   FileText,
+  Newspaper,
   LogOut,
 } from 'lucide-react'
 import HeaderPanel from '../../components/HeaderPanel'
@@ -30,6 +31,7 @@ const nav = [
   { to: '/admin/subscription', label: 'Subscriptions', icon: BadgePercent },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/weekly-tests', label: 'Weekly Tests', icon: FileText },
+  { to: '/admin/blogs', label: 'Blogs', icon: Newspaper },
   { to: '/admin/inquire', label: 'Inquire', icon: Users },
 ]
 

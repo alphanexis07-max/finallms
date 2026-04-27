@@ -360,136 +360,62 @@ export default (props) => {
                   {"Understand exactly what each plan offers and pick what fits your goals best."}
                 </span>
               </div>
-            </div>
-
-            {/* Table Header */}
-            <div className="flex items-center self-stretch mb-[37px] mx-4 sm:mx-10">
-              <div className="flex flex-1 flex-col items-start py-[5px] pl-[1px] mr-[13px]">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Features"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start pt-[5px] pb-1.5 px-8 sm:px-[95px] mr-3">
-                <span className="text-[#111b2f] text-[15px] font-bold">
-                  {"Basic"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start pt-[5px] pb-1.5 px-8 sm:px-[103px] mr-3">
-                <span className="text-[#111b2f] text-[15px] font-bold">
-                  {"Pro"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start pt-1 pb-[5px] px-8 sm:px-[77px]">
-                <span className="text-[#111b2f] text-[15px] font-bold">
-                  {"Enterprise"}
-                </span>
-              </div>
+            </div>            {/* Table Header */}
+            <div className="grid grid-cols-4 gap-4 self-stretch mb-8 px-4 sm:px-10 border-b border-gray-100 pb-4">
+              <div className="text-[#111b2f] text-sm font-bold">Features</div>
+              <div className="text-[#111b2f] text-[15px] font-bold text-center">Basic</div>
+              <div className="text-[#111b2f] text-[15px] font-bold text-center">Pro</div>
+              <div className="text-[#111b2f] text-[15px] font-bold text-center">Enterprise</div>
             </div>
 
             {/* Table Rows */}
-            <div className="flex items-center self-stretch mb-[37px] mx-4 sm:mx-10">
-              <div className="flex flex-1 flex-col items-start py-[3px] mr-[13px]">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Student capacity"}
-                </span>
+            <div className="flex flex-col self-stretch px-4 sm:px-10 gap-6">
+              {/* Student capacity */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <div className="text-[#111b2f] text-sm font-bold">Student capacity</div>
+                <div className="text-slate-500 text-sm text-center">100</div>
+                <div className="text-slate-500 text-sm text-center">Unlimited</div>
+                <div className="text-slate-500 text-sm text-center">Unlimited</div>
               </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[103px] mr-3">
-                <span className="text-slate-500 text-sm">
-                  {"100"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[84px] mr-3">
-                <span className="text-slate-500 text-sm">
-                  {"Unlimited"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[84px]">
-                <span className="text-slate-500 text-sm">
-                  {"Unlimited"}
-                </span>
-              </div>
-            </div>
 
-            <div className="flex items-center self-stretch mb-9 mx-4 sm:mx-10">
-              <div className="flex flex-1 flex-col items-start py-[5px] pl-[1px] mr-[13px]">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Published courses"}
-                </span>
+              {/* Published courses */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <div className="text-[#111b2f] text-sm font-bold">Published courses</div>
+                <div className="text-slate-500 text-sm text-center">5</div>
+                <div className="text-slate-500 text-sm text-center">Unlimited</div>
+                <div className="text-slate-500 text-sm text-center">Unlimited</div>
               </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[111px] mr-3">
-                <span className="text-slate-500 text-sm">
-                  {"5"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[84px] mr-3">
-                <span className="text-slate-500 text-sm">
-                  {"Unlimited"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[84px]">
-                <span className="text-slate-500 text-sm">
-                  {"Unlimited"}
-                </span>
-              </div>
-            </div>
 
-            <div className="flex items-center self-stretch mb-9 mx-4 sm:mx-10 gap-3">
-              <div className="flex flex-1 flex-col items-start py-[5px]">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Custom domain"}
-                </span>
+              {/* Custom domain */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <div className="text-[#111b2f] text-sm font-bold">Custom domain</div>
+                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
+                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
+                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
               </div>
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-            </div>
 
-            <div className="flex items-center self-stretch mb-9 mx-4 sm:mx-10 gap-3">
-              <div className="flex flex-1 flex-col items-start py-[3px]">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Advanced analytics"}
-                </span>
+              {/* Advanced analytics */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <div className="text-[#111b2f] text-sm font-bold">Advanced analytics</div>
+                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
+                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
+                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
               </div>
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-            </div>
 
-            <div className="flex items-center self-stretch mb-[37px] mx-4 sm:mx-10">
-              <div className="flex flex-1 flex-col items-start py-[3px] pl-[1px] mr-3">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Multi-tenant setup"}
-                </span>
+              {/* Multi-tenant setup */}
+              <div className="grid grid-cols-4 gap-4 items-center">
+                <div className="text-[#111b2f] text-sm font-bold">Multi-tenant setup</div>
+                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
+                <div className="text-slate-500 text-sm text-center">Optional</div>
+                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
               </div>
-              <X className="w-6 h-6 text-red-500 mx-auto" />
-              <div className="flex flex-col shrink-0 items-start py-[5px] px-8 sm:px-[87px] mr-[11px]">
-                <span className="text-slate-500 text-sm">
-                  {"Optional"}
-                </span>
-              </div>
-              <Check className="w-6 h-6 text-green-500 mx-auto" />
-            </div>
 
-            <div className="flex items-center self-stretch mb-[57px] mx-4 sm:mx-10">
-              <div className="flex flex-1 flex-col items-start py-[3px] pl-[1px] mr-[13px]">
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Dedicated support"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-1.5 px-8 sm:px-[98px] mr-3">
-                <span className="text-slate-500 text-sm">
-                  {"Email"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-[5px] px-8 sm:px-[92px] mr-3">
-                <span className="text-slate-500 text-sm">
-                  {"Priority"}
-                </span>
-              </div>
-              <div className="flex flex-col shrink-0 items-start py-[5px] px-8 sm:px-14">
-                <span className="text-slate-500 text-sm">
-                  {"Success manager"}
-                </span>
+              {/* Dedicated support */}
+              <div className="grid grid-cols-4 gap-4 items-center mb-10">
+                <div className="text-[#111b2f] text-sm font-bold">Dedicated support</div>
+                <div className="text-slate-500 text-sm text-center">Email</div>
+                <div className="text-slate-500 text-sm text-center">Priority</div>
+                <div className="text-slate-500 text-sm text-center">Success manager</div>
               </div>
             </div>
           </div>

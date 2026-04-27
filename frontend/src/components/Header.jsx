@@ -18,9 +18,9 @@ export default function Header() {
   const isHomePage = location.pathname === "/" || location.pathname === "/home";
 
   return (
-    <header className="relative z-30 w-full">
-      <div className={`${isHomePage ? "bg-[linear-gradient(90deg,#FEF6EE_942px,#0e7c67_943px)]" : "bg-white border-b border-slate-200"}`}>
-        <div className="mx-auto flex w-full max-w-[1340px] items-center justify-between px-4 py-5 sm:px-8 lg:px-12">
+    <header className="relative z-30 w-full transition-all">
+      <div className={`${isHomePage ? "bg-[#FEF6EE] lg:bg-[linear-gradient(90deg,#FEF6EE_60%,#0e7c67_60%)]" : "bg-white border-b border-slate-200"}`}>
+        <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-1 sm:px-6 lg:px-12 lg:py-2">
           <div className="flex items-center gap-8 xl:gap-10 pr-10">
             <Link to="/home" className="flex shrink-0 items-center no-underline" onClick={() => setMenuOpen(false)}>
               <img src="/logo.png" alt="Logo" className="h-20 w-auto" />
@@ -53,7 +53,7 @@ export default function Header() {
             className={`inline-flex h-10 w-10 items-center justify-center rounded-md border lg:hidden ${isHomePage ? "border-[#e5f7f3] text-white" : "border-slate-300 text-slate-700"}`}
             aria-label="Toggle navigation menu"
           >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {menuOpen ? <X className="h-7 w-7 text-black" /> : <Menu className="h-7 w-7 text-black" />}
           </button>
         </div>
       </div>

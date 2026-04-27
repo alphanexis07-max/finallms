@@ -1,5 +1,3 @@
-
-
 import asyncio
 from datetime import datetime, timezone
 from bson import ObjectId
@@ -13,7 +11,7 @@ from app.schemas.lms import (
     CourseUpdateIn,
     CourseIn,
     EnrollmentIn,
-    EventIn,
+    EventIn, 
     LiveClassIn,
     LiveClassUpdateIn,
     NotificationIn,
@@ -622,6 +620,20 @@ async def list_live_classes(
     total = await db.live_classes.count_documents(query)
     items = [as_dict(x) async for x in db.live_classes.find(query).sort("start_at", 1).skip(skip).limit(limit)]
     items = await _attach_ratings(items, target_type="live_class", tenant_id=tenant_id)
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
+
+
+@router.get("/public/live-classes")
+async def list_public_live_classes(
+    skip: int = 0,
+    limit: int = 100,
+    status: str | None = None,
+):
+    query: dict = {}
+    if status:
+        query["status"] = status
+    total = await db.live_classes.count_documents(query)
+    items = [as_dict(x) async for x in db.live_classes.find(query).sort("start_at", 1).skip(skip).limit(limit)]
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
@@ -1504,6 +1516,117 @@ async def list_public_plans(
     if active_only:
         query["active"] = True
     return await paged(db.plans, query, "created_at", -1, skip, limit)
+
+
+@router.post("/blogs")
+async def create_blog(
+    payload: dict,
+    tenant_id: str = Depends(get_tenant_id),
+    user=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
+):
+    title = str(payload.get("title") or "").strip()
+    content = str(payload.get("content") or "").strip()
+    if not title or not content:
+        raise HTTPException(status_code=400, detail="title and content are required")
+
+    now = datetime.now(timezone.utc)
+    data = {
+        "tenant_id": tenant_id,
+        "title": title,
+        "summary": str(payload.get("summary") or "").strip(),
+        "content": content,
+        "cover_image": str(payload.get("cover_image") or "").strip(),
+        "author_name": str(payload.get("author_name") or "").strip() or "Admin",
+        "tags": [str(x).strip() for x in (payload.get("tags") or []) if str(x).strip()],
+        "published": bool(payload.get("published", True)),
+        "created_by": user.get("sub"),
+        "created_at": now,
+        "updated_at": now,
+    }
+    res = await db.blogs.insert_one(data)
+    return inserted_response(data, res.inserted_id)
+
+
+@router.get("/blogs")
+async def list_blogs(
+    tenant_id: str = Depends(get_tenant_id),
+    skip: int = 0,
+    limit: int = 100,
+    q: str | None = None,
+):
+    query = {"tenant_id": tenant_id} if tenant_id else {}
+    if q:
+        query["$or"] = [
+            {"title": {"$regex": q, "$options": "i"}},
+            {"summary": {"$regex": q, "$options": "i"}},
+            {"author_name": {"$regex": q, "$options": "i"}},
+        ]
+    return await paged(db.blogs, query, "created_at", -1, skip, limit)
+
+
+@router.get("/public/blogs")
+async def list_public_blogs(
+    skip: int = 0,
+    limit: int = 100,
+    q: str | None = None,
+):
+    query: dict = {"published": True}
+    if q:
+        query["$or"] = [
+            {"title": {"$regex": q, "$options": "i"}},
+            {"summary": {"$regex": q, "$options": "i"}},
+            {"author_name": {"$regex": q, "$options": "i"}},
+        ]
+    return await paged(db.blogs, query, "created_at", -1, skip, limit)
+
+
+@router.patch("/blogs/{blog_id}")
+async def update_blog(
+    blog_id: str,
+    payload: dict,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
+):
+    updates = {}
+    for field in ("title", "summary", "content", "cover_image", "author_name", "published"):
+        if field in payload:
+            updates[field] = payload[field]
+    if "tags" in payload:
+        updates["tags"] = [str(x).strip() for x in (payload.get("tags") or []) if str(x).strip()]
+    if not updates:
+        return {"message": "No updates provided"}
+
+    if "title" in updates:
+        updates["title"] = str(updates["title"] or "").strip()
+    if "content" in updates:
+        updates["content"] = str(updates["content"] or "").strip()
+    if not str(updates.get("title", "x")).strip() or not str(updates.get("content", "x")).strip():
+        raise HTTPException(status_code=400, detail="title and content are required")
+
+    updates["updated_at"] = datetime.now(timezone.utc)
+    query = {"_id": ObjectId(blog_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+    result = await db.blogs.update_one(query, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    updated = await db.blogs.find_one(query)
+    return as_dict(updated)
+
+
+@router.delete("/blogs/{blog_id}")
+async def delete_blog(
+    blog_id: str,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
+):
+    query = {"_id": ObjectId(blog_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+    result = await db.blogs.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    return {"ok": True}
 
 
 @router.post("/library-resources")
