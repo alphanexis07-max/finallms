@@ -16,6 +16,7 @@ const BENEFITS = ['Multi-Tenant LMS System', 'Live & Recorded Learning', 'Secure
 
 export default function Login() {
   const navigate = useNavigate()
+  const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -109,35 +110,37 @@ export default function Login() {
               <p className="mt-2 text-sm text-slate-500">Enter your details to access your account.</p>
             </div>
 
-             {/* Google Login Button - Improved UI */}
-            <div className="flex flex-col items-center gap-3 mb-1">
-              <GoogleLogin
-                onSuccess={async (credentialResponse) => {
-                  try {
-                    const data = await api('/auth/google-login', {
-                      method: 'POST',
-                      body: JSON.stringify({ credential: credentialResponse.credential }),
-                    })
-                    setAuthSession(data.access_token, data.role, data.tenant_id)
-                    navigate(getDashboardPathByRole(data.role))
-                  } catch (err) {
+            {/* Google Login Button - Improved UI */}
+            {hasGoogleClientId && (
+              <div className="mb-1 flex flex-col items-center gap-3">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    try {
+                      const data = await api('/auth/google-login', {
+                        method: 'POST',
+                        body: JSON.stringify({ credential: credentialResponse.credential }),
+                      })
+                      setAuthSession(data.access_token, data.role, data.tenant_id)
+                      navigate(getDashboardPathByRole(data.role))
+                    } catch (err) {
+                      showToast('Google Login Failed')
+                    }
+                  }}
+                  onError={() => {
                     showToast('Google Login Failed')
-                  }
-                }}
-                onError={() => {
-                  showToast('Google Login Failed')
-                }}
-                useOneTap
-                width="100%"
-                theme="outline"
-                size="large"
-              />
-              <div className="flex items-center w-full my-2">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="mx-3 text-xs text-gray-400 font-medium">or login with email</span>
-                <div className="flex-grow border-t border-gray-200"></div>
+                  }}
+                  useOneTap
+                  width="100%"
+                  theme="outline"
+                  size="large"
+                />
+                <div className="my-2 flex w-full items-center">
+                  <div className="flex-grow border-t border-gray-200"></div>
+                  <span className="mx-3 text-xs font-medium text-gray-400">or login with email</span>
+                  <div className="flex-grow border-t border-gray-200"></div>
+                </div>
               </div>
-            </div>
+            )}
 
             <form onSubmit={onSubmit} className="space-y-5">
               <div>
