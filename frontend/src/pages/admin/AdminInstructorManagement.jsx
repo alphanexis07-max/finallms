@@ -1198,13 +1198,6 @@ export default function AdminInstructorManagement() {
                 <Plus className="h-4 w-4" />
                 Create Instructor
               </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#0f172a] hover:bg-gray-50"
-              >
-                <Calendar className="h-4 w-4" />
-                This week
-              </button>
             </div>
           </div>
           <div className="flex w-full flex-col gap-3 sm:min-w-[200px] lg:w-auto">

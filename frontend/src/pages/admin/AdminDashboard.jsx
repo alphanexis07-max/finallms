@@ -392,7 +392,6 @@ export default function AdminDashboard() {
           <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[18px] items-start p-[21px] rounded-[8px]">
             <div className="flex flex-col items-start justify-between gap-3 w-full sm:flex-row sm:items-center">
               <div className="flex flex-col gap-[4px]"><div className="font-bold text-[18px] text-[#0f172a]">Student management</div><div className="text-[13px] text-[#94a3b8]">Add learners, upload CSVs, and track progress</div></div>
-              <div className="bg-[#e8f5ff] border border-black/[0.08] flex h-[40px] items-center justify-center rounded-[6px] px-[17px]"><div className="text-[14px] font-medium text-[#0f172a]">Track Progress</div></div>
             </div>
             <div className="w-full flex flex-col">
               {studentRows.map((st, idx) => {
@@ -407,12 +406,6 @@ export default function AdminDashboard() {
                 )
               })}
               {!loading && studentRows.length === 0 && <div className="text-[13px] text-[#94a3b8] py-2">No students found.</div>}
-            </div>
-            <div className="border-t border-black/[0.08] w-full pt-[15px]">
-              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-[12px]"><div className="bg-[#e8f5ff] flex items-center justify-center rounded-[6px] size-[42px]"><Upload className="h-[18px] w-[18px] text-[#5b3df6]" /></div><div className="flex flex-col min-w-0"><div className="font-semibold text-[14px] text-[#0f172a]">Bulk Upload (CSV)</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">Student import tools are available from Student Management.</div></div></div>
-                <div className="bg-[#5b3df6] h-[40px] rounded-[6px] flex items-center justify-center px-[16px]"><div className="text-[14px] font-medium text-white">Review CSV</div></div>
-              </div>
             </div>
           </div>
         </div>
@@ -434,7 +427,7 @@ export default function AdminDashboard() {
               ))}
               {!loading && couponRows.length === 0 && <div className="text-[13px] text-[#94a3b8]">No coupons available.</div>}
             </div>
-            <div className="border-t border-black/[0.08] w-full pt-[15px]"><div className="flex items-center justify-between"><div className="flex items-center gap-[12px]"><div className="bg-[#e8f5ff] rounded-[6px] flex items-center justify-center h-[42px] w-[42px]"><BarChart3 className="h-[18px] w-[18px] text-[#5b3df6]" /></div><div className="flex flex-col"><div className="font-semibold text-[14px] text-[#0f172a]">Recent transactions</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{transactions24h} payments captured in the last 24 hours</div></div></div><div className="bg-[#5b3df6] h-[40px] rounded-[6px] flex items-center justify-center px-[16px]"><div className="text-[14px] font-medium text-white">View Transactions</div></div></div></div>
+            <div className="border-t border-black/[0.08] w-full pt-[15px]"><div className="flex items-center justify-between"><div className="flex items-center gap-[12px]"><div className="bg-[#e8f5ff] rounded-[6px] flex items-center justify-center h-[42px] w-[42px]"><BarChart3 className="h-[18px] w-[18px] text-[#5b3df6]" /></div><div className="flex flex-col"><div className="font-semibold text-[14px] text-[#0f172a]">Recent transactions</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{transactions24h} payments captured in the last 24 hours</div></div></div><div className="bg-[#5b3df6] h-[40px] rounded-[6px] flex items-center justify-center px-[16px]"><div className="text-[14px] font-medium text-white" onClick={() => navigate('/admin/payments-coupons')}>View Transactions</div></div></div></div>
           </div>
 
           <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[18px] items-start p-[21px] rounded-[8px]">
