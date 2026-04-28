@@ -158,7 +158,7 @@ export default function SignUp() {
                     onChange={(event) => setFullName(event.target.value)}
                     className="border border-gray-200 rounded-md p-3.5 text-sm text-[#111b2f] outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20" 
                     type="text" 
-                    placeholder="Ava Thompson" 
+                    placeholder="Enter Your Full Name" 
                   />
                   {submitted && !fullName.trim() && (
                     <span className="text-xs font-medium text-red-500">Full name is required</span>
@@ -172,7 +172,7 @@ export default function SignUp() {
                     onChange={(event) => setEmail(event.target.value)}
                     className="border border-gray-200 rounded-md p-3.5 text-sm text-[#111b2f] outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20" 
                     type="email" 
-                    placeholder="ava@example.com" 
+                    placeholder="Enter your email address" 
                   />
                   {submitted && !isEmailValid && (
                     <span className="text-xs font-medium text-red-500">Enter a valid email address.</span>
@@ -186,7 +186,7 @@ export default function SignUp() {
                     onChange={(event) => setPhone(event.target.value)}
                     className="border border-gray-200 rounded-md p-3.5 text-sm text-[#111b2f] outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20" 
                     type="tel" 
-                    placeholder="(123) 456-7890" 
+                    placeholder="Enter your phone number" 
                   />
                   {submitted && !isPhoneValid && (
                     <span className="text-xs font-medium text-red-500">Enter a valid phone number.</span>
@@ -201,7 +201,7 @@ export default function SignUp() {
                       onChange={(event) => setPassword(event.target.value)}
                       className="border border-gray-200 rounded-md p-3.5 text-sm text-[#111b2f] outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20 w-full pr-10" 
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••••" 
+                      placeholder="Create password" 
                     />
                     <button
                       type="button"
@@ -223,7 +223,7 @@ export default function SignUp() {
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       className="border border-gray-200 rounded-md p-3.5 text-sm text-[#111b2f] outline-none transition-all focus:border-[#0b8276] focus:ring-2 focus:ring-[#0b8276]/20 w-full pr-10" 
                       type={showConfirmPassword ? 'text' : 'password'}
-                      placeholder="••••••••••" 
+                      placeholder="Re-enter password" 
                     />
                     <button
                       type="button"

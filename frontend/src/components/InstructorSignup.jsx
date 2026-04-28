@@ -209,7 +209,7 @@ export default function InstructorSignup() {
                   label="Full Name"
                   value={formData.fullName}
                   onChange={(v) => handleChange('fullName', v)}
-                  placeholder="Enter full name"
+                  placeholder="Enter Your Full Name"
                   submitted={submitted}
                   errorMessage="Full name is required"
                   isValid={formData.fullName.trim()}
@@ -221,7 +221,7 @@ export default function InstructorSignup() {
                   type="email"
                   value={formData.email}
                   onChange={(v) => handleChange('email', v)}
-                  placeholder="you@example.com"
+                  placeholder="Enter your email address"
                   submitted={submitted}
                   errorMessage="Enter a valid email address"
                   isValid={isEmailValid}
@@ -240,7 +240,7 @@ export default function InstructorSignup() {
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="(123) 456-7890"
+                        placeholder="Enter your phone number"
                         className="w-full bg-transparent text-[14px] text-[#111b2f] placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>

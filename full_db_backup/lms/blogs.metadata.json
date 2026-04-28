@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"tenant_id":{"$numberInt":"1"},"published":{"$numberInt":"1"},"created_at":{"$numberInt":"-1"}},"name":"tenant_id_1_published_1_created_at_-1"}],"uuid":"4547f494e65b4002bd7bad4bb18f8617","collectionName":"blogs","type":"collection"}
