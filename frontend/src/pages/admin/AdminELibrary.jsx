@@ -4,13 +4,14 @@ import { api } from '../../lib/api'
 
 export default function AdminELibrary() {
   const [resources, setResources] = useState([])
+  const [classOptions, setClassOptions] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
   const [title, setTitle] = useState('')
-  const [grade, setGrade] = useState('Class 9')
+  const [grade, setGrade] = useState('')
   const [format, setFormat] = useState('PDF')
   const [fileUrl, setFileUrl] = useState('')
   const [imageUrl, setImageUrl] = useState('')
@@ -37,8 +38,26 @@ export default function AdminELibrary() {
     }
   }
 
+  // ✅ Fetch live classes and extract unique class_name values
+  const fetchClassOptions = async () => {
+    try {
+      const response = await api('/lms/live-classes?limit=300')
+      const items = response.items || response || []
+      const uniqueClasses = [...new Set(
+        items
+          .map((item) => item.class_name)
+          .filter(Boolean)
+      )]
+      setClassOptions(uniqueClasses)
+      if (uniqueClasses.length > 0) setGrade(uniqueClasses[0])
+    } catch (err) {
+      console.error('Failed to load class options:', err)
+    }
+  }
+
   useEffect(() => {
     fetchResources()
+    fetchClassOptions()
   }, [])
 
   const normalizedResources = useMemo(
@@ -60,12 +79,10 @@ export default function AdminELibrary() {
       setFormError('Title is required')
       return
     }
-
     if (!fileUrl.trim()) {
       setFormError('Please provide a file URL or select a file')
       return
     }
-
     try {
       setSubmitting(true)
       setError('')
@@ -81,7 +98,7 @@ export default function AdminELibrary() {
         }),
       })
       setTitle('')
-      setGrade('Class 9')
+      setGrade(classOptions[0] || '')
       setFormat('PDF')
       setFileUrl('')
       setImageUrl('')
@@ -101,19 +118,16 @@ export default function AdminELibrary() {
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     if (file.size > 5 * 1024 * 1024) {
       setFormError('File size should be 5MB or less')
       e.target.value = ''
       return
     }
-
     try {
       setFormError('')
       setSelectedFileName(file.name)
       const dataUrl = await fileToDataUrl(file)
       setFileUrl(dataUrl)
-
       const ext = (file.name.split('.').pop() || '').toUpperCase()
       if (ext) setFormat(ext)
     } catch (err) {
@@ -124,19 +138,16 @@ export default function AdminELibrary() {
   const handleImageSelect = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     if (!file.type.startsWith('image/')) {
       setFormError('Please select a valid image file')
       e.target.value = ''
       return
     }
-
     if (file.size > 5 * 1024 * 1024) {
       setFormError('Image size should be 5MB or less')
       e.target.value = ''
       return
     }
-
     try {
       setFormError('')
       setSelectedImageName(file.name)
@@ -239,16 +250,22 @@ export default function AdminELibrary() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-[13px] font-semibold text-[#0f172a]">Class</label>
+                  {/* ✅ Dynamic class options from live_classes API */}
                   <select
                     disabled={submitting}
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
                     className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]"
                   >
-                    <option>Class 9</option>
-                    <option>Class 10</option>
-                    <option>Class 11</option>
-                    <option>Class 12</option>
+                    {classOptions.length === 0 ? (
+                      <option value="">Loading classes...</option>
+                    ) : (
+                      classOptions.map((cls) => (
+                        <option key={cls} value={cls}>
+                          {cls}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div>
@@ -300,24 +317,13 @@ export default function AdminELibrary() {
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[6px] border border-dashed border-[#94a3b8] bg-[#f8fafc] p-4 text-[13px] font-medium text-[#64748b]">
                 <Upload className="h-4 w-4" />
                 {selectedFileName ? `Selected: ${selectedFileName}` : 'Choose file (max 5MB)'}
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  disabled={submitting}
-                />
+                <input type="file" className="hidden" onChange={handleFileSelect} disabled={submitting} />
               </label>
 
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[6px] border border-dashed border-[#94a3b8] bg-[#f8fafc] p-4 text-[13px] font-medium text-[#64748b]">
                 <Upload className="h-4 w-4" />
                 {selectedImageName ? `Selected image: ${selectedImageName}` : 'Choose image (max 5MB)'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageSelect}
-                  disabled={submitting}
-                />
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} disabled={submitting} />
               </label>
 
               {imageUrl ? (
