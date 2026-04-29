@@ -58,6 +58,7 @@ import StudentMyCourses from './pages/student panel/StudentMyCourses'
 import StudentBrowseCourses from './pages/student panel/StudentBrowseCourse'
 import StudentELibrary from './pages/student panel/StudentELibrary'
 import StudentLiveClasses from './pages/student panel/StudentLiveClasses'
+import StudentSchoolEvents from './pages/student panel/StudentSchoolEvents'
 import StudentTests from './pages/student panel/StudentTests'
 import StudentCertificates from './pages/student panel/StudentCertificates'
 import StudentProfile from './pages/student panel/StudentProfile'
@@ -153,6 +154,7 @@ function App() {
           <Route path="browse-courses" element={<StudentBrowseCourses />} />
           <Route path="e-library" element={<StudentELibrary />} />
           <Route path="live-classes" element={<StudentLiveClasses />} />
+          <Route path="school-events" element={<StudentSchoolEvents />} />
           <Route path="tests" element={<StudentTests />} />
           <Route path="certificates" element={<StudentCertificates />} />
           <Route path="notifications" element={<StudentNotification />} />

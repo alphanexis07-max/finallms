@@ -20,6 +20,29 @@ async def get_student_tests(db=Depends(get_database), user=Depends(get_current_u
     return tests
 
 
+@router.get("/student/tests/{test_id}/questions")
+async def get_student_test_questions(test_id: str, db=Depends(get_database), user=Depends(get_current_user)):
+    if user.get("role") != Role.STUDENT.value:
+        raise HTTPException(status_code=403, detail="Only students can access test questions.")
+    student_id = user.get("sub")
+    questions = await student_service.get_test_questions_for_student(db, student_id, test_id)
+    if questions is None:
+        raise HTTPException(status_code=404, detail="Test not found or not assigned.")
+    return {"items": questions}
+
+
+@router.post("/student/tests/{test_id}/submit")
+async def submit_student_test(test_id: str, payload: dict, db=Depends(get_database), user=Depends(get_current_user)):
+    if user.get("role") != Role.STUDENT.value:
+        raise HTTPException(status_code=403, detail="Only students can submit tests.")
+    student_id = user.get("sub")
+    answers = payload.get("answers") if isinstance(payload, dict) else {}
+    submission = await student_service.submit_student_test(db, student_id, test_id, answers or {})
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Test not found or not assigned.")
+    return submission
+
+
 @router.get("/student/tests/debug")
 async def debug_student_tests(db=Depends(get_database), user=Depends(get_current_user)):
     """

@@ -24,6 +24,12 @@ const StudentTests = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [enrolledIds, setEnrolledIds] = useState([]);
+	const [activeTest, setActiveTest] = useState(null);
+	const [questions, setQuestions] = useState([]);
+	const [answers, setAnswers] = useState({});
+	const [openingTestId, setOpeningTestId] = useState("");
+	const [submitting, setSubmitting] = useState(false);
+	const [resultModal, setResultModal] = useState(null);
 
 	useEffect(() => {
 		async function fetchData() {
@@ -52,14 +58,73 @@ const StudentTests = () => {
 		fetchData();
 	}, []);
 
-	const handleStartTest = (testId) => {
-		alert(`Start Test ID: ${testId}`);
-		// Implement navigation or logic to start the test
+	const handleStartTest = async (test) => {
+		try {
+			setOpeningTestId(test._id);
+			const res = await api(`/student/tests/${test._id}/questions`);
+			const loadedQuestions = Array.isArray(res?.items) ? res.items : [];
+			setQuestions(loadedQuestions);
+			setAnswers({});
+			setActiveTest(test);
+		} catch (err) {
+			window.alert(err?.message || "Unable to start this test.");
+		} finally {
+			setOpeningTestId("");
+		}
 	};
 
-	const handleViewResult = (testId) => {
-		alert(`View Result for Test ID: ${testId}`);
-		// Implement navigation or logic to view the result
+	const handleViewResult = (test) => {
+		const score = Number(test.score || 0);
+		const total = Number(test.max_score || 0);
+		const percentage = total > 0 ? ((score / total) * 100).toFixed(2) : "0.00";
+		setResultModal({
+			title: test.title || "Test",
+			score,
+			total,
+			percentage,
+		});
+	};
+
+	const canSubmit = questions.length > 0 && questions.every((q) => String(answers[q._id] || "").trim().length > 0);
+
+	const handleSubmitTest = async () => {
+		if (!activeTest?._id || submitting) return;
+		if (!canSubmit) {
+			window.alert("Please answer all questions before submitting.");
+			return;
+		}
+		try {
+			setSubmitting(true);
+			const submission = await api(`/student/tests/${activeTest._id}/submit`, {
+				method: "POST",
+				body: JSON.stringify({ answers }),
+			});
+			setTests((prev) =>
+				prev.map((t) =>
+					t._id === activeTest._id
+						? {
+								...t,
+								status: "completed",
+								score: submission?.score ?? t.score,
+								max_score: submission?.total ?? t.max_score,
+						  }
+						: t,
+				),
+			);
+			setResultModal({
+				title: activeTest.title || "Test",
+				score: Number(submission?.score || 0),
+				total: Number(submission?.total || 0),
+				percentage: Number(submission?.percentage || 0).toFixed(2),
+			});
+			setActiveTest(null);
+			setQuestions([]);
+			setAnswers({});
+		} catch (err) {
+			window.alert(err?.message || "Failed to submit test.");
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
 	if (loading) {
@@ -163,17 +228,18 @@ const StudentTests = () => {
 											<div className="mt-4 flex gap-2">
 												{status === "completed" ? (
 													<button
-														onClick={() => handleViewResult(test._id)}
+														onClick={() => handleViewResult(test)}
 														className="flex-1 h-9 rounded-[8px] bg-[#5b3df6] text-[12px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#4a2ed8] transition-colors"
 													>
 														<CheckCircle2 className="h-4 w-4" /> View Result
 													</button>
 												) : (
 													<button
-														onClick={() => handleStartTest(test._id)}
+														onClick={() => handleStartTest(test)}
+														disabled={openingTestId === test._id}
 														className="flex-1 h-9 rounded-[8px] bg-[#ef4444] text-[12px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#dc2626] transition-colors"
 													>
-														<PlayCircle className="h-4 w-4" /> {status === "ongoing" ? "Resume Test" : "Start Test"}
+														<PlayCircle className="h-4 w-4" /> {openingTestId === test._id ? "Opening..." : status === "ongoing" ? "Resume Test" : "Start Test"}
 													</button>
 												)}
 											</div>
@@ -185,6 +251,89 @@ const StudentTests = () => {
 					)}
 				</div>
 			</div>
+
+			{activeTest ? (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="w-full max-w-[900px] max-h-[90vh] overflow-y-auto rounded-[12px] bg-white shadow-2xl">
+						<div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/[0.08] bg-white px-5 py-4">
+							<div>
+								<h3 className="text-[18px] font-bold text-[#0f172a]">{activeTest.title}</h3>
+								<p className="text-[12px] text-[#64748b]">{questions.length} questions</p>
+							</div>
+							<button
+								onClick={() => {
+									setActiveTest(null);
+									setQuestions([]);
+									setAnswers({});
+								}}
+								className="rounded-full p-1.5 text-[#94a3b8] hover:bg-[#f1f5f9] hover:text-[#334155]"
+							>
+								<X className="h-5 w-5" />
+							</button>
+						</div>
+						<div className="space-y-4 px-5 py-4">
+							{questions.length === 0 ? (
+								<div className="rounded-[10px] border border-dashed border-black/[0.12] bg-[#fafcff] p-6 text-center text-[13px] text-[#64748b]">
+									No questions available for this test.
+								</div>
+							) : (
+								questions.map((q, index) => (
+									<div key={q._id} className="rounded-[10px] border border-black/[0.08] bg-[#fcfdff] p-4">
+										<p className="text-[13px] font-semibold text-[#334155]">Q{index + 1}</p>
+										<p className="mt-1 text-[14px] font-medium text-[#0f172a]">{q.question}</p>
+										<div className="mt-3 space-y-2">
+											{(q.options || []).map((option, optionIndex) => (
+												<label key={`${q._id}-${optionIndex}`} className="flex cursor-pointer items-center gap-2 rounded-[8px] border border-black/[0.06] bg-white px-3 py-2 text-[13px] text-[#334155]">
+													<input
+														type="radio"
+														name={`question-${q._id}`}
+														value={option}
+														checked={answers[q._id] === option}
+														onChange={(e) => setAnswers((prev) => ({ ...prev, [q._id]: e.target.value }))}
+													/>
+													<span>{option}</span>
+												</label>
+											))}
+										</div>
+									</div>
+								))
+							)}
+						</div>
+						<div className="sticky bottom-0 flex justify-end border-t border-black/[0.08] bg-white px-5 py-4">
+							<button
+								onClick={handleSubmitTest}
+								disabled={!canSubmit || submitting || questions.length === 0}
+								className="h-10 rounded-[8px] bg-[#5b3df6] px-5 text-[13px] font-semibold text-white hover:bg-[#4a2ed8] disabled:cursor-not-allowed disabled:opacity-60"
+							>
+								{submitting ? "Submitting..." : "Submit Test"}
+							</button>
+						</div>
+					</div>
+				</div>
+			) : null}
+
+			{resultModal ? (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="w-full max-w-[420px] rounded-[12px] bg-white p-5 shadow-2xl">
+						<h3 className="text-[20px] font-bold text-[#0f172a]">Result Submitted</h3>
+						<p className="mt-1 text-[13px] text-[#64748b]">{resultModal.title}</p>
+						<div className="mt-4 rounded-[10px] border border-black/[0.08] bg-[#f8fafc] p-4">
+							<p className="text-[14px] text-[#334155]">
+								Score: <span className="font-bold text-[#0f172a]">{resultModal.score}/{resultModal.total}</span>
+							</p>
+							<p className="mt-1 text-[13px] text-[#64748b]">Percentage: {resultModal.percentage}%</p>
+						</div>
+						<div className="mt-4 flex justify-end">
+							<button
+								onClick={() => setResultModal(null)}
+								className="h-10 rounded-[8px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4a2ed8]"
+							>
+								OK
+							</button>
+						</div>
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 };

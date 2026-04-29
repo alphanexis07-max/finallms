@@ -116,11 +116,37 @@ async def create_test(db, data, instructor_id):
 # GET TESTS
 async def get_tests(db, instructor_id):
     tests = []
-    cursor = db["tests"].find({"created_by": str(instructor_id)})
+    owner_id = str(instructor_id)
+    cursor = db["tests"].find({"created_by": owner_id})
 
     async for doc in cursor:
         doc["_id"] = str(doc["_id"])
         tests.append(doc)
+
+    if not tests:
+        return []
+
+    # Attach attempts metadata for dashboard cards/highlights.
+    test_ids = {str(t["_id"]) for t in tests if t.get("_id")}
+    attempts_by_test = {}
+    attempts_cursor = db["test_attempts"].find({}).sort("submitted_at", -1)
+    async for attempt in attempts_cursor:
+        tid = str(attempt.get("test_id") or "").strip()
+        if not tid or tid not in test_ids:
+            continue
+        attempts_by_test.setdefault(tid, []).append(attempt)
+
+    for test in tests:
+        tid = str(test.get("_id") or "")
+        attempts = attempts_by_test.get(tid, [])
+        test["attempts_count"] = len(attempts)
+        if attempts:
+            avg = sum((float(a.get("score") or 0) / max(float(a.get("total") or 1), 1)) * 100 for a in attempts) / len(attempts)
+            test["average_score"] = round(avg, 2)
+            latest_attempt = attempts[0]
+            test["latest_submission_at"] = latest_attempt.get("submitted_at")
+        else:
+            test["average_score"] = 0
 
     return tests
 
@@ -209,13 +235,71 @@ async def get_test_analytics(db, test_id):
     }
 
 
+async def get_test_results_for_owner(db, test_id, owner_id, owner_role):
+    test = await db["tests"].find_one({"_id": ObjectId(test_id)} if ObjectId.is_valid(test_id) else {"_id": test_id})
+    if not test:
+        return None
+
+    created_by = str(test.get("created_by") or "")
+    if owner_role == "instructor" and created_by != str(owner_id):
+        return "forbidden"
+
+    attempts = await db["test_attempts"].find({"test_id": str(test.get("_id"))}).sort("submitted_at", -1).to_list(None)
+    user_ids = []
+    seen = set()
+    for a in attempts:
+        sid = str(a.get("student_id") or "").strip()
+        if sid and sid not in seen:
+            seen.add(sid)
+            user_ids.append(sid)
+
+    users = {}
+    if user_ids:
+        # Cross-backend safe: load users and filter locally.
+        users_cursor = db["users"].find({})
+        async for u in users_cursor:
+            uid = str(u.get("_id"))
+            if uid in seen:
+                users[uid] = u
+
+    items = []
+    for attempt in attempts:
+        sid = str(attempt.get("student_id") or "").strip()
+        total = int(attempt.get("total") or 0)
+        score = int(attempt.get("score") or 0)
+        percentage = round((score / total) * 100, 2) if total > 0 else 0
+        student = users.get(sid) or {}
+        items.append(
+            {
+                "attempt_id": str(attempt.get("_id")),
+                "student_id": sid,
+                "student_name": student.get("full_name") or student.get("name") or student.get("email") or "Student",
+                "student_email": student.get("email") or "",
+                "score": score,
+                "total": total,
+                "percentage": percentage,
+                "submitted_at": attempt.get("submitted_at"),
+            }
+        )
+
+    return {
+        "test_id": str(test.get("_id")),
+        "test_title": test.get("title") or "Test",
+        "items": items,
+    }
+
+
 async def get_weekly_test_overview(db, instructor_id):
     tests = await db["tests"].find({"created_by": str(instructor_id)}).to_list(None)
 
     test_ids = [str(test.get("_id")) for test in tests if test.get("_id")]
     attempts = []
     if test_ids:
-        attempts = await db["test_attempts"].find({"test_id": {"$in": test_ids}}).to_list(None)
+        test_id_set = set(test_ids)
+        attempts_cursor = db["test_attempts"].find({})
+        async for attempt in attempts_cursor:
+            if str(attempt.get("test_id") or "") in test_id_set:
+                attempts.append(attempt)
 
     published_tests = 0
     draft_or_scheduled_tests = 0

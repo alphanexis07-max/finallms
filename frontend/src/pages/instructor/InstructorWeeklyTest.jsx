@@ -72,6 +72,8 @@ export default function InstructorWeeklyTest() {
   const [tests, setTests] = useState([])
   const [courses, setCourses] = useState([])
   const [liveClasses, setLiveClasses] = useState([])
+  const [selectedTestResults, setSelectedTestResults] = useState(null)
+  const [resultsLoadingFor, setResultsLoadingFor] = useState('')
 
   const loadData = async () => {
     try {
@@ -286,6 +288,24 @@ export default function InstructorWeeklyTest() {
   const addOption = () => setOptions([...options, ''])
   const removeOption = (index) => setOptions(options.filter((_, i) => i !== index))
 
+  const openResults = async (test) => {
+    try {
+      const testId = test?._id || test?.id
+      if (!testId) return
+      setResultsLoadingFor(testId)
+      const response = await api(`/instructor/tests/${testId}/results`)
+      setSelectedTestResults({
+        testId,
+        testTitle: response?.test_title || test?.title || 'Test',
+        items: Array.isArray(response?.items) ? response.items : [],
+      })
+    } catch (err) {
+      setError(err?.message || 'Failed to load test results')
+    } finally {
+      setResultsLoadingFor('')
+    }
+  }
+
   return (
     <div className="min-h-full bg-[#F7FAFD]">
       <div className="flex h-full flex-col gap-6 bg-gradient-to-b from-[#f6f8fa] to-[#f7fcff] p-4 sm:p-6 lg:p-7">
@@ -385,7 +405,12 @@ export default function InstructorWeeklyTest() {
                 <div className="p-[16px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No tests created yet.</div>
               ) : (
                 tests.map((test) => (
-                  <div key={test._id || test.id} className="p-[16px] border border-black/[0.08] rounded-[6px]">
+                  <button
+                    type="button"
+                    key={test._id || test.id}
+                    onClick={() => openResults(test)}
+                    className="w-full text-left p-[16px] border border-black/[0.08] rounded-[6px] hover:border-[#5b3df6]/30 hover:bg-[#faf8ff] transition-colors"
+                  >
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-3">
@@ -394,6 +419,9 @@ export default function InstructorWeeklyTest() {
                             <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{test.title}</div>
                             <div className="text-[12px] text-[#94a3b8] mt-[4px]">{formatDateTime(test.scheduled_at)}</div>
                             <div className="text-[12px] text-[#94a3b8] mt-[4px] line-clamp-2">{test.description || 'No description'}</div>
+                            {resultsLoadingFor === (test._id || test.id) ? (
+                              <div className="text-[11px] text-[#5b3df6] mt-[4px]">Loading results...</div>
+                            ) : null}
                             <div className="mt-2 flex flex-wrap gap-1">
                               <span className="inline-flex h-[24px] items-center px-[8px] rounded-[10px] text-[10px] font-medium bg-[#f1f5f9] text-[#64748b]">{test.total_questions || 0} questions</span>
                               <span className="inline-flex h-[24px] items-center px-[8px] rounded-[10px] text-[10px] font-medium bg-[#f1f5f9] text-[#64748b]">{test.duration || 0} mins</span>
@@ -408,7 +436,7 @@ export default function InstructorWeeklyTest() {
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))
               )}
             </div>
@@ -780,6 +808,42 @@ export default function InstructorWeeklyTest() {
           </div>
         </div>
       )}
+
+      {selectedTestResults ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSelectedTestResults(null)}>
+          <div className="w-full max-w-[760px] max-h-[88vh] overflow-y-auto rounded-[12px] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 flex items-center justify-between border-b border-black/[0.08] bg-white px-5 py-4">
+              <div>
+                <h3 className="text-[20px] font-bold text-[#0f172a]">{selectedTestResults.testTitle}</h3>
+                <p className="text-[12px] text-[#64748b]">Student submissions</p>
+              </div>
+              <button onClick={() => setSelectedTestResults(null)} className="text-[#94a3b8] hover:text-[#334155]">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              {selectedTestResults.items.length === 0 ? (
+                <div className="rounded-[8px] border border-dashed border-black/[0.12] bg-[#fafcff] p-5 text-[13px] text-[#64748b]">
+                  No student has submitted this test yet.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedTestResults.items.map((item) => (
+                    <div key={item.attempt_id} className="rounded-[8px] border border-black/[0.08] p-3">
+                      <p className="text-[13px] font-semibold text-[#0f172a]">{item.student_name}</p>
+                      <p className="text-[11px] text-[#64748b]">{item.student_email || '-'}</p>
+                      <p className="mt-1 text-[12px] text-[#334155]">
+                        Score: <span className="font-semibold">{item.score}/{item.total}</span> ({item.percentage}%)
+                      </p>
+                      <p className="text-[11px] text-[#94a3b8]">Submitted: {formatDateTime(item.submitted_at)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -130,6 +130,26 @@ async def get_test_by_id(
     return await service.get_test_by_id(db, test_id, get_user_id(user))
 
 
+@router.get("/tests/{test_id}/results")
+async def get_test_results(
+    test_id: str,
+    db=Depends(get_database),
+    user=Depends(get_current_user),
+):
+    weekly_tests_admin_required(user)
+    result = await service.get_test_results_for_owner(
+        db,
+        test_id,
+        get_user_id(user),
+        str(user.get("role") or "").lower(),
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Test not found")
+    if result == "forbidden":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return result
+
+
 # UPDATE TEST (publish also here)
 @router.put("/tests/{test_id}")
 async def update_test(

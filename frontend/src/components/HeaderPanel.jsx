@@ -77,6 +77,7 @@ const getPageTitle = (pathname) => {
   if (pathname === '/student-panel/browse-courses') return 'Browse Courses'
   if (pathname === '/student-panel/e-library') return 'E-Library'
   if (pathname === '/student-panel/live-classes') return 'Live Classes'
+  if (pathname === '/student-panel/school-events') return 'School Events'
   if (pathname === '/student-panel/certificates') return 'Certificates'
   if (pathname === '/student-panel/notifications') return 'Notifications'
 

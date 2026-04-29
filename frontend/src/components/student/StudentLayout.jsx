@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
+  Calendar,
   GraduationCap,
   Video,
   BarChart3,
@@ -21,6 +22,7 @@ const nav = [
   { to: '/student-panel/browse-courses', label: 'Browse Courses', icon: BarChart3 },
   { to: '/student-panel/e-library', label: 'E-Library', icon: GraduationCap },
   { to: '/student-panel/live-classes', label: 'Live Classes', icon: Users },
+  { to: '/student-panel/school-events', label: 'School Events', icon: Calendar },
   { to: '/student-panel/tests', label: 'Tests', icon: BookOpen },
   { to: '/student-panel/certificates', label: 'Certificates', icon: Trophy },
 ]

@@ -64,7 +64,8 @@ function parseServerDateAsUtc(value) {
     return Number.isNaN(parsed.getTime()) ? null : parsed
   }
 
-  // Legacy rows without timezone are treated as IST local wall time.
+  // Backend may return timezone-less datetime strings (common with Mongo/FastAPI serialization).
+  // Treat these as UTC so IST formatting remains correct for newly created classes.
   const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/)
   if (!m) {
     const fallback = new Date(raw)
@@ -78,7 +79,7 @@ function parseServerDateAsUtc(value) {
   const minute = Number(m[5])
   const second = Number(m[6] || 0)
   const millisecond = Number(String(m[7] || '0').padEnd(3, '0'))
-  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond) - IST_OFFSET_MS
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond)
   return new Date(utcMs)
 }
 
