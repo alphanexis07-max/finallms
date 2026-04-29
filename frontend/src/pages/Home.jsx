@@ -407,7 +407,7 @@ export default (props) => {
                 <div className="relative flex flex-col lg:flex-row items-stretch self-stretch lg:min-h-[635px] lg:overflow-visible">
 
                     {/* Left panel — cream/beige */}
-                    <div className="flex-1 lg:flex-[0.6] flex flex-col justify-center bg-[#FEF6EE] px-6 pt-10 pb-6 sm:px-12 lg:pl-32 lg:pr-24 gap-5 relative overflow-hidden">
+                    <div className="flex-1 lg:flex-[0.6] flex flex-col justify-center bg-[#FEF6EE] px-6 pt-3 pb-6 sm:px-12 lg:pl-32 lg:pr-24 gap-5 relative overflow-hidden">
                         {/* Squiggle decorations */}
                         <motion.svg
                             animate={{ rotate: [0, 5, 0], scale: [1, 1.05, 1] }}
@@ -566,7 +566,7 @@ export default (props) => {
 
             {/* ── Live Classes Section ── */}
             <motion.div
-                className="self-stretch px-4 py-12 md:py-16 bg-[#f7efeb]"
+                className="self-stretch px-4 py-10 md:py-16 bg-[#f7efeb]"
                 initial="hidden"
                 whileInView="show"
                 viewport={{ once: true, amount: 0.15 }}
@@ -574,27 +574,18 @@ export default (props) => {
             >
                 <div className="mx-auto w-full max-w-[1200px]">
                     {/* Header row */}
-                    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between text-center md:text-left">
                         <motion.div variants={fadeUp}>
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                    {liveCount} Live Now
-                                </span>
-                                <span className="bg-[#e3f0ed] text-[#0b8276] text-xs font-semibold px-3 py-1 rounded-full">
-                                    {upcomingCount} Upcoming
-                                </span>
-                            </div>
                             <h2 className="text-3xl sm:text-4xl lg:text-[41px] font-extrabold leading-tight text-[#111b2f]">
                                 Explore Our Live Classes
                             </h2>
-                            <p className="mt-2 text-sm text-slate-600">
+                            <p className="mt-2 text-sm text-slate-600 md:text-left">
                                 Join real-time sessions with expert instructors — interactive, engaging, and career-focused.
                             </p>
                         </motion.div>
 
                         {/* Scroll arrows — desktop */}
-                        <motion.div className="flex items-center gap-3" variants={fadeUp}>
+                        <motion.div className="hidden md:flex items-center gap-3" variants={fadeUp}>
                             <button
                                 className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-[#0b8276] text-[#0b8276] hover:bg-[#0b8276] hover:text-white transition-colors"
                                 onClick={() => scroll(liveClassesRef, "left")}
@@ -681,24 +672,24 @@ export default (props) => {
 
             {/* Featured Courses Section */}
             <motion.div
-                className="relative self-stretch overflow-hidden bg-[#f7efeb] py-12 md:py-14"
+                className="relative self-stretch overflow-hidden bg-[#f7efeb] py-1 md:py-14"
                 initial="hidden"
                 whileInView="show"
                 viewport={{ once: true, amount: 0.2 }}
                 variants={fadeUp}
             >
                 <div className="relative mx-auto w-full max-w-[1200px] px-4 sm:px-8 md:px-10 lg:px-14">
-                    <div className="mb-8 md:mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="mb-8 md:mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-center md:text-left">
                         <motion.div variants={fadeUp}>
                             <h2 className="text-3xl sm:text-4xl lg:text-[41px] font-extrabold leading-tight text-[#111b2f]">
                                 Explore Our Course Offerings
                             </h2>
-                            <p className="mt-2 text-sm text-slate-500">
+                            <p className="mt-2 text-sm text-slate-500 md:text-left">
                                 Explore top-rated courses designed to help you gain real-world skills and advance your career.
                             </p>
                         </motion.div>
 
-                        <motion.div className="flex items-center gap-3" variants={fadeUp}>
+                        <motion.div className="hidden md:flex items-center gap-3" variants={fadeUp}>
                             <button
                                 className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-[#0b8276] text-[#0b8276] hover:bg-[#0b8276] hover:text-white transition-colors"
                                 onClick={() => scroll(coursesRef, "left")}
