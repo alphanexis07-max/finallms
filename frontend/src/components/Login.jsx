@@ -4,7 +4,6 @@ import { CheckCircle2, Eye, EyeOff, Sparkles } from 'lucide-react'
 import { api, getDashboardPathByRole, setAuthSession } from '../lib/api'
 import { GoogleLogin } from '@react-oauth/google'
 
-// Simple toast notification (replace with a library like react-toastify for production)
 function showToast(message) {
   if (window && window.alert) {
     window.alert(message)
@@ -13,10 +12,16 @@ function showToast(message) {
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 const BENEFITS = ['Multi-Tenant LMS System', 'Live & Recorded Learning', 'Secure Payments Integration']
+const GOOGLE_CLIENT_ID = (
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  import.meta.env.VITE_GOOGLE_CLIENTID ||
+  import.meta.env.REACT_APP_GOOGLE_CLIENT_ID ||
+  ''
+).trim()
+const GOOGLE_AUTH_ENABLED = GOOGLE_CLIENT_ID.length > 0
 
 export default function Login() {
   const navigate = useNavigate()
-  const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -110,9 +115,9 @@ export default function Login() {
               <p className="mt-2 text-sm text-slate-500">Enter your details to access your account.</p>
             </div>
 
-            {/* Google Login Button - Improved UI */}
-            {hasGoogleClientId && (
-              <div className="mb-1 flex flex-col items-center gap-3">
+             {/* Google Login Button - Improved UI */}
+            <div className="flex flex-col items-center gap-3 mb-1">
+              {GOOGLE_AUTH_ENABLED ? (
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
                     try {
@@ -123,7 +128,7 @@ export default function Login() {
                       setAuthSession(data.access_token, data.role, data.tenant_id)
                       navigate(getDashboardPathByRole(data.role))
                     } catch (err) {
-                      showToast('Google Login Failed')
+                      showToast(err?.message || 'Google Login Failed')
                     }
                   }}
                   onError={() => {
@@ -134,13 +139,17 @@ export default function Login() {
                   theme="outline"
                   size="large"
                 />
-                <div className="my-2 flex w-full items-center">
-                  <div className="flex-grow border-t border-gray-200"></div>
-                  <span className="mx-3 text-xs font-medium text-gray-400">or login with email</span>
-                  <div className="flex-grow border-t border-gray-200"></div>
-                </div>
+              ) : (
+                <p className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Google sign-in is disabled. Add `VITE_GOOGLE_CLIENT_ID` in frontend env.
+                </p>
+              )}
+              <div className="flex items-center w-full my-2">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="mx-3 text-xs text-gray-400 font-medium">or login with email</span>
+                <div className="flex-grow border-t border-gray-200"></div>
               </div>
-            )}
+            </div>
 
             <form onSubmit={onSubmit} className="space-y-5">
               <div>

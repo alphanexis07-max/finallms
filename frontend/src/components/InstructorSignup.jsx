@@ -6,6 +6,13 @@ import { GoogleLogin } from '@react-oauth/google'
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 const PHONE_REGEX = /^\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{4}$/
+const GOOGLE_CLIENT_ID = (
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  import.meta.env.VITE_GOOGLE_CLIENTID ||
+  import.meta.env.REACT_APP_GOOGLE_CLIENT_ID ||
+  ''
+).trim()
+const GOOGLE_AUTH_ENABLED = GOOGLE_CLIENT_ID.length > 0
 
 // Simple toast notification (replace with a library like react-toastify for production)
 function showToast(message) {
@@ -16,7 +23,6 @@ function showToast(message) {
 
 export default function InstructorSignup() {
   const navigate = useNavigate()
-  const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -175,8 +181,8 @@ export default function InstructorSignup() {
             {/* Scrollable Form Fields */}
             <div className="flex-1 overflow-y-auto px-5 sm:px-8">
               {/* Google Sign Up Button */}
-              {hasGoogleClientId && (
-                <div className="mb-1 flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-3 mb-1">
+                {GOOGLE_AUTH_ENABLED ? (
                   <GoogleLogin
                     onSuccess={async (credentialResponse) => {
                       try {
@@ -198,13 +204,17 @@ export default function InstructorSignup() {
                     theme="outline"
                     size="large"
                   />
-                  <div className="my-2 flex w-full items-center">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="mx-3 text-xs font-medium text-gray-400">or sign up with email</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
-                  </div>
+                ) : (
+                  <p className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    Google sign-up is disabled. Add `VITE_GOOGLE_CLIENT_ID` in frontend env.
+                  </p>
+                )}
+                <div className="flex items-center w-full my-2">
+                  <div className="flex-grow border-t border-gray-200"></div>
+                  <span className="mx-3 text-xs text-gray-400 font-medium">or sign up with email</span>
+                  <div className="flex-grow border-t border-gray-200"></div>
                 </div>
-              )}
+              </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4 pb-4">
                 <Field
