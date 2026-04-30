@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 export default function AdminELibrary() {
   const [resources, setResources] = useState([])
   const [classOptions, setClassOptions] = useState([])
+  const [classOptionsLoading, setClassOptionsLoading] = useState(true)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -40,18 +41,30 @@ export default function AdminELibrary() {
 
   // ✅ Fetch live classes and extract unique class_name values
   const fetchClassOptions = async () => {
+    setClassOptionsLoading(true)
     try {
       const response = await api('/lms/live-classes?limit=300')
       const items = response.items || response || []
       const uniqueClasses = [...new Set(
         items
-          .map((item) => item.class_name)
-          .filter(Boolean)
+          .map((item) =>
+            String(
+              item?.class_name ||
+                item?.className ||
+                item?.title ||
+                item?.subject ||
+                ''
+            ).trim()
+          )
+          .filter((value) => value.length > 0)
       )]
       setClassOptions(uniqueClasses)
       if (uniqueClasses.length > 0) setGrade(uniqueClasses[0])
     } catch (err) {
       console.error('Failed to load class options:', err)
+      setClassOptions([])
+    } finally {
+      setClassOptionsLoading(false)
     }
   }
 
@@ -252,13 +265,15 @@ export default function AdminELibrary() {
                   <label className="mb-1 block text-[13px] font-semibold text-[#0f172a]">Class</label>
                   {/* ✅ Dynamic class options from live_classes API */}
                   <select
-                    disabled={submitting}
+                    disabled={submitting || classOptionsLoading || classOptions.length === 0}
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
                     className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]"
                   >
-                    {classOptions.length === 0 ? (
+                    {classOptionsLoading ? (
                       <option value="">Loading classes...</option>
+                    ) : classOptions.length === 0 ? (
+                      <option value="">No live classes found</option>
                     ) : (
                       classOptions.map((cls) => (
                         <option key={cls} value={cls}>

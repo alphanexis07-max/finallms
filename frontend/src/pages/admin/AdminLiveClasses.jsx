@@ -1460,6 +1460,7 @@ import {
   UserCheck,
   Star,
   StopCircle,
+  Award,
 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
@@ -1812,7 +1813,69 @@ function ReassignInstructorModal({
   )
 }
 
-function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, regeneratingId, endingId }) {
+function CertificateIssueModal({
+  session,
+  certificateTitle,
+  certificateFileUrl,
+  setCertificateTitle,
+  setCertificateFileUrl,
+  onClose,
+  onSubmit,
+  isSubmitting,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
+      <div className="w-full max-w-[520px] rounded-[12px] border border-black/[0.08] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 border-b border-black/[0.08] px-4 py-4 sm:px-5">
+          <div>
+            <h3 className="text-[20px] font-bold text-[#0f172a]">Issue Certificates</h3>
+            <p className="mt-1 text-[12px] text-[#64748b]">{session?.title || 'Class'} • {session?.studentsEnrolled || 0} students</p>
+          </div>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#64748b]">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-4 py-4 sm:px-5">
+          <div>
+            <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Certificate title *</label>
+            <input
+              value={certificateTitle}
+              onChange={(e) => setCertificateTitle(e.target.value)}
+              placeholder="e.g. Live Class Completion Certificate"
+              className="h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Certificate file URL (optional)</label>
+            <input
+              value={certificateFileUrl}
+              onChange={(e) => setCertificateFileUrl(e.target.value)}
+              placeholder="https://..."
+              className="h-10 w-full rounded-[8px] border border-black/[0.08] px-3 text-[13px]"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-black/[0.08] px-4 py-4 sm:px-5">
+          <button onClick={onClose} className="h-10 rounded-[8px] border border-black/[0.08] bg-white px-4 text-[13px] font-semibold text-[#4b5563]">
+            Cancel
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={isSubmitting}
+            className="inline-flex h-10 items-center gap-2 rounded-[8px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white disabled:opacity-60"
+          >
+            <Award className="h-4 w-4" />
+            {isSubmitting ? 'Issuing...' : 'Issue to All Students'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, onAddCertificate, regeneratingId, endingId, certificateIssuingId }) {
   const isLive = session.status === 'live'
   const isEnded = session.status === 'ended'
   return (
@@ -1929,6 +1992,19 @@ function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, 
                 <UserCheck className="h-3 w-3" /> Reassign
               </button>
             )}
+            {isEnded && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAddCertificate(session)
+                }}
+                disabled={certificateIssuingId === session.id}
+                className="inline-flex items-center gap-1 rounded-[8px] border border-[#ddd6fe] bg-[#f5f3ff] px-2.5 py-1 text-[11px] font-semibold text-[#6d28d9] disabled:opacity-60"
+              >
+                <Award className="h-3 w-3" />
+                {certificateIssuingId === session.id ? 'Issuing...' : 'Add Certificate'}
+              </button>
+            )}
           </div>
           <span className="text-[11px] font-medium text-[#5b3df6] group-hover:underline">View details</span>
         </div>
@@ -1963,6 +2039,10 @@ export default function AdminLiveClasses() {
   // End Course confirm modal state
   const [endCourseTarget, setEndCourseTarget] = useState(null)
   const [endingId, setEndingId] = useState('')
+  const [certificateTarget, setCertificateTarget] = useState(null)
+  const [certificateIssuingId, setCertificateIssuingId] = useState('')
+  const [certificateTitle, setCertificateTitle] = useState('')
+  const [certificateFileUrl, setCertificateFileUrl] = useState('')
 
   const tenantId = localStorage.getItem('lms_tenant_id')
 
@@ -2058,6 +2138,7 @@ export default function AdminLiveClasses() {
 
       return {
         id: c._id,
+        courseId: c.course_id || '',
         title: c.title || 'Live Class',
         class_name: c.class_name || '',
         course: course?.title || c.course_id || 'Course',
@@ -2277,6 +2358,75 @@ export default function AdminLiveClasses() {
     if (!selectedSession) return []
     return selectedSession.attendeeIds.map((id) => userMap.get(id)).filter(Boolean)
   }, [selectedSession, userMap])
+
+  const openCertificateModal = (session) => {
+    setActionError('')
+    setCertificateTarget(session || null)
+    setCertificateTitle(`${session?.title || 'Live Class'} Completion Certificate`)
+    setCertificateFileUrl('')
+  }
+
+  const closeCertificateModal = () => {
+    setCertificateTarget(null)
+    setCertificateTitle('')
+    setCertificateFileUrl('')
+    setCertificateIssuingId('')
+  }
+
+  const issueCertificatesForClass = async () => {
+    if (!certificateTarget?.id) return
+    if (!certificateTarget.courseId) {
+      setActionError('Course mapping missing for this class. Cannot issue certificates.')
+      return
+    }
+    if (!certificateTitle.trim()) {
+      setActionError('Certificate title is required.')
+      return
+    }
+
+    try {
+      setActionError('')
+      setCertificateIssuingId(certificateTarget.id)
+      const attendeeIds = (certificateTarget.attendeeIds || []).map((id) => String(id || '').trim()).filter(Boolean)
+      let recipientIds = [...attendeeIds]
+
+      // Fallback: if class attendee_ids are empty, pick students from course enrollments.
+      if (recipientIds.length === 0) {
+        const enrollmentsRes = await api('/lms/enrollments?limit=2000').catch(() => ({ items: [] }))
+        const enrollmentRows = Array.isArray(enrollmentsRes?.items) ? enrollmentsRes.items : []
+        recipientIds = enrollmentRows
+          .filter((row) => String(row?.course_id || '').trim() === String(certificateTarget.courseId || '').trim())
+          .map((row) => String(row?.student_id || '').trim())
+          .filter(Boolean)
+      }
+
+      recipientIds = [...new Set(recipientIds)]
+      if (recipientIds.length === 0) {
+        setActionError('No enrolled students found for this class/course.')
+        setCertificateIssuingId('')
+        return
+      }
+
+      await Promise.all(
+        recipientIds.map((studentId) =>
+          api('/lms/admin/certificates', {
+            method: 'POST',
+            body: JSON.stringify({
+              student_id: studentId,
+              course_id: certificateTarget.courseId,
+              title: certificateTitle.trim(),
+              file_url: certificateFileUrl.trim(),
+            }),
+          }),
+        ),
+      )
+      closeCertificateModal()
+      await loadData()
+    } catch (error) {
+      setActionError(error?.message || 'Unable to issue certificates.')
+      setCertificateIssuingId('')
+    }
+  }
 
   // ─── Create view ────────────────────────────────────────────────────────────
   if (activeView === 'create') {
@@ -2585,8 +2735,10 @@ export default function AdminLiveClasses() {
                   onEndCourse={(s) => setEndCourseTarget(s)}
                   onRegenerate={regenerateZoom}
                   onReassign={openReassignModal}
+                  onAddCertificate={openCertificateModal}
                   regeneratingId={regeneratingId}
                   endingId={endingId}
+                  certificateIssuingId={certificateIssuingId}
                 />
               ))}
             </div>
@@ -2627,6 +2779,19 @@ export default function AdminLiveClasses() {
           onClose={closeReassignModal}
           onSubmit={reassignInstructor}
           isSubmitting={reassigningId === reassignTarget.id}
+        />
+      ) : null}
+
+      {certificateTarget ? (
+        <CertificateIssueModal
+          session={certificateTarget}
+          certificateTitle={certificateTitle}
+          certificateFileUrl={certificateFileUrl}
+          setCertificateTitle={setCertificateTitle}
+          setCertificateFileUrl={setCertificateFileUrl}
+          onClose={closeCertificateModal}
+          onSubmit={issueCertificatesForClass}
+          isSubmitting={certificateIssuingId === certificateTarget.id}
         />
       ) : null}
 

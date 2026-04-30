@@ -56,9 +56,9 @@ function LiveClassCard({ cls, fadeUp, getSubjectColor, formatStart, navigate }) 
       variants={fadeUp}
       whileHover={{ y: -5 }}
       className="min-w-[280px] sm:min-w-0 snap-start rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
-      onClick={() => navigate(`/live-classes/${cls.id}`)}
+      onClick={() => navigate('/signup')}
     >
-      <div className="relative h-[180px] overflow-hidden">
+      <div className="relative h-[200px] sm:h-[220px] overflow-hidden">
         {imgSrc ? (
           <img
             src={imgSrc}
@@ -122,7 +122,7 @@ function LiveClassCard({ cls, fadeUp, getSubjectColor, formatStart, navigate }) 
       </div>
 
       <div className="flex flex-col flex-1 p-4 gap-2">
-        <h3 className="text-[#111b2f] text-base font-semibold leading-tight line-clamp-2 min-h-[44px]">
+        <h3 className="text-[#111b2f] text-lg sm:text-xl font-semibold leading-tight line-clamp-2 min-h-[70px]">
           {cls.title}
         </h3>
 
@@ -155,7 +155,7 @@ function LiveClassCard({ cls, fadeUp, getSubjectColor, formatStart, navigate }) 
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/live-classes/${cls.id}`);
+              navigate('/signup');
             }}
           >
             {cls.isLive ? "Join Now" : "Register"}
@@ -507,27 +507,6 @@ export default function LandingPage(props) {
             </motion.div>
           </div>
 
-          {/* Filter tabs */}
-          <motion.div className="flex gap-2 mb-7" variants={fadeUp}>
-            {[
-              { key: "all", label: "All Classes" },
-              { key: "live", label: "🔴 Live Now" },
-              { key: "upcoming", label: "📅 Upcoming" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveLiveTab(tab.key)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
-                  activeLiveTab === tab.key
-                    ? "bg-[#0b8276] text-white border-[#0b8276] shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-[#0b8276] hover:text-[#0b8276]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </motion.div>
-
           {/* ── Cards: skeleton → real data, no long blank wait ── */}
           {liveClassesLoading ? (
             // Show 3 skeleton placeholders instantly while fetching
@@ -572,12 +551,6 @@ export default function LandingPage(props) {
             </motion.div>
           )}
 
-          <motion.div className="mt-8 text-center" variants={fadeUp}>
-            <button onClick={() => navigate("/live-classes")} className="inline-flex items-center gap-2 bg-[#0b8276] text-white font-bold py-3 px-8 rounded-lg hover:bg-[#096b61] transition-all transform hover:scale-105">
-              <Radio size={18} />
-              View All Live Classes
-            </button>
-          </motion.div>
         </div>
       </motion.div>
 
@@ -600,7 +573,13 @@ export default function LandingPage(props) {
             ) : featuredCourses.length === 0 ? (
               <motion.div className="col-span-full rounded-2xl bg-white p-6 text-center text-slate-500" variants={fadeUp}>No uploaded courses found.</motion.div>
             ) : featuredCourses.map((course) => (
-              <motion.div key={course.title} className="min-w-[280px] sm:min-w-0 snap-start rounded-2xl bg-white p-4 shadow-sm hover:shadow-md transition-shadow" variants={fadeUp} whileHover={{ y: -5 }}>
+              <motion.div
+                key={course.title}
+                className="min-w-[280px] sm:min-w-0 snap-start rounded-2xl bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                variants={fadeUp}
+                whileHover={{ y: -5 }}
+                onClick={() => navigate('/signup')}
+              >
                 <img src={course.image} alt={course.title} className="h-[200px] sm:h-[220px] w-full rounded-xl object-cover" loading="lazy" decoding="async" />
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
                   <span>{course.rating}</span>
@@ -670,7 +649,7 @@ export default function LandingPage(props) {
       </motion.div>
 
       {/* ── Pricing ── */}
-      <motion.div className="self-stretch bg-[#f7efeb] px-4 py-5 sm:py-16" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }} variants={stagger}>
+      <motion.div className="self-stretch bg-[#f7efeb] px-4 py-5 sm:py-2" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }} variants={stagger}>
         <div className="mx-auto w-full max-w-[1200px]">
           <motion.div className="text-center" variants={fadeUp}>
             <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-[#111b2f]">Simple, transparent pricing</h2>
@@ -690,8 +669,14 @@ export default function LandingPage(props) {
               if (isHighlighted) {
                 return (
                   <motion.div key={plan?._id || `${planName}-${idx}`} variants={fadeUp} whileHover={{ scale: 1.02 }} className="min-w-[300px] sm:min-w-0 snap-center relative flex flex-col items-center rounded-xl shadow-xl">
-                    <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }} className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                      <span className="bg-[#FF8A33] text-white text-sm font-bold py-2 px-6 rounded-xl shadow-lg whitespace-nowrap">Most Popular</span>
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2"
+                    >
+                      <span className="inline-flex h-7 items-center bg-[#FF8A33] text-white text-sm font-bold px-5 rounded-xl shadow-lg whitespace-nowrap">
+                        Most Popular
+                      </span>
                     </motion.div>
                     <div className="flex flex-col items-center bg-slate-900 py-8 sm:py-10 px-6 w-full h-full rounded-xl overflow-hidden">
                       <h3 className="text-[#F7FCFF] text-2xl font-bold">{planName}</h3>

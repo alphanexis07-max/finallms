@@ -16,6 +16,7 @@ from app.schemas.lms import (
     LiveClassUpdateIn,
     NotificationIn,
     PlanIn,
+    PlanUpdateIn,
     PlatformSettingsIn,
     LibraryResourceIn,
     RatingIn,
@@ -1534,6 +1535,44 @@ async def list_plans(
         query["active"] = True
 
     return await paged(db.plans, query, "created_at", -1, skip, limit)
+
+
+@router.patch("/plans/{plan_id}")
+async def update_plan(
+    plan_id: str,
+    payload: PlanUpdateIn,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        return {"message": "No updates provided"}
+    updates["updated_at"] = datetime.now(timezone.utc)
+
+    query = {"_id": ObjectId(plan_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+    result = await db.plans.update_one(query, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    updated = await db.plans.find_one(query)
+    return as_dict(updated)
+
+
+@router.delete("/plans/{plan_id}")
+async def delete_plan(
+    plan_id: str,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+):
+    query = {"_id": ObjectId(plan_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+    result = await db.plans.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return {"message": "Plan deleted"}
 
 
 @router.get("/public/plans")

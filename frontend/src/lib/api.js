@@ -3,7 +3,6 @@ const isLocalDev = import.meta.env.DEV && window.location.hostname === 'localhos
 const DEFAULT_API_BASE = isLocalDev
   ? LOCAL_DEV_API_BASE
   : (import.meta.env.VITE_API_BASE_URL || LOCAL_DEV_API_BASE)
-// const FALLBACK_API_BASES = ['http://localhost:8000/api/v1', 'http://localhost:8001/api/v1']
 const FALLBACK_API_BASES = []
 const savedApiBase = localStorage.getItem('lms_api_base') || ''
 let runtimeApiBase = isLocalDev ? LOCAL_DEV_API_BASE : (savedApiBase || DEFAULT_API_BASE)

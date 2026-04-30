@@ -173,10 +173,10 @@ export default function StudentDashboard() {
               <div className="text-[12px] font-medium text-[#4b2e00]">Student journey - Updated</div>
             </div>
             <div className="max-w-[850px] text-[24px] font-bold leading-[1.2] text-[#0f172a] sm:text-[30px] lg:text-[35px]">
-              Continue courses, access the new e-library, join live classes, and complete quizzes from one place.
+              Everything you need to learn, right here.
             </div>
             <div className="max-w-[750px] text-[13.9px] text-[#94a3b8]">
-              A learner dashboard for course discovery, class schedule, progress tracking, saved courses, e-library resources, live class reminders, and next-step digital study pathways with time-based goals.
+              Your courses, schedule, and study goals — organized and ready to go.
             </div>
           </div>
           <div className="mt-4 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">

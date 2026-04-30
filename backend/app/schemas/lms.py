@@ -105,6 +105,13 @@ class PlanIn(BaseModel):
     active: bool = True
 
 
+class PlanUpdateIn(BaseModel):
+    name: str | None = None
+    price: float | None = None
+    billing_period: str | None = None
+    active: bool | None = None
+
+
 class LibraryResourceIn(BaseModel):
     title: str
     grade: str

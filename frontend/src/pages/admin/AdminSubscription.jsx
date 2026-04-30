@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { PlusCircle, Save, IndianRupee } from 'lucide-react'
+import { PlusCircle, Save, IndianRupee, Pencil, Trash2, Check, X } from 'lucide-react'
 import { api } from '../../lib/api'
 
 function toUiPlan(plan) {
@@ -42,6 +42,13 @@ export default function AdminSubscription() {
   const [newActive, setNewActive] = useState(true)
   const [billsPage, setBillsPage] = useState(1)
   const [billsPerPage, setBillsPerPage] = useState(10)
+  const [editingPlanId, setEditingPlanId] = useState('')
+  const [editingPlanDraft, setEditingPlanDraft] = useState({
+    name: '',
+    duration: '',
+    price: '',
+    enabled: true,
+  })
 
   const instructorShare = useMemo(() => Math.max(0, 100 - adminShare), [adminShare])
   const sampleCoursePrice = 500
@@ -171,6 +178,79 @@ export default function AdminSubscription() {
     }
   }
 
+  const startEditPlan = (plan) => {
+    setError('')
+    setSuccess('')
+    setEditingPlanId(String(plan?.id || ''))
+    setEditingPlanDraft({
+      name: plan?.name || '',
+      duration: plan?.duration || '',
+      price: String(Number(plan?.price || 0)),
+      enabled: Boolean(plan?.enabled),
+    })
+  }
+
+  const cancelEditPlan = () => {
+    setEditingPlanId('')
+    setEditingPlanDraft({ name: '', duration: '', price: '', enabled: true })
+  }
+
+  const saveEditedPlan = async () => {
+    if (!editingPlanId) return
+    if (!editingPlanDraft.name.trim() || !editingPlanDraft.duration.trim()) {
+      setError('Plan name and duration are required.')
+      return
+    }
+    const parsedPrice = Number(editingPlanDraft.price)
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setError('Enter a valid price.')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError('')
+      setSuccess('')
+      await api(`/lms/plans/${editingPlanId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: editingPlanDraft.name.trim(),
+          billing_period: editingPlanDraft.duration.trim(),
+          price: parsedPrice,
+          active: editingPlanDraft.enabled,
+        }),
+      })
+      setSuccess('Plan updated successfully.')
+      cancelEditPlan()
+      await loadPlans()
+    } catch (err) {
+      setError(err?.message || 'Unable to update plan.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const deletePlan = async (plan) => {
+    const planId = String(plan?.id || '')
+    if (!planId) return
+    const confirmed = window.confirm(`Delete plan "${plan?.name || 'this plan'}"?`)
+    if (!confirmed) return
+
+    try {
+      setSaving(true)
+      setError('')
+      setSuccess('')
+      await api(`/lms/plans/${planId}`, { method: 'DELETE' })
+      setSuccess('Plan deleted successfully.')
+      if (editingPlanId === planId) cancelEditPlan()
+      await loadPlans()
+    } catch (err) {
+      setError(err?.message || 'Unable to delete plan.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="min-h-full bg-[#F7FAFD] p-4 sm:p-6 lg:p-7">
       <section className="rounded-[8px] border border-black/[0.08] bg-gradient-to-br from-white to-[#e8f5ff] p-5 sm:p-6">
@@ -197,31 +277,117 @@ export default function AdminSubscription() {
                 <th className="px-3 py-2">Duration</th>
                 <th className="px-3 py-2">Price (INR)</th>
                 <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-4 text-[13px] text-[#64748b]">
+                  <td colSpan={5} className="px-3 py-4 text-[13px] text-[#64748b]">
                     Loading plans...
                   </td>
                 </tr>
               ) : plans.length > 0 ? (
-                plans.map((plan) => (
-                  <tr key={plan.id} className="rounded-[6px] border border-black/[0.08] bg-[#f8fafc]">
-                    <td className="px-3 py-2 text-[13px] text-[#0f172a]">{plan.name || 'Untitled plan'}</td>
-                    <td className="px-3 py-2 text-[13px] text-[#0f172a]">{plan.duration || 'Not set'}</td>
-                    <td className="px-3 py-2 text-[13px] font-semibold text-[#0f172a]">Rs. {plan.price.toLocaleString()}</td>
-                    <td className="px-3 py-2 text-[12px]">
-                      <span className={`rounded-full px-2.5 py-1 font-medium ${plan.enabled ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
-                        {plan.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                plans.map((plan) => {
+                  const isEditing = editingPlanId === plan.id
+                  return (
+                    <tr key={plan.id} className="rounded-[6px] border border-black/[0.08] bg-[#f8fafc]">
+                      <td className="px-3 py-2 text-[13px] text-[#0f172a]">
+                        {isEditing ? (
+                          <input
+                            value={editingPlanDraft.name}
+                            onChange={(e) => setEditingPlanDraft((prev) => ({ ...prev, name: e.target.value }))}
+                            className="h-8 w-full rounded-[6px] border border-black/[0.12] bg-white px-2 text-[12px]"
+                          />
+                        ) : (
+                          plan.name || 'Untitled plan'
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[13px] text-[#0f172a]">
+                        {isEditing ? (
+                          <input
+                            value={editingPlanDraft.duration}
+                            onChange={(e) => setEditingPlanDraft((prev) => ({ ...prev, duration: e.target.value }))}
+                            className="h-8 w-full rounded-[6px] border border-black/[0.12] bg-white px-2 text-[12px]"
+                          />
+                        ) : (
+                          plan.duration || 'Not set'
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[13px] font-semibold text-[#0f172a]">
+                        {isEditing ? (
+                          <input
+                            value={editingPlanDraft.price}
+                            onChange={(e) => setEditingPlanDraft((prev) => ({ ...prev, price: e.target.value }))}
+                            type="number"
+                            min="0"
+                            className="h-8 w-[110px] rounded-[6px] border border-black/[0.12] bg-white px-2 text-[12px]"
+                          />
+                        ) : (
+                          `Rs. ${plan.price.toLocaleString()}`
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[12px]">
+                        {isEditing ? (
+                          <select
+                            value={editingPlanDraft.enabled ? 'enabled' : 'disabled'}
+                            onChange={(e) => setEditingPlanDraft((prev) => ({ ...prev, enabled: e.target.value === 'enabled' }))}
+                            className="h-8 rounded-[6px] border border-black/[0.12] bg-white px-2 text-[12px]"
+                          >
+                            <option value="enabled">Enabled</option>
+                            <option value="disabled">Disabled</option>
+                          </select>
+                        ) : (
+                          <span className={`rounded-full px-2.5 py-1 font-medium ${plan.enabled ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
+                            {plan.enabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[12px]">
+                        <div className="flex items-center gap-1.5">
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={saveEditedPlan}
+                                disabled={saving}
+                                className="inline-flex h-8 items-center gap-1 rounded-[6px] bg-[#5b3df6] px-2.5 text-white disabled:opacity-60"
+                              >
+                                <Check className="h-3.5 w-3.5" /> Save
+                              </button>
+                              <button
+                                onClick={cancelEditPlan}
+                                disabled={saving}
+                                className="inline-flex h-8 items-center gap-1 rounded-[6px] border border-black/[0.12] bg-white px-2.5 text-[#334155] disabled:opacity-60"
+                              >
+                                <X className="h-3.5 w-3.5" /> Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => startEditPlan(plan)}
+                                disabled={saving}
+                                className="inline-flex h-8 items-center gap-1 rounded-[6px] border border-black/[0.12] bg-white px-2.5 text-[#334155] hover:bg-[#f8fafc] disabled:opacity-60"
+                              >
+                                <Pencil className="h-3.5 w-3.5" /> Edit
+                              </button>
+                              <button
+                                onClick={() => deletePlan(plan)}
+                                disabled={saving}
+                                className="inline-flex h-8 items-center gap-1 rounded-[6px] border border-red-200 bg-white px-2.5 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-3 py-4 text-[13px] text-[#64748b]">
+                  <td colSpan={5} className="px-3 py-4 text-[13px] text-[#64748b]">
                     No plans created yet.
                   </td>
                 </tr>
