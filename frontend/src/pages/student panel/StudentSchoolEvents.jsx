@@ -29,6 +29,57 @@ function formatEventDate(event) {
   }
 }
 
+function parseEndTimeFromDescription(event) {
+  const description = String(event?.description || '')
+  const timeLine = description.match(/Time:\s*([^\n]+)/i)?.[1] || ''
+  if (!timeLine) return null
+
+  const endToken =
+    timeLine.match(/\bto\s+([0-9]{1,2}:[0-9]{2}(?:\s*[AP]M)?)\b/i)?.[1] ||
+    timeLine.match(/-\s*([0-9]{1,2}:[0-9]{2}(?:\s*[AP]M)?)\b/i)?.[1] ||
+    ''
+  if (!endToken) return null
+
+  return endToken.trim()
+}
+
+function buildEventEndDate(startDate, endToken) {
+  if (!startDate || Number.isNaN(startDate.getTime()) || !endToken) return null
+  const endDate = new Date(startDate)
+
+  const timeMatch = endToken.match(/^([0-9]{1,2}):([0-9]{2})(?:\s*([AP]M))?$/i)
+  if (!timeMatch) return null
+
+  let hours = Number(timeMatch[1])
+  const minutes = Number(timeMatch[2])
+  const meridiem = String(timeMatch[3] || '').toUpperCase()
+
+  if (meridiem === 'PM' && hours < 12) hours += 12
+  if (meridiem === 'AM' && hours === 12) hours = 0
+  if (hours > 23 || minutes > 59) return null
+
+  endDate.setHours(hours, minutes, 0, 0)
+  if (endDate < startDate) {
+    // Handle events that cross midnight.
+    endDate.setDate(endDate.getDate() + 1)
+  }
+  return endDate
+}
+
+function isUpcomingOrLiveEvent(event, now) {
+  const startsAt = new Date(event?.starts_at || event?.date || 0)
+  if (Number.isNaN(startsAt.getTime())) return false
+  if (startsAt >= now) return true
+
+  const parsedEndToken = parseEndTimeFromDescription(event)
+  const parsedEndAt = buildEventEndDate(startsAt, parsedEndToken)
+  if (parsedEndAt) return parsedEndAt >= now
+
+  // Fallback: if end time is unavailable, keep event visible for a default live window.
+  const fallbackEndAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000)
+  return fallbackEndAt >= now
+}
+
 export default function StudentSchoolEvents() {
   const tenantId = localStorage.getItem('lms_tenant_id')
   const [loading, setLoading] = useState(false)
@@ -69,7 +120,7 @@ export default function StudentSchoolEvents() {
 
   const upcoming = useMemo(() => {
     const now = new Date()
-    return sortedEvents.filter((event) => new Date(event.starts_at || event.date || 0) >= now)
+    return sortedEvents.filter((event) => isUpcomingOrLiveEvent(event, now))
   }, [sortedEvents])
 
   return (
@@ -81,7 +132,7 @@ export default function StudentSchoolEvents() {
             View all upcoming and announced school events uploaded by your institute.
           </p>
           <div className="mt-4 inline-flex h-8 items-center rounded-[10px] border border-black/[0.08] bg-white px-3 text-[11px] font-medium text-[#0f172a]">
-            {sortedEvents.length} total events
+            {upcoming.length} total events
           </div>
         </section>
 
@@ -99,13 +150,13 @@ export default function StudentSchoolEvents() {
             <div className="rounded-[10px] border border-dashed border-black/[0.12] bg-[#fafcff] py-10 text-center text-[13px] text-[#94a3b8]">
               Loading events...
             </div>
-          ) : sortedEvents.length === 0 ? (
+          ) : upcoming.length === 0 ? (
             <div className="rounded-[10px] border border-dashed border-black/[0.12] bg-[#fafcff] py-10 text-center text-[13px] text-[#94a3b8]">
               No school events available right now.
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {sortedEvents.map((event) => {
+              {upcoming.map((event) => {
                 const { dateLabel, timeLabel } = formatEventDate(event)
                 const meta = parseEventMeta(event)
                 return (

@@ -1,7 +1,12 @@
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+const LOCAL_DEV_API_BASE = 'http://localhost:8000/api/v1'
+const isLocalDev = import.meta.env.DEV && window.location.hostname === 'localhost'
+const DEFAULT_API_BASE = isLocalDev
+  ? LOCAL_DEV_API_BASE
+  : (import.meta.env.VITE_API_BASE_URL || LOCAL_DEV_API_BASE)
 // const FALLBACK_API_BASES = ['http://localhost:8000/api/v1', 'http://localhost:8001/api/v1']
 const FALLBACK_API_BASES = []
-let runtimeApiBase = localStorage.getItem('lms_api_base') || DEFAULT_API_BASE
+const savedApiBase = localStorage.getItem('lms_api_base') || ''
+let runtimeApiBase = isLocalDev ? LOCAL_DEV_API_BASE : (savedApiBase || DEFAULT_API_BASE)
 const GET_CACHE_TTL_MS = 15_000
 const responseCache = new Map()
 const inflightRequests = new Map()
@@ -46,7 +51,8 @@ function deriveWsBaseFromApi(apiBase) {
 }
 
 function getWsBase() {
-  if (import.meta.env.VITE_WS_BASE_URL) return import.meta.env.VITE_WS_BASE_URL
+  if (!isLocalDev && import.meta.env.VITE_WS_BASE_URL) return import.meta.env.VITE_WS_BASE_URL
+  if (isLocalDev) return 'ws://localhost:8000'
   return deriveWsBaseFromApi(runtimeApiBase)
 }
 
@@ -88,11 +94,13 @@ export async function api(path, options = {}) {
   }
 
   const token = getToken()
+  const tenantId = localStorage.getItem('lms_tenant_id') || ''
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   }
   if (token) headers.Authorization = `Bearer ${token}`
+  if (tenantId && !headers['X-Tenant-Id']) headers['X-Tenant-Id'] = tenantId
   const candidates = [runtimeApiBase, ...FALLBACK_API_BASES.filter((x) => x !== runtimeApiBase)]
   let lastError
 

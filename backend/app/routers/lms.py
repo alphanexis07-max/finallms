@@ -1277,8 +1277,38 @@ async def create_event(
 
 
 @router.get("/events")
-async def list_events(tenant_id: str = Depends(get_tenant_id), skip: int = 0, limit: int = 100):
-    return await paged(db.events, {"tenant_id": tenant_id}, "starts_at", 1, skip, limit)
+async def list_events(
+    tenant_id: str = Depends(get_tenant_id),
+    user=Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 100,
+):
+    # Product requirement: all students should see all school events.
+    if user.get("role") == Role.STUDENT.value:
+        return await paged(db.events, {}, "starts_at", 1, skip, limit)
+
+    normalized_tenant_id = str(tenant_id or "").strip()
+    if not normalized_tenant_id:
+        return await paged(db.events, {}, "starts_at", 1, skip, limit)
+
+    # Primary path: strict tenant-scoped events.
+    tenant_result = await paged(db.events, {"tenant_id": normalized_tenant_id}, "starts_at", 1, skip, limit)
+    if tenant_result.get("total", 0) > 0:
+        return tenant_result
+
+    # Fallback path: include legacy rows where tenant_id was missing.
+    legacy_query = {
+        "$or": [
+            {"tenant_id": normalized_tenant_id},
+            {"tenant_id": None},
+            {"tenant_id": {"$exists": False}},
+        ]
+    }
+    legacy_result = await paged(db.events, legacy_query, "starts_at", 1, skip, limit)
+    if legacy_result.get("total", 0) > 0:
+        return legacy_result
+
+    return legacy_result
 
 
 @router.post("/notifications")

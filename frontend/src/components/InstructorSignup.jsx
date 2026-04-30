@@ -199,8 +199,7 @@ export default function InstructorSignup() {
                     onError={() => {
                       showToast('Google Sign Up Failed')
                     }}
-                    useOneTap
-                    width="100%"
+                    width="360"
                     theme="outline"
                     size="large"
                   />

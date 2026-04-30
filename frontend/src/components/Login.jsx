@@ -134,8 +134,7 @@ export default function Login() {
                   onError={() => {
                     showToast('Google Login Failed')
                   }}
-                  useOneTap
-                  width="100%"
+                  width="360"
                   theme="outline"
                   size="large"
                 />

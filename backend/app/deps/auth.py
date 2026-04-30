@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from app.core.config import settings
@@ -27,8 +27,14 @@ def require_roles(*allowed: Role):
     return checker
 
 
-async def get_tenant_id(user: dict = Depends(get_current_user)) -> str | None:
+async def get_tenant_id(
+    user: dict = Depends(get_current_user),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> str | None:
     tenant_id = user.get("tenant_id")
-    # Keep requests functional even if older tokens were issued without tenant_id.
-    # Tenant-scoped handlers can still apply additional checks where strict isolation is required.
-    return tenant_id
+    if tenant_id:
+        return str(tenant_id)
+    # Fallback for older JWTs where tenant_id claim is missing.
+    if x_tenant_id:
+        return str(x_tenant_id)
+    return None
