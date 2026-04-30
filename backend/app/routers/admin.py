@@ -1,4 +1,5 @@
 
+# ...existing code...
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app.deps.auth import get_current_user
@@ -6,6 +7,30 @@ from app.db import mongo
 from bson import ObjectId
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+@router.get("/tests/{test_id}/results")
+async def get_test_results(test_id: str, user=Depends(get_current_user)):
+    admin_required(user)
+    # Fetch all attempts for this test
+    attempts_cursor = mongo.db.test_attempts.find({"test_id": test_id})
+    attempts = []
+    total_score = 0
+    count = 0
+    async for attempt in attempts_cursor:
+        score = attempt.get("score", 0)
+        total_score += score
+        count += 1
+        attempts.append({
+            "user_id": attempt.get("student_id"),
+            "score": score,
+            "attempt_id": str(attempt.get("_id")),
+        })
+    avg_score = (total_score / count) if count else 0
+    return {
+        "total_attempts": count,
+        "average_score": avg_score,
+        "attempts": attempts,
+    }
 
 # Get courses a student is enrolled in
 @router.get("/student-courses")

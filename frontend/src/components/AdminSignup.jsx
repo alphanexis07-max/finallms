@@ -102,10 +102,10 @@ export default function AdminSignup() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden overflow-y-auto bg-gradient-to-br from-[#0e7c67] via-[#1a5c3a] to-[#0e5c4a] p-4 font-['Inter',_'Segoe_UI',_Roboto,_sans-serif] sm:p-6 lg:p-8">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-[1300px] grid-cols-1 items-start gap-8 lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[1fr_460px] lg:items-center lg:gap-13">
-        {/* Left Section - Brand Section */}
-        <section className="text-white">
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-[#0e7c67] via-[#1a5c3a] to-[#0e5c4a] p-4 font-['Inter',_'Segoe_UI',_Roboto,_sans-serif] sm:p-6 lg:p-8">
+      <div className="mx-auto grid h-full w-full max-w-[1300px] grid-cols-1 items-center gap-8 lg:grid-cols-[1fr_460px] lg:gap-13">
+        {/* Left Section - Brand Section (Hidden on mobile) */}
+        <section className="hidden text-white lg:block">
           <div className="inline-flex items-center gap-2 rounded-[12px] bg-white/15 px-3 py-1.5 text-[12px] font-semibold text-[#ffb76a]">
             <ShieldCheck className="h-4 w-4" />
             Admin Onboarding
@@ -137,25 +137,28 @@ export default function AdminSignup() {
         </section>
 
         {/* Card Section - Admin Signup Form */}
-        <section className="relative mx-auto w-full max-w-[520px] lg:h-full lg:max-w-none">
-          <div className="relative flex w-full flex-col rounded-2xl bg-white p-5 shadow-2xl sm:p-8 lg:h-full lg:max-h-[880px] lg:p-10">
-            {/* Tabs */}
-            <div className="flex gap-1.5 p-1.5 rounded-xl bg-gray-100 mb-7">
-              <Link
-                to="/login"
-                className="flex-1 text-center border-0 rounded-lg py-3 px-2.5 bg-transparent text-gray-600 text-sm font-semibold cursor-pointer no-underline transition-all hover:bg-gray-200 hover:text-gray-900"
-              >
-                Login
-              </Link>
-              <button type="button" className="flex-1 border-0 rounded-lg py-3 px-2.5 bg-[#ff8a33] text-white shadow-sm text-sm font-semibold cursor-pointer transition-all hover:bg-[#e57a23]">
-                Admin Sign Up
-              </button>
+        <section className="relative mx-auto w-full max-w-[520px]">
+          <div className="relative flex h-[90vh] max-h-[800px] w-full flex-col rounded-2xl bg-white shadow-2xl">
+            {/* Static Header */}
+            <div className="flex-shrink-0 p-5 sm:p-8 pb-0">
+              <div className="flex gap-1.5 p-1.5 rounded-xl bg-gray-100 mb-7">
+                <Link
+                  to="/login"
+                  className="flex-1 text-center border-0 rounded-lg py-3 px-2.5 bg-transparent text-gray-600 text-sm font-semibold cursor-pointer no-underline transition-all hover:bg-gray-200 hover:text-gray-900"
+                >
+                  Login
+                </Link>
+                <button type="button" className="flex-1 border-0 rounded-lg py-3 px-2.5 bg-[#ff8a33] text-white shadow-sm text-sm font-semibold cursor-pointer transition-all hover:bg-[#e57a23]">
+                  Admin Sign Up
+                </button>
+              </div>
+
+              <h2 className="m-0 text-[#111b2f] text-2xl sm:text-[30px] leading-[1.15] font-extrabold">Create Admin Account</h2>
+              <p className="mt-2 text-slate-500 text-sm">Fill details to set up your admin account.</p>
             </div>
 
-            <h2 className="m-0 text-[#111b2f] text-2xl sm:text-[30px] leading-[1.15] font-extrabold">Create Admin Account</h2>
-            <p className="mt-2 text-slate-500 text-sm">Fill details to set up your admin account.</p>
-
-            <div className="mt-6 flex-1 overflow-y-auto pr-1">
+            {/* Scrollable Form Fields (only form inputs) */}
+            <div className="flex-1 overflow-y-auto px-5 sm:px-8">
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <Field
                   icon={<User className="h-4 w-4" />}
@@ -272,32 +275,36 @@ export default function AdminSignup() {
                 {formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && (
                   <span className="text-xs font-medium text-[#0b8276] -mt-2">✓ Passwords match</span>
                 )}
-
-                <label className="flex items-start gap-2 text-xs text-slate-500 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.agreeToTerms}
-                    onChange={(e) => handleChange('agreeToTerms', e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
-                  />
-                  I agree to the Terms and Privacy Policy for admin account access.
-                </label>
-
-                {submitted && !isFormValid && (
-                  <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-                    Please fill all fields correctly and confirm terms before submitting.
-                  </p>
-                )}
-
-                <button 
-                  type="submit" 
-                  disabled={!isFormValid || loading} 
-                  className="border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer mt-1 transition-all hover:bg-[#e57a23] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? 'Creating Admin Account...' : 'Create Admin Account'}
-                </button>
-                {error && <p className="text-xs font-medium text-red-500 text-center">{error}</p>}
               </form>
+            </div>
+
+            {/* Static Footer with Terms, Error, and Button */}
+            <div className="flex-shrink-0 p-5 sm:p-8 pt-0">
+              <label className="flex items-start gap-2 text-xs text-slate-500 cursor-pointer mb-4">
+                <input
+                  type="checkbox"
+                  checked={formData.agreeToTerms}
+                  onChange={(e) => handleChange('agreeToTerms', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
+                />
+                I agree to the Terms and Privacy Policy for admin account access.
+              </label>
+
+              {submitted && !isFormValid && (
+                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 mb-4">
+                  Please fill all fields correctly and confirm terms before submitting.
+                </p>
+              )}
+
+              <button 
+                type="submit" 
+                onClick={handleSubmit}
+                disabled={!isFormValid || loading} 
+                className="w-full border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer transition-all hover:bg-[#e57a23] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? 'Creating Admin Account...' : 'Create Admin Account'}
+              </button>
+              {error && <p className="text-xs font-medium text-red-500 text-center mt-3">{error}</p>}
             </div>
           </div>
         </section>

@@ -34,6 +34,23 @@ function statusClass(status) {
 }
 
 export default function InstructorWeeklyTest() {
+  const [showResultModal, setShowResultModal] = useState(false)
+  const [selectedTest, setSelectedTest] = useState(null)
+  const [testResult, setTestResult] = useState(null)
+
+  // Fetch result for a test
+  const handleShowResult = async (test) => {
+    setSelectedTest(test)
+    setShowResultModal(true)
+    setTestResult(null)
+    try {
+      // Example endpoint, adjust as per your backend
+      const result = await api(`/admin/tests/${test._id || test.id}/results`)
+      setTestResult(result)
+    } catch (err) {
+      setTestResult({ error: err?.message || 'Failed to fetch result' })
+    }
+  }
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showQuestionModal, setShowQuestionModal] = useState(false)
 
@@ -395,7 +412,11 @@ export default function InstructorWeeklyTest() {
                 <div className="p-[16px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No tests created yet.</div>
               ) : (
                 tests.map((test) => (
-                  <div key={test._id || test.id} className="p-[16px] border border-black/[0.08] rounded-[6px]">
+                  <div
+                    key={test._id || test.id}
+                    className="p-[16px] border border-black/[0.08] rounded-[6px] cursor-pointer hover:bg-[#f8fafc]"
+                    onClick={() => handleShowResult(test)}
+                  >
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-3">
@@ -453,9 +474,52 @@ export default function InstructorWeeklyTest() {
                     <div key={item._id || item.title} className="p-[16px] border border-black/[0.08] rounded-[6px]">
                       <div className="text-[14px] font-semibold text-[#0f172a]">{item.title}</div>
                       <div className="text-[12px] text-[#94a3b8] mt-[4px]">{item.average_score || 0}% average score</div>
+                      {item.attempts_count !== undefined && (
+                        <div className="text-[12px] text-[#94a3b8]">{item.attempts_count} attempts</div>
+                      )}
+                      {item.top_scorer && (
+                        <div className="text-[12px] text-[#94a3b8]">Top scorer: {item.top_scorer}</div>
+                      )}
                     </div>
                   ))
                 )}
+                    {/* Test Result Modal */}
+                    {showResultModal && selectedTest && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto bg-white rounded-[8px] shadow-xl">
+                          <div className="flex items-center justify-between p-5 border-b border-black/[0.08] sticky top-0 bg-white">
+                            <h2 className="text-[20px] font-bold text-[#0f172a]">Test Result: {selectedTest.title}</h2>
+                            <button onClick={() => setShowResultModal(false)} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="p-5 space-y-4">
+                            {!testResult && <div>Loading result...</div>}
+                            {testResult && testResult.error && (
+                              <div className="text-red-600">{testResult.error}</div>
+                            )}
+                            {testResult && !testResult.error && (
+                              <div>
+                                <div className="mb-2"><b>Total Attempts:</b> {testResult.total_attempts ?? 'N/A'}</div>
+                                <div className="mb-2"><b>Average Score:</b> {testResult.average_score ?? 'N/A'}%</div>
+                                {Array.isArray(testResult.attempts) && testResult.attempts.length > 0 && (
+                                  <div>
+                                    <b>Attempts:</b>
+                                    <ul className="list-disc ml-5">
+                                      {testResult.attempts.map((a, idx) => (
+                                        <li key={a._id || idx}>
+                                          User: {a.user_name || a.user_id || 'N/A'}, Score: {a.score ?? 'N/A'}%
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
               </div>
             </div>
           </div>

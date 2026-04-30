@@ -64,8 +64,8 @@ export default function Login() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#0e7c67] via-[#1a5c3a] to-[#0e5c4a] p-4 font-['Inter',_system-ui,_sans-serif] sm:p-6 lg:p-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1280px] flex-col items-center justify-center gap-8 lg:min-h-[calc(100vh-4rem)] lg:flex-row lg:justify-between lg:gap-12">
-        {/* Left Side - Brand Section */}
-        <div className="w-full max-w-[600px] text-center lg:text-left">
+        {/* Left Side - Brand Section (Hidden on mobile) */}
+        <div className="hidden w-full max-w-[600px] text-center lg:block lg:text-left">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[13px] font-medium text-white/90 backdrop-blur-sm">
             <Sparkles className="h-4 w-4 text-[#ff8a33]" />
             Learning Management System

@@ -124,8 +124,8 @@ export default function InstructorSignup() {
   return (
     <div className="min-h-screen w-full overflow-hidden bg-gradient-to-br from-[#0e7c67] via-[#1a5c3a] to-[#0e5c4a] font-['Inter',_'Segoe_UI',_Roboto,_sans-serif]">
       <div className="h-screen w-full max-w-[1300px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-8 p-4 sm:p-6 lg:p-8 overflow-hidden">
-        {/* Left Section - Brand Section */}
-        <section className="text-white flex flex-col justify-center h-full overflow-y-auto">
+        {/* Left Section - Brand Section (Hidden on mobile) */}
+        <section className="hidden text-white flex-col justify-center h-full overflow-y-auto lg:flex">
           <div className="inline-flex items-center gap-2 rounded-[12px] bg-white/15 px-3 py-1.5 text-[12px] font-semibold text-[#ffb76a] w-fit">
             <GraduationCap className="h-4 w-4" />
             Instructor Onboarding
