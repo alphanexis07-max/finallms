@@ -120,6 +120,14 @@ class LibraryResourceIn(BaseModel):
     image_url: str = ""
 
 
+class LibraryResourceUpdateIn(BaseModel):
+    title: str | None = None
+    grade: str | None = None
+    format: str | None = None
+    file_url: str | None = None
+    image_url: str | None = None
+
+
 class ReportGenerateIn(BaseModel):
     report_type: str
 

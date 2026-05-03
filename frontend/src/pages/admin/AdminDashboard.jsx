@@ -9,6 +9,7 @@ import {
   Wallet,
   BarChart3,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
 
@@ -54,6 +55,7 @@ function StatusPill({ children, variant = 'neutral' }) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const tenantId = localStorage.getItem('lms_tenant_id')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

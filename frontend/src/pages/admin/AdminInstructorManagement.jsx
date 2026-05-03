@@ -167,16 +167,50 @@ function ViewInstructorModal({ instructor, courses = [], onClose }) {
   const tabs = ['overview', 'courses', 'live-classes', 'reviews', 'bank-details']
   const instructorId = String(instructor._id || instructor.id || '').trim()
   const instructorEmail = String(instructor.email || '').trim().toLowerCase()
-  const uploadedCourses = [...liveCourses]
-    .filter((course) => {
-      const createdBy = String(course?.created_by || course?.instructor_id || course?.owner_id || '').trim()
-      const createdByEmail = String(course?.created_by_email || course?.email || '').trim().toLowerCase()
-      return (instructorId && createdBy === instructorId) || (instructorEmail && createdByEmail === instructorEmail)
-    })
-    .sort((left, right) => new Date(right.created_at || right.updated_at || 0) - new Date(left.created_at || left.updated_at || 0))
-  const instructorLiveClasses = [...liveClasses]
-    .filter((session) => String(session?.instructor_id || '').trim() === instructorId && String(session?.status || '').toLowerCase() === 'live')
-    .sort((left, right) => new Date(left.start_at || 0) - new Date(right.start_at || 0))
+
+  const uploadedCourses = React.useMemo(() => {
+    return [...liveCourses]
+      .filter((course) => {
+        const createdBy = String(course?.created_by || course?.instructor_id || course?.owner_id || '').trim()
+        const createdByEmail = String(course?.created_by_email || course?.email || '').trim().toLowerCase()
+        return (instructorId && createdBy === instructorId) || (instructorEmail && createdByEmail === instructorEmail)
+      })
+      .sort((left, right) => new Date(right.created_at || right.updated_at || 0) - new Date(left.created_at || left.updated_at || 0))
+  }, [liveCourses, instructorId, instructorEmail])
+
+  const instructorLiveClasses = React.useMemo(() => {
+    return [...liveClasses]
+      .filter((session) => {
+        const createdBy = String(session?.created_by || session?.instructor_id || session?.owner_id || '').trim()
+        return (instructorId && createdBy === instructorId)
+      })
+      .sort((left, right) => new Date(left.start_at || 0) - new Date(right.start_at || 0))
+  }, [liveClasses, instructorId])
+
+  const totalStudents = React.useMemo(() => uploadedCourses.reduce((sum, c) => sum + Number(c.students_count || 0), 0), [uploadedCourses])
+  const activeBatches = React.useMemo(() => instructorLiveClasses.length, [instructorLiveClasses])
+  const avgRating = React.useMemo(() => uploadedCourses.length ? (uploadedCourses.reduce((sum, c) => sum + Number(c.avg_rating || c.rating || 0), 0) / uploadedCourses.length).toFixed(1) : '-', [uploadedCourses])
+
+  const [reviews, setReviews] = useState([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+    if (uploadedCourses.length > 0) {
+      setLoadingReviews(true)
+      Promise.all(uploadedCourses.map(c => api(`/lms/ratings?target_type=course&target_id=${c._id || c.id}`)))
+        .then(results => {
+          if (!isMounted) return
+          const allReviews = results.flatMap(r => r.items || r || [])
+          setReviews(allReviews.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)))
+        })
+        .catch(err => console.error(err))
+        .finally(() => {
+          if (isMounted) setLoadingReviews(false)
+        })
+    }
+    return () => { isMounted = false }
+  }, [uploadedCourses])
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={onClose}>
@@ -249,15 +283,15 @@ function ViewInstructorModal({ instructor, courses = [], onClose }) {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Total Students Taught</p>
-                    <p className="text-sm font-medium mt-1">{instructor.students_count ?? '-'}</p>
+                    <p className="text-sm font-medium mt-1">{totalStudents}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Active Batches</p>
-                    <p className="text-sm font-medium mt-1">{instructor.active_batches ?? '-'}</p>
+                    <p className="text-sm font-medium mt-1">{activeBatches}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Average Rating</p>
-                    <p className="text-sm font-medium mt-1">{instructor.rating ?? '-'}</p>
+                    <p className="text-sm font-medium mt-1">{avgRating}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Status</p>
@@ -384,11 +418,30 @@ function ViewInstructorModal({ instructor, courses = [], onClose }) {
           {activeTab === 'reviews' && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900">Student Reviews</h3>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No real review data is available yet for this instructor.</p>
-                <p className="mt-1 text-xs text-gray-400">Reviews will appear here once the backend starts storing student feedback.</p>
-              </div>
+              {loadingReviews ? (
+                <p className="text-sm text-gray-500">Loading reviews...</p>
+              ) : reviews.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
+                  <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No review data is available yet for this instructor.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((r, idx) => (
+                    <div key={idx} className="rounded-lg border border-gray-200 p-4">
+                       <div className="flex items-center justify-between mb-2">
+                         <div className="flex gap-1 text-[#facc15]">
+                           {Array.from({ length: 5 }).map((_, i) => (
+                             <Star key={i} className={`h-4 w-4 ${i < (r.rating || 0) ? 'fill-current' : 'text-gray-300'}`} />
+                           ))}
+                         </div>
+                         <span className="text-xs text-gray-500">{r.updated_at || r.created_at ? new Date(r.updated_at || r.created_at).toLocaleDateString() : ''}</span>
+                       </div>
+                       <p className="text-sm text-gray-700">{r.comment || 'No comment provided.'}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

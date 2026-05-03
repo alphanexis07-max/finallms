@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Upload, PlusCircle, FileText, BookOpen, X } from 'lucide-react'
+import { Upload, PlusCircle, FileText, BookOpen, X, Eye, Edit2, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
 
 export default function AdminELibrary() {
@@ -18,6 +18,7 @@ export default function AdminELibrary() {
   const [imageUrl, setImageUrl] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
   const [selectedImageName, setSelectedImageName] = useState('')
+  const [editItem, setEditItem] = useState(null)
 
   const fileToDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -81,11 +82,38 @@ export default function AdminELibrary() {
         grade: item.grade || '-',
         format: item.format || '-',
         imageUrl: item.image_url || '',
+        fileUrl: item.file_url || '',
         uploadedBy: item.uploaded_by || '-',
         uploadedOn: item.created_at ? new Date(item.created_at).toLocaleString() : '-',
       })),
     [resources]
   )
+
+  const handleEdit = (item) => {
+    setEditItem(item)
+    setTitle(item.title === '-' ? '' : item.title)
+    setGrade(item.grade === '-' ? '' : item.grade)
+    setFormat(item.format === '-' ? 'PDF' : item.format)
+    setFileUrl(item.fileUrl || '')
+    setImageUrl(item.imageUrl || '')
+    setSelectedFileName('')
+    setSelectedImageName('')
+    setShowUploadModal(true)
+    setFormError('')
+    setError('')
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this resource?")) return
+    try {
+      setLoading(true)
+      await api(`/lms/library-resources/${id}`, { method: 'DELETE' })
+      await fetchResources()
+    } catch (err) {
+      setError(err.message || 'Failed to delete resource')
+      setLoading(false)
+    }
+  }
 
   const handleUpload = async () => {
     if (!title.trim()) {
@@ -100,16 +128,27 @@ export default function AdminELibrary() {
       setSubmitting(true)
       setError('')
       setFormError('')
-      await api('/lms/library-resources', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: title.trim(),
-          grade,
-          format,
-          file_url: fileUrl.trim(),
-          image_url: imageUrl.trim(),
-        }),
-      })
+
+      const payload = {
+        title: title.trim(),
+        grade,
+        format,
+        file_url: fileUrl.trim(),
+        image_url: imageUrl.trim(),
+      }
+
+      if (editItem) {
+        await api(`/lms/library-resources/${editItem.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        })
+      } else {
+        await api('/lms/library-resources', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+      }
+
       setTitle('')
       setGrade(classOptions[0] || '')
       setFormat('PDF')
@@ -118,9 +157,10 @@ export default function AdminELibrary() {
       setSelectedFileName('')
       setSelectedImageName('')
       setShowUploadModal(false)
+      setEditItem(null)
       await fetchResources()
     } catch (err) {
-      const message = err.message || 'Failed to upload resource'
+      const message = err.message || 'Failed to save resource'
       setError(message)
       setFormError(message)
     } finally {
@@ -228,9 +268,22 @@ export default function AdminELibrary() {
                   </p>
                 </div>
               </div>
-              <span className="inline-flex h-[28px] items-center rounded-[12px] bg-[#2dd4bf] px-[10px] text-[12px] font-medium text-[#023b33]">
-                Published
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-[28px] items-center rounded-[12px] bg-[#2dd4bf] px-[10px] text-[12px] font-medium text-[#023b33]">
+                  Published
+                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => window.open(item.fileUrl, '_blank')} className="p-1.5 text-gray-500 hover:text-[#5b3df6] transition-colors" title="View">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-500 hover:text-blue-500 transition-colors" title="Edit">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(item.id)} className="p-1.5 text-gray-500 hover:text-red-500 transition-colors" title="Delete">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -240,8 +293,8 @@ export default function AdminELibrary() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-[95vw] max-w-[560px] rounded-[8px] bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-black/[0.08] p-5">
-              <h3 className="text-[18px] font-bold text-[#0f172a]">Upload library resource</h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-[#94a3b8] hover:text-[#0f172a]">
+              <h3 className="text-[18px] font-bold text-[#0f172a]">{editItem ? 'Edit' : 'Upload'} library resource</h3>
+              <button onClick={() => { setShowUploadModal(false); setEditItem(null); }} className="text-[#94a3b8] hover:text-[#0f172a]">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -349,7 +402,7 @@ export default function AdminELibrary() {
             <div className="flex flex-col gap-3 border-t border-black/[0.08] p-5 sm:flex-row">
               <button
                 disabled={submitting}
-                onClick={() => setShowUploadModal(false)}
+                onClick={() => { setShowUploadModal(false); setEditItem(null); }}
                 className="h-10 flex-1 rounded-[6px] border border-black/[0.08] text-[13px] font-medium text-[#64748b] hover:bg-[#f8fafc]"
               >
                 Cancel
@@ -359,7 +412,7 @@ export default function AdminELibrary() {
                 onClick={handleUpload}
                 className="h-10 flex-1 rounded-[6px] bg-[#5b3df6] text-[13px] font-medium text-white hover:bg-[#4c2dd9]"
               >
-                {submitting ? 'Publishing...' : 'Publish resource'}
+                {submitting ? (editItem ? 'Saving...' : 'Publishing...') : (editItem ? 'Save Changes' : 'Publish resource')}
               </button>
             </div>
           </div>

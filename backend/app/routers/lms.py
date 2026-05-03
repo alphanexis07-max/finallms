@@ -107,6 +107,7 @@ from app.schemas.lms import (
     PlanIn,
     PlatformSettingsIn,
     LibraryResourceIn,
+    LibraryResourceUpdateIn,
     RatingIn,
     ReportGenerateIn,
     RazorpayOrderIn,
@@ -1728,6 +1729,38 @@ async def list_library_resources(
     if q:
         query["title"] = {"$regex": q, "$options": "i"}
     return await paged(db.library_resources, query, "created_at", -1, skip, limit)
+
+
+@router.patch("/library-resources/{resource_id}")
+async def update_library_resource(
+    resource_id: str,
+    payload: LibraryResourceUpdateIn,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR)),
+):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        return {"message": "No updates provided"}
+    updates["updated_at"] = datetime.now(timezone.utc)
+    result = await db.library_resources.update_one(
+        {"_id": ObjectId(resource_id), "tenant_id": tenant_id}, {"$set": updates}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Library resource not found")
+    updated = await db.library_resources.find_one({"_id": ObjectId(resource_id)})
+    return as_dict(updated)
+
+
+@router.delete("/library-resources/{resource_id}")
+async def delete_library_resource(
+    resource_id: str,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR)),
+):
+    result = await db.library_resources.delete_one({"_id": ObjectId(resource_id), "tenant_id": tenant_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Library resource not found")
+    return {"message": "Library resource deleted"}
 
 
 @router.post("/reports/generate")

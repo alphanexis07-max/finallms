@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 const Inquire = () => {
   const [contactInquiries, setContactInquiries] = useState([]);
@@ -16,16 +16,9 @@ const Inquire = () => {
       setLoading(true);
       setError("");
       try {
-        const token = localStorage.getItem('lms_token');
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"}/inquire/all`,
-          {
-            withCredentials: true,
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
-        );
-        setContactInquiries(res.data.contact_inquiries || []);
-        setNewsletterInquiries(res.data.newsletter_inquiries || []);
+        const res = await api("/inquire/all");
+        setContactInquiries(res.contact_inquiries || []);
+        setNewsletterInquiries(res.newsletter_inquiries || []);
       } catch (err) {
         setError("Failed to fetch inquiries");
       } finally {

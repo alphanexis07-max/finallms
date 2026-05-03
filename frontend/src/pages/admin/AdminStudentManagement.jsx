@@ -141,8 +141,11 @@ export default function StudentManagement() {
       api('/lms/public/courses?limit=500').catch(() => ({ items: [] })),
       api('/lms/payments?limit=1000').catch(() => ({ items: [] })),
       api('/lms/notifications?limit=1000').catch(() => ({ items: [] })),
+      api('/lms/live-classes?limit=500').catch(() => ({ items: [] })),
+      api('/lms/public/live-classes?limit=500').catch(() => ({ items: [] })),
+      api('/lms/certificates?limit=1000').catch(() => ({ items: [] })),
     ])
-      .then(([usersRes, enrollmentsRes, coursesRes, publicCoursesRes, paymentsRes, notificationsRes]) => {
+      .then(([usersRes, enrollmentsRes, coursesRes, publicCoursesRes, paymentsRes, notificationsRes, liveClassesRes, publicLiveClassesRes, certificatesRes]) => {
         const rows = Array.isArray(usersRes?.items) ? usersRes.items : Array.isArray(usersRes) ? usersRes : []
         if (rows.length === 0) {
           setStudents([])
@@ -159,9 +162,12 @@ export default function StudentManagement() {
         const publicCourses = Array.isArray(publicCoursesRes?.items) ? publicCoursesRes.items : []
         const payments = Array.isArray(paymentsRes?.items) ? paymentsRes.items : []
         const notifications = Array.isArray(notificationsRes?.items) ? notificationsRes.items : []
+        const liveClasses = Array.isArray(liveClassesRes?.items) ? liveClassesRes.items : []
+        const publicLiveClasses = Array.isArray(publicLiveClassesRes?.items) ? publicLiveClassesRes.items : []
+        const certificatesData = Array.isArray(certificatesRes?.items) ? certificatesRes.items : []
 
         const courseById = new Map()
-        ;[...tenantCourses, ...publicCourses].forEach((course) => {
+        ;[...tenantCourses, ...publicCourses, ...liveClasses, ...publicLiveClasses].forEach((course) => {
           const id = String(course?._id || course?.id || '').trim()
           if (id && !courseById.has(id)) {
             courseById.set(id, course)
@@ -234,7 +240,12 @@ export default function StudentManagement() {
               autoRenew: false,
               status: latestPayment?.status === 'captured' ? 'active' : 'active',
             },
-            certificates: [],
+            certificates: certificatesData.filter((c) => String(c?.student_id || c?.user_id || '') === studentId).map((c) => ({
+              id: String(c?._id || c?.id || ''),
+              name: c?.title || c?.course_title || 'Certificate of Completion',
+              issueDate: c?.created_at || c?.issue_date || new Date().toISOString(),
+              grade: c?.grade || 'Pass',
+            })),
             bills,
             progress: {
               overall: overallProgress,
@@ -250,12 +261,6 @@ export default function StudentManagement() {
                   month: new Date(e?.created_at || Date.now()).toLocaleString('en-US', { month: 'short' }),
                   score: 0,
                 })),
-            },
-            parent: {
-              name: '-',
-              relation: '-',
-              phone: '-',
-              email: '-',
             },
             notes,
           }
@@ -856,9 +861,9 @@ export default function StudentManagement() {
                 {activeTab === 'overview' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      <div>
+                      <div className="col-span-1 md:col-span-2">
                         <h3 className="font-semibold text-gray-900 mb-3">Personal Information</h3>
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-sm flex gap-6 flex-wrap">
                           <div className="flex items-center gap-2 text-gray-600">
                             <Mail className="h-4 w-4" />
                             <span>{selectedStudent.email}</span>
@@ -866,25 +871,6 @@ export default function StudentManagement() {
                           <div className="flex items-center gap-2 text-gray-600">
                             <Phone className="h-4 w-4" />
                             <span>{selectedStudent.phone}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <MapPin className="h-4 w-4" />
-                            <span>{selectedStudent.address}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-3">Parent/Guardian</h3>
-                        <div className="space-y-2 text-sm">
-                          <p className="font-medium text-gray-900">{selectedStudent.parent.name}</p>
-                          <p className="text-gray-500">{selectedStudent.parent.relation}</p>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Phone className="h-3 w-3" />
-                            <span>{selectedStudent.parent.phone}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Mail className="h-3 w-3" />
-                            <span>{selectedStudent.parent.email}</span>
                           </div>
                         </div>
                       </div>

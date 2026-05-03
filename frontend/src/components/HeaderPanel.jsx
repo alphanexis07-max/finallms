@@ -265,14 +265,6 @@ export default function HeaderPanel({ onMenuToggle }) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <div className="hidden h-[40px] min-w-0 items-center gap-[10px] rounded-[6px] border border-black/[0.08] bg-white px-3 py-[0.25px] sm:flex sm:w-[210px] lg:w-[280px]">
-          <Search className="h-[18px] w-[18px] text-[#94a3b8]" />
-          <input
-            className="min-w-0 flex-1 bg-transparent text-[14px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none"
-            placeholder={placeholderText}
-          />
-        </div>
-
         <button
           onClick={() => notificationPath && navigate(notificationPath)}
           className="relative flex h-10 w-10 shrink-0 items-center justify-center gap-[8px] rounded-[6px] border border-black/[0.08] bg-white px-[10px] py-[0.25px]"
