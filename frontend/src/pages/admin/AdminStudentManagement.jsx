@@ -132,6 +132,11 @@ export default function StudentManagement() {
     class: 'all',
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [showNoteModal, setShowNoteModal] = useState(false)
+  const [noteInput, setNoteInput] = useState('')
+  const [noteType, setNoteType] = useState('info')
+  const [noteLoading, setNoteLoading] = useState(false)
+  const [noteError, setNoteError] = useState('')
   const tenantId = localStorage.getItem('lms_tenant_id')
 
   const loadStudents = () =>
@@ -570,65 +575,6 @@ export default function StudentManagement() {
               <p className="mt-0.5 text-[13px] text-[#94a3b8]">
                 Monitor users, enrollment, payment status, and next actions from a single operational list.
               </p>
-            </div>
-            <div className="relative flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setShowBulkActions((prev) => !prev)}
-                className={`inline-flex h-9 items-center gap-2 rounded-[6px] border px-4 text-[13px] font-medium transition-colors ${
-                  showBulkActions
-                    ? 'border-[#5b3df6]/30 bg-[#ede7ff] text-[#5b3df6]'
-                    : 'border-black/[0.08] bg-white text-[#0f172a] hover:bg-gray-50'
-                }`}
-              >
-                <MoreVertical className="h-4 w-4" />
-                Bulk Actions
-                <ChevronDown className={`h-4 w-4 transition-transform ${showBulkActions ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showBulkActions && (
-                <div className="absolute right-0 top-11 z-20 w-[380px] rounded-[14px] border border-black/[0.08] bg-white p-3 shadow-[0_20px_40px_rgba(15,23,42,0.16)]">
-                  <div className="mb-3 rounded-[10px] border border-black/[0.08] bg-gradient-to-br from-white to-[#f8fbff] p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[13px] font-semibold text-[#0f172a]">Bulk action center</p>
-                      <span className="rounded-full bg-[#f0f4f8] px-2.5 py-1 text-[11px] font-medium text-[#64748b]">
-                        {filteredStudents.length} visible
-                      </span>
-                    </div>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <div className="rounded-[8px] bg-white px-2.5 py-2">
-                        <p className="text-[10px] text-[#94a3b8]">Pending payment</p>
-                        <p className="mt-0.5 text-[14px] font-semibold text-[#0f172a]">{pendingPaymentsCount}</p>
-                      </div>
-                      <div className="rounded-[8px] bg-white px-2.5 py-2">
-                        <p className="text-[10px] text-[#94a3b8]">Avg progress</p>
-                        <p className="mt-0.5 text-[14px] font-semibold text-[#0f172a]">{avgProgress}%</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {bulkActions.map((action) => (
-                      <button
-                        key={action.key}
-                        onClick={() => handleBulkAction(action.title)}
-                        className={`w-full rounded-[10px] border p-3 text-left transition-colors hover:opacity-90 ${action.tone}`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <action.icon className="mt-0.5 h-4 w-4" />
-                            <div>
-                              <p className="text-[12.5px] font-semibold">{action.title}</p>
-                              <p className="mt-0.5 text-[11px] opacity-80">{action.desc}</p>
-                              <p className="mt-1 text-[10.5px] font-medium opacity-90">{action.meta}</p>
-                            </div>
-                          </div>
-                          <ArrowRight className="h-4 w-4 shrink-0" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -1112,7 +1058,15 @@ export default function StudentManagement() {
                 {activeTab === 'notes' && (
                   <div className="space-y-4">
                     <div className="flex justify-end">
-                      <button className="inline-flex items-center gap-2 rounded-lg bg-[#5b3df6] px-3 py-1.5 text-sm text-white">
+                      <button
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#5b3df6] px-3 py-1.5 text-sm text-white"
+                        onClick={() => {
+                          setNoteInput('');
+                          setNoteType('info');
+                          setNoteError('');
+                          setShowNoteModal(true);
+                        }}
+                      >
                         <Plus className="h-4 w-4" />
                         Add Note
                       </button>
@@ -1138,6 +1092,84 @@ export default function StudentManagement() {
                           <p className="text-sm text-gray-700">{note.content}</p>
                         </div>
                       ))
+                    )}
+
+                    {/* Note Modal */}
+                    {showNoteModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+                          <button
+                            className="absolute top-3 right-3 p-1 rounded hover:bg-gray-100"
+                            onClick={() => setShowNoteModal(false)}
+                          >
+                            <XCircle className="h-5 w-5 text-gray-400" />
+                          </button>
+                          <h3 className="text-lg font-bold mb-3">Add Note</h3>
+                          <textarea
+                            className="w-full border border-gray-200 rounded-lg p-2 mb-3 text-sm"
+                            rows={3}
+                            placeholder="Enter note..."
+                            value={noteInput}
+                            onChange={e => setNoteInput(e.target.value)}
+                          />
+                          <div className="mb-3">
+                            <label className="text-xs font-medium text-gray-600 mr-2">Type:</label>
+                            <select
+                              className="border border-gray-200 rounded px-2 py-1 text-sm"
+                              value={noteType}
+                              onChange={e => setNoteType(e.target.value)}
+                            >
+                              <option value="info">Info</option>
+                              <option value="warning">Warning</option>
+                              <option value="achievement">Achievement</option>
+                            </select>
+                          </div>
+                          {noteError && <div className="text-xs text-red-500 mb-2">{noteError}</div>}
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="px-4 py-2 rounded bg-gray-100 text-gray-700 text-sm"
+                              onClick={() => setShowNoteModal(false)}
+                              disabled={noteLoading}
+                            >Cancel</button>
+                            <button
+                              className="px-4 py-2 rounded bg-[#5b3df6] text-white text-sm disabled:opacity-60"
+                              disabled={noteLoading || !noteInput.trim()}
+                              onClick={async () => {
+                                if (!noteInput.trim()) {
+                                  setNoteError('Note cannot be empty');
+                                  return;
+                                }
+                                setNoteLoading(true);
+                                setNoteError('');
+                                try {
+                                  // Upload note to backend
+                                  await api('/lms/notifications', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                      user_id: selectedStudent._id || selectedStudent.id,
+                                      title: noteType.charAt(0).toUpperCase() + noteType.slice(1),
+                                      message: noteInput.trim(),
+                                    }),
+                                  });
+                                  // Reload students to refresh notes
+                                  await loadStudents();
+                                  // Find and set updated selectedStudent
+                                  setSelectedStudent(prev => {
+                                    if (!prev) return prev;
+                                    const updated = students.find(s => s.id === prev.id);
+                                    return updated || prev;
+                                  });
+                                  setShowNoteModal(false);
+                                } catch (err) {
+                                  setNoteError('Failed to upload note');
+                                } finally {
+                                  setNoteLoading(false);
+                                }
+                              }}
+                            >{noteLoading ? 'Saving...' : 'Save Note'}</button>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

@@ -310,30 +310,6 @@ export default function AdminSchoolEvents() {
           <div className="flex flex-col gap-[24px]">
             <div className="bg-white border border-black/[0.08] rounded-[8px] flex flex-col">
               <div className="px-[21px] pt-[21px] pb-[16px]">
-                <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Quick actions</h3>
-                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Frequently used event management shortcuts.</p>
-              </div>
-              <div className="flex flex-col gap-[12px] px-[21px] pb-[21px]">
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-full text-left p-[16px] border border-black/[0.08] rounded-[6px] hover:bg-[#f8fafc] transition-colors cursor-pointer"
-                >
-                  <div className="text-[14px] font-semibold text-[#0f172a]">Create a new event</div>
-                  <div className="text-[12px] text-[#94a3b8] mt-[4px]">Action shortcut</div>
-                </button>
-                <div className="p-[16px] border border-black/[0.08] rounded-[6px]">
-                  <div className="text-[14px] font-semibold text-[#0f172a]">Check venue availability</div>
-                  <div className="text-[12px] text-[#94a3b8] mt-[4px]">Action shortcut</div>
-                </div>
-                <div className="p-[16px] border border-black/[0.08] rounded-[6px]">
-                  <div className="text-[14px] font-semibold text-[#0f172a]">Assign staff coordinators</div>
-                  <div className="text-[12px] text-[#94a3b8] mt-[4px]">Action shortcut</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-black/[0.08] rounded-[8px] flex flex-col">
-              <div className="px-[21px] pt-[21px] pb-[16px]">
                 <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Notices</h3>
                 <p className="text-[13px] text-[#94a3b8] mt-[4px]">Important reminders before the next event cycle.</p>
               </div>
