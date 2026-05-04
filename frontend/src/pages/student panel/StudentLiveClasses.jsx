@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Search, Video, Calendar, Clock3, Users, PlayCircle, BookOpen,
-  Star, ChevronRight, X, Check, Lock, CreditCard, CheckCircle2,
+  Star, ChevronRight, ChevronDown, X, Check, Lock, CreditCard, CheckCircle2,
   CalendarDays, BarChart2, MessageSquare, Monitor, UserCheck,
   Link2, Clock, Wifi
 } from 'lucide-react'
@@ -20,6 +20,7 @@ const STATUS_CONFIG = {
   live: { label: 'Live', bg: 'bg-[#fee2e2]', text: 'text-[#991b1b]', dot: 'bg-[#ef4444]' },
   upcoming: { label: 'Upcoming', bg: 'bg-[#fef9c3]', text: 'text-[#854d0e]', dot: 'bg-[#eab308]' },
   recent: { label: 'Completed', bg: 'bg-[#dcfce7]', text: 'text-[#14532d]', dot: 'bg-[#22c55e]' },
+  ended: { label: 'Course Ended', bg: 'bg-[#f1f5f9]', text: 'text-[#475569]', dot: 'bg-[#94a3b8]' },
 }
 
 const FILTERS = ['All Sessions', 'Live Now', 'Upcoming', 'Complete', 'Enrolled']
@@ -225,22 +226,32 @@ function formatTimeInIst(value) {
 
 function getSessionStatus(rawStatus, startAtValue, durationMinutes) {
   const status = String(rawStatus || '').toLowerCase()
-  if (status === 'recent' || status === 'completed') return 'recent'
-  if (status === 'cancelled') return 'recent'
+  if (status === 'ended' || status === 'course_ended') return 'ended'
 
   const startAt = parseServerDateAsUtc(startAtValue)
-  const startMs = startAt ? startAt.getTime() : null
-  if (!startMs) return status === 'live' ? 'live' : 'upcoming'
+  if (!startAt) return 'upcoming'
 
   const durationMs = Math.max(1, Number(durationMinutes || 60)) * 60 * 1000
-  const endMs = startMs + durationMs
   const now = Date.now()
 
-  if (status === 'live') {
-    return now <= endMs ? 'live' : 'recent'
-  }
+  const nowIst = new Date(now + IST_OFFSET_MS)
+  const startIst = new Date(startAt.getTime() + IST_OFFSET_MS)
 
-  if (now > endMs) return 'recent'
+  const todayStart = new Date(Date.UTC(
+    nowIst.getUTCFullYear(),
+    nowIst.getUTCMonth(),
+    nowIst.getUTCDate(),
+    startIst.getUTCHours(),
+    startIst.getUTCMinutes(),
+    startIst.getUTCSeconds(),
+  ))
+  const todayStartMs = todayStart.getTime() - IST_OFFSET_MS
+  const todayEndMs = todayStartMs + durationMs
+
+  if (now < startAt.getTime() - 30 * 60 * 1000) return 'upcoming'
+
+  if (now >= todayStartMs - 30 * 60 * 1000 && now <= todayEndMs) return 'live'
+
   return 'upcoming'
 }
 
@@ -646,12 +657,11 @@ function ClassDetailModal({ session, onClose }) {
   )
 }
 
-// Main Session Card
 function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, ratingValue, ratingSaving, enrollPriceLabel }) {
   const isLive = session.status === 'live'
 
   return (
-    <div className={`group relative overflow-hidden rounded-[14px] border transition-all duration-200 hover:shadow-md ${isLive ? 'border-[#ef4444]/30 bg-[#fff5f5]' : 'border-black/[0.08] bg-white'}`}>
+    <div className={`group relative overflow-hidden rounded-[14px] border transition-all duration-200 hover:shadow-md ${isLive ? 'border-[#ef4444]/30 bg-[#fff5f5]' : 'border-black/[0.08] bg-white hover:border-[#5b3df6]/30'}`}>
       {isLive && <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#ef4444] to-[#f97316]" />}
 
       <div className="p-4">
@@ -692,34 +702,29 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
           </div>
         </div>
 
-        {/* Tags */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {session.tags.map(tag => (
-            <span key={tag} className={`inline-flex h-[22px] items-center rounded-[8px] px-2 text-[10px] font-medium ${tag === 'Live today' ? 'bg-[#ffd966] text-[#4b2e00]' : 'bg-[#f1f5f9] text-[#64748b]'}`}>
-              {tag}
-            </span>
-          ))}
-        </div>
-
         {/* Meta */}
         <div className="mt-3 space-y-1.5">
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
-            <img src={session.instructorAvatar} alt="" className="h-4 w-4 rounded-full" />
-            <span>{session.instructor} • {session.instructorRole}</span>
+            <UserCheck className="h-3.5 w-3.5 text-[#94a3b8]" />
+            <span>{session.instructor}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
             <CalendarDays className="h-3.5 w-3.5 text-[#94a3b8]" />
-            <span>{session.date} • {session.time} • {session.duration}</span>
+            <span>Daily • {session.time} • {session.duration}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
             <Users className="h-3.5 w-3.5 text-[#94a3b8]" />
             <span>{session.studentsEnrolled} students enrolled</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
-            <Star className="h-3.5 w-3.5 text-[#eab308] fill-[#eab308]" />
+            <span className="font-medium text-[#4338ca]">Amount:</span>
+            <span>{session.price}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
+            <Star className={`h-3.5 w-3.5 ${Number(session.rating || 0) > 0 ? 'fill-[#f59e0b] text-[#f59e0b]' : 'text-[#cbd5e1]'}`} />
             <span>
               {Number(session.rating || 0) > 0
-                ? `${session.rating}${session.ratingCount ? ` (${session.ratingCount})` : ''} rating`
+                ? `${session.rating}${session.ratingCount ? ` (${session.ratingCount})` : ''}`
                 : 'Not rated'}
             </span>
           </div>
@@ -758,21 +763,21 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
             <>
               <button
                 onClick={() => onJoinClick(session)}
-                className="flex-1 text-[12px] font-medium text-[#64748b] border border-black/[0.08] rounded-[8px] h-9 hover:bg-gray-50 transition-colors"
+                className="flex-1 text-[11px] font-semibold text-[#4338ca] border border-[#c7d2fe] bg-[#eef2ff] rounded-[8px] h-9 hover:bg-[#e0e7ff] transition-colors"
               >
                 View Details
               </button>
               {isLive ? (
                 <button
                   onClick={() => window.open(session.link, '_blank')}
-                  className="flex-1 h-9 rounded-[8px] bg-[#ef4444] text-[12px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#dc2626] transition-colors"
+                  className="flex-1 h-9 rounded-[8px] bg-[#ef4444] text-[11px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#dc2626] transition-colors"
                 >
                   <PlayCircle className="h-4 w-4" /> Join Class
                 </button>
               ) : (
                 <button
                   onClick={() => onJoinClick(session)}
-                  className="flex-1 h-9 rounded-[8px] bg-[#5b3df6] text-[12px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#4a2ed8] transition-colors"
+                  className="flex-1 h-9 rounded-[8px] bg-[#5b3df6] text-[11px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#4a2ed8] transition-colors"
                 >
                   <CalendarDays className="h-4 w-4" /> Scheduled
                 </button>
@@ -782,13 +787,13 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
             <>
               <button
                 onClick={() => onJoinClick(session)}
-                className="flex-1 text-[12px] font-medium text-[#64748b] border border-black/[0.08] rounded-[8px] h-9 hover:bg-gray-50 transition-colors"
+                className="flex-1 text-[11px] font-semibold text-[#4338ca] border border-[#c7d2fe] bg-[#eef2ff] rounded-[8px] h-9 hover:bg-[#e0e7ff] transition-colors"
               >
                 Preview
               </button>
               <button
                 onClick={() => onEnrollClick(session)}
-                className="flex-1 h-9 rounded-[8px] bg-[#5b3df6] text-[12px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#4a2ed8] transition-colors"
+                className="flex-1 h-9 rounded-[8px] bg-[#5b3df6] text-[11px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#4a2ed8] transition-colors"
               >
                 <Lock className="h-3.5 w-3.5" /> Enroll {enrollPriceLabel || session.price}
               </button>
@@ -859,7 +864,9 @@ export default function StudentLiveClasses() {
       let enrollmentsRes = { items: [] }
       try {
         enrollmentsRes = await api('/lms/enrollments?limit=500').catch(() => ({ items: [] }))
-      } catch {}
+      } catch (err) {
+        console.error('Failed to load enrollments:', err)
+      }
       const enrolledCourseIds = new Set((enrollmentsRes.items || []).map(e => String(e.course_id)))
 
       const rows = classesRes.items || []
@@ -973,10 +980,10 @@ export default function StudentLiveClasses() {
   const filtered = liveSessions.filter(s => {
     const selectedCourse = activeCourseFilter.trim().toLowerCase()
     const matchFilter =
-      (activeFilter === 'All Sessions' && (s.status === 'live' || s.status === 'upcoming')) ||
-      (activeFilter === 'Live Now' && s.status === 'live') ||
+      (activeFilter === 'All Sessions') ||
+      (activeFilter === 'Live Now' && s.status === 'live' && enrolledSessionIds.includes(s.id)) ||
       (activeFilter === 'Upcoming' && s.status === 'upcoming') ||
-      (activeFilter === 'Complete' && s.status === 'recent') ||
+      (activeFilter === 'Complete' && s.status === 'ended') ||
       (activeFilter === 'Enrolled' && enrolledSessionIds.includes(s.id))
     const matchCourse = selectedCourse === 'all courses' || s.course.toLowerCase() === selectedCourse
     const matchSearch =
@@ -986,146 +993,81 @@ export default function StudentLiveClasses() {
     return matchFilter && matchCourse && matchSearch
   })
 
-  const liveCount = liveSessions.filter(s => s.status === 'live').length
-  const recentCount = liveSessions.filter(s => s.status === 'recent').length
+  const liveCount = liveSessions.filter(s => s.status === 'live' && enrolledSessionIds.includes(s.id)).length
+  const endedCount = liveSessions.filter(s => s.status === 'ended').length
   const enrolledCount = enrolledSessionIds.length
 
   return (
-    <div className="min-h-full bg-[#F7FAFD]">
-      <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-7">
-
-        {/* Hero Banner */}
-        <section className="rounded-[10px] border border-black/[0.08] bg-gradient-to-br from-white to-[#e8f5ff] px-5 py-5 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-1.5 rounded-[12px] bg-[#ffd966] px-3 py-1.5 text-[12px] font-medium text-[#4b2e00]">
-                <Video className="h-3.5 w-3.5" /> Instructor-led Live Sessions
-              </div>
-              <h1 className="mt-3 text-[26px] font-bold leading-tight text-[#0f172a]">Join live classes, reserve seats, and grow your skills in real-time.</h1>
-              <p className="mt-2 text-[13px] text-[#94a3b8]">Join enrolled courses directly. For new courses, enroll and make payment — then join the class.</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {[
-                  `${liveCount} live now`,
-                  `${enrolledCount} courses enrolled`,
-                  `${liveSessions.length} total sessions`,
-                ].map(t => (
-                  <div key={t} className="inline-flex h-8 items-center rounded-[10px] border border-black/[0.08] bg-white px-3 text-[11px] font-medium text-[#0f172a]">{t}</div>
-                ))}
-              </div>
-            </div>
-
-            {/* Live now mini card */}
-            {liveSessions.filter(s => s.status === 'live').map(s => (
-              <div key={s.id} className="w-full shrink-0 rounded-[10px] border border-black/[0.08] bg-white p-4 lg:w-[270px]">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="h-2 w-2 rounded-full bg-[#ef4444] animate-pulse" />
-                  <span className="text-[12px] font-semibold text-[#ef4444]">Live right now</span>
-                </div>
-                <h3 className="font-bold text-[15px] text-[#0f172a]">{s.title}</h3>
-                <p className="text-[11px] text-[#94a3b8] mt-1">{s.topic}</p>
-                <div className="mt-3 space-y-1.5 text-[11px] text-[#64748b]">
-                  <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> {s.studentsPresent} students in class</div>
-                  <div className="flex items-center gap-1.5"><Video className="h-3.5 w-3.5" /> {s.platform} • {s.duration}</div>
-                </div>
-                {enrolledSessionIds.includes(s.id) ? (
-                  <button
-                    onClick={() => window.open(s.link, '_blank')}
-                    className="mt-4 w-full h-10 rounded-[8px] bg-[#ef4444] text-[13px] font-semibold text-white flex items-center justify-center gap-2 hover:bg-[#dc2626] transition-colors"
-                  >
-                    <PlayCircle className="h-4 w-4" /> Join Class Now
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setEnrollModal(s)}
-                    className="mt-4 w-full h-10 rounded-[8px] bg-[#5b3df6] text-[13px] font-semibold text-white flex items-center justify-center gap-2 hover:bg-[#4a2ed8] transition-colors"
-                  >
-                    <Lock className="h-4 w-4" /> Enroll to Join
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+    <div className="min-h-full bg-[#f6f8fa]">
+      <div className="space-y-4 p-4 sm:p-5">
+        <section className="rounded-[8px] border border-black/[0.08] bg-[#eaf2fb] p-4">
+          <span className="inline-flex rounded-[12px] bg-[#ffd966] px-[10px] py-[5px] text-[11px] font-medium text-[#4b2e00]">Student live classes</span>
+          <h2 className="mt-3 max-w-[700px] text-[26px] font-bold leading-tight text-[#0f172a]">Join live classes, reserve seats, and grow your skills in real-time.</h2>
+          <p className="mt-2 max-w-[700px] text-[14px] text-[#94a3b8]">Join enrolled courses directly. For new courses, enroll and make payment — then join the class.</p>
         </section>
 
-        {/* Filters + Search */}
-        <div className="rounded-[10px] border border-black/[0.08] bg-white p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-[18px] font-bold text-[#0f172a]">Browse Live Schedule</h2>
-              <p className="text-[12px] text-[#94a3b8] mt-0.5">Filter by status, or search by topic, mentor, or course.</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Total sessions', value: liveSessions.length },
+            { label: 'Live now', value: liveCount },
+            { label: 'Completed classes', value: endedCount },
+            { label: 'Courses enrolled', value: enrolledCount },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-[8px] border border-black/[0.08] bg-white p-4">
+              <p className="text-[11px] text-[#94a3b8]">{label}</p>
+              <p className="mt-2 text-[32px] font-bold text-[#0f172a]">{value}</p>
             </div>
-          </div>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="h-10 w-full rounded-[8px] border border-black/[0.08] pl-9 pr-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
-                placeholder="Search by topic, mentor, or course..."
-              />
-            </div>
-            <div className="relative sm:w-[220px]">
-              <select
-                value={activeCourseFilter}
-                onChange={(e) => setActiveCourseFilter(e.target.value)}
-                className="h-10 w-full appearance-none rounded-[8px] border border-black/[0.08] bg-white px-3 pr-8 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
-              >
-                {allCourseFilters.map((courseName) => (
-                  <option key={courseName} value={courseName}>{courseName}</option>
-                ))}
-              </select>
-              <ChevronRight className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 rotate-90 text-[#94a3b8]" />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {FILTERS.map(f => (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`h-9 rounded-[8px] px-3 text-[12px] font-medium transition-colors ${activeFilter === f ? 'bg-[#5b3df6] text-white' : 'border border-black/[0.08] bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]'}`}
-                >
-                  {f}
-                  {f === 'Live Now' && (
-                    <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#ef4444] text-[9px] font-bold text-white">{liveCount}</span>
-                  )}
-                  {f === 'Complete' && (
-                    <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#16a34a] text-[9px] font-bold text-white">{recentCount}</span>
-                  )}
-                  {f === 'Enrolled' && (
-                    <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#16a34a] text-[9px] font-bold text-white">{enrolledCount}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Sessions Grid */}
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[18px] font-bold text-[#0f172a]">
-              {activeFilter === 'Enrolled'
-                ? 'My Enrolled Sessions'
-                : activeFilter === 'Complete'
-                  ? 'Recently Completed Sessions'
-                  : activeFilter === 'Live Now'
-                    ? 'Live Sessions'
-                    : activeFilter === 'All Sessions'
-                      ? 'All Sessions'
-                      : 'Upcoming Sessions'}
-            </h2>
-            <span className="text-[12px] text-[#94a3b8]">{filtered.length} sessions</span>
+        <section className="rounded-[8px] border border-black/[0.08] bg-white p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-[20px] font-bold text-[#0f172a]">All Live Classes</h3>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search classes..."
+                  className="h-9 w-[200px] rounded-[7px] border border-black/[0.08] pl-9 pr-3 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={activeCourseFilter}
+                  onChange={(e) => setActiveCourseFilter(e.target.value)}
+                  className="h-9 w-[190px] appearance-none rounded-[7px] border border-black/[0.08] bg-white px-3 pr-8 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
+                >
+                  {allCourseFilters.map((courseName) => (
+                    <option key={courseName} value={courseName}>{courseName}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-4 flex flex-wrap gap-2">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`h-8 rounded-[8px] px-3 text-[12px] font-medium transition-colors ${activeFilter === f ? 'bg-[#5b3df6] text-white' : 'border border-black/[0.08] bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]'}`}
+              >
+                {f}
+              </button>
+            ))}
           </div>
 
           {filtered.length === 0 ? (
-            <div className="rounded-[12px] border border-dashed border-black/[0.12] bg-white py-14 text-center">
+            <div className="rounded-[12px] border border-dashed border-black/[0.12] bg-[#fafcff] py-12 text-center">
               <Video className="mx-auto h-8 w-8 text-[#cbd5e1]" />
-              <p className="mt-3 text-[14px] font-medium text-[#94a3b8]">No sessions found</p>
-              <p className="text-[12px] text-[#cbd5e1] mt-1">Try a different filter or search term</p>
+              <p className="mt-3 text-[14px] font-medium text-[#94a3b8]">No classes found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filtered.map(session => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {filtered.map((session) => (
                 <SessionCard
                   key={session.id}
                   session={session}
@@ -1140,7 +1082,7 @@ export default function StudentLiveClasses() {
               ))}
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       {/* Enrollment / Payment Modal */}

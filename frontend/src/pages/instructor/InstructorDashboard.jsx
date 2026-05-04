@@ -314,7 +314,7 @@ export default function InstructorDashboard() {
             ) : (
               upcomingEvents.map((item) => (
                 <div key={item._id} className="flex flex-col items-start gap-[12px] p-[16px] border border-black/[0.08] rounded-[6px] sm:flex-row sm:items-center">
-                  <IconBox icon="\uD83D\uDDD3\uFE0F" />
+                  <IconBox/>
                   <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{item.title || 'Untitled event'}</div>
                     <div className="text-[13px] text-[#94a3b8] mt-[4px] leading-relaxed">

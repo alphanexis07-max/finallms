@@ -264,7 +264,7 @@ export default function InstructorStudentInsights() {
             <div className="px-[21px] pt-[21px] pb-[16px] flex justify-between items-start gap-4">
               <div>
                 <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Student highlights</h3>
-                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Live records from `/instructor/students/insights`.</p>
+                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Real-time student performance analytics.</p>
               </div>
               <div className="relative min-w-[220px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
