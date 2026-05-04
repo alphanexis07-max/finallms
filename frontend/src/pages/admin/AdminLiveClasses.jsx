@@ -528,17 +528,6 @@ function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, 
                 {regeneratingId === session.id ? 'Generating...' : 'Generate Link'}
               </button>
             )}
-            {!isEnded && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onReassign(session)
-                }}
-                className="inline-flex items-center gap-1 rounded-[8px] border border-[#dbeafe] bg-[#eff6ff] px-2.5 py-1 text-[11px] font-semibold text-[#1d4ed8]"
-              >
-                <UserCheck className="h-3 w-3" /> Reassign
-              </button>
-            )}
             {isEnded && (
               <button
                 onClick={(e) => {
