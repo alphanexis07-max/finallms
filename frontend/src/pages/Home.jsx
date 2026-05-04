@@ -498,15 +498,6 @@ export default function LandingPage(props) {
                 Join real-time sessions with expert instructors — interactive, engaging, and career-focused.
               </p>
             </motion.div>
-
-            <motion.div className="hidden md:flex items-center gap-3" variants={fadeUp}>
-              <button className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-[#0b8276] text-[#0b8276] hover:bg-[#0b8276] hover:text-white transition-colors" onClick={() => scroll(liveClassesRef, "left")}>
-                <ChevronLeft size={20} />
-              </button>
-              <button className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-[#0b8276] text-white hover:bg-[#096b61] transition-colors" onClick={() => scroll(liveClassesRef, "right")}>
-                <ChevronRight size={20} />
-              </button>
-            </motion.div>
           </div>
 
           {/* ── Cards: skeleton → real data, no long blank wait ── */}
@@ -563,10 +554,6 @@ export default function LandingPage(props) {
             <motion.div variants={fadeUp}>
               <h2 className="text-3xl sm:text-4xl lg:text-[41px] font-extrabold leading-tight text-[#111b2f]">Explore Our Course Offerings</h2>
               <p className="mt-2 text-sm text-slate-500 md:text-left">Explore top-rated courses designed to help you gain real-world skills and advance your career.</p>
-            </motion.div>
-            <motion.div className="hidden md:flex items-center gap-3" variants={fadeUp}>
-              <button className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-[#0b8276] text-[#0b8276] hover:bg-[#0b8276] hover:text-white transition-colors" onClick={() => scroll(coursesRef, "left")}><ChevronLeft size={20} /></button>
-              <button className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-[#0b8276] text-white hover:bg-[#096b61] transition-colors" onClick={() => scroll(coursesRef, "right")}><ChevronRight size={20} /></button>
             </motion.div>
           </div>
           <motion.div ref={coursesRef} className="flex overflow-x-auto snap-x snap-mandatory gap-5 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 md:gap-6 no-scrollbar" variants={stagger}>
@@ -670,7 +657,13 @@ export default function LandingPage(props) {
               const priceLabel = `₹${price.toLocaleString("en-IN")}`;
               if (isHighlighted) {
                 return (
-                  <motion.div key={plan?._id || `${planName}-${idx}`} variants={fadeUp} whileHover={{ scale: 1.02 }} className="min-w-[300px] sm:min-w-0 snap-center relative flex flex-col items-center rounded-xl shadow-xl">
+                  <motion.div
+                    key={plan?._id || `${planName}-${idx}`}
+                    variants={fadeUp}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => navigate('/login')}
+                    className="min-w-[300px] sm:min-w-0 snap-center relative flex cursor-pointer flex-col items-center rounded-xl shadow-xl"
+                  >
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
@@ -689,13 +682,27 @@ export default function LandingPage(props) {
                       <div className="flex flex-col w-full gap-3 py-4 text-[#F7FCFF] text-sm sm:text-base">
                         <span>Flexible plan billing</span><span>Access to platform courses</span><span>Live class eligibility</span><span>Student support included</span>
                       </div>
-                      <button className="w-full bg-[#FF8A33] text-white font-bold py-3 rounded-lg hover:bg-[#e07a2e] transition-colors">Choose {planName}</button>
+                      <button
+                        className="w-full bg-[#FF8A33] text-white font-bold py-3 rounded-lg hover:bg-[#e07a2e] transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/login');
+                        }}
+                      >
+                        Choose {planName}
+                      </button>
                     </div>
                   </motion.div>
                 );
               }
               return (
-                <motion.div key={plan?._id || `${planName}-${idx}`} variants={fadeUp} whileHover={{ y: -5 }} className="min-w-[300px] sm:min-w-0 snap-center flex flex-col items-center gap-4 rounded-xl border border-[#00000012] bg-white px-6 py-8 sm:py-10 shadow-sm hover:shadow-md transition-all duration-300">
+                <motion.div
+                  key={plan?._id || `${planName}-${idx}`}
+                  variants={fadeUp}
+                  whileHover={{ y: -5 }}
+                  onClick={() => navigate('/login')}
+                  className="min-w-[300px] sm:min-w-0 snap-center flex cursor-pointer flex-col items-center gap-4 rounded-xl border border-[#00000012] bg-white px-6 py-8 sm:py-10 shadow-sm transition-all duration-300 hover:shadow-md"
+                >
                   <h3 className="text-slate-900 text-2xl font-bold">{planName}</h3>
                   <div className="flex items-baseline justify-center">
                     <span className="text-slate-900 text-5xl sm:text-[56px] font-bold">{priceLabel}</span>
@@ -704,7 +711,15 @@ export default function LandingPage(props) {
                   <div className="flex flex-col w-full gap-3 py-4 text-slate-900 text-sm sm:text-base">
                     <span>Self-paced learning access</span><span>Course progress tracking</span><span>Certification support</span>
                   </div>
-                  <button className="w-full bg-transparent py-3 rounded-lg border-2 border-[#00000012] font-bold text-slate-900 hover:bg-slate-50 transition-colors">Choose {planName}</button>
+                  <button
+                    className="w-full bg-transparent py-3 rounded-lg border-2 border-[#00000012] font-bold text-slate-900 hover:bg-slate-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/login');
+                    }}
+                  >
+                    Choose {planName}
+                  </button>
                 </motion.div>
               );
             })}
