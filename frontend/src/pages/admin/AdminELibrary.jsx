@@ -273,7 +273,35 @@ export default function AdminELibrary() {
                   Published
                 </span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => window.open(item.fileUrl, '_blank')} className="p-1.5 text-gray-500 hover:text-[#5b3df6] transition-colors" title="View">
+                  <button 
+                    onClick={() => {
+                      if (!item.fileUrl) {
+                        alert("No file available");
+                        return;
+                      }
+                      if (item.fileUrl.startsWith('data:')) {
+                        try {
+                          const arr = item.fileUrl.split(',');
+                          const mime = arr[0].match(/:(.*?);/)[1];
+                          const bstr = atob(arr[1]);
+                          let n = bstr.length;
+                          const u8arr = new Uint8Array(n);
+                          while (n--) {
+                            u8arr[n] = bstr.charCodeAt(n);
+                          }
+                          const blob = new Blob([u8arr], { type: mime });
+                          const url = URL.createObjectURL(blob);
+                          window.open(url, '_blank');
+                        } catch (e) {
+                          window.open(item.fileUrl, '_blank');
+                        }
+                      } else {
+                        window.open(item.fileUrl, '_blank');
+                      }
+                    }} 
+                    className="p-1.5 text-gray-500 hover:text-[#5b3df6] transition-colors" 
+                    title="View"
+                  >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-500 hover:text-blue-500 transition-colors" title="Edit">

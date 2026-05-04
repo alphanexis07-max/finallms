@@ -33,7 +33,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminCourseManagement from './pages/admin/AdminCourseManagement'
 import AdminInstructorManagement from './pages/admin/AdminInstructorManagement'
 import AdminStudentManagement from './pages/admin/AdminStudentManagement'
-import AdminStudentInsights from './pages/admin/AdminStudentInsights'
+
 import AdminSchoolEvents from './pages/admin/AdminSchoolEvents'
 import AdminPaymentsCupons from './pages/admin/AdminPayments&Cupons'
 import AdminLiveClasses from './pages/admin/AdminLiveClasses'
@@ -122,7 +122,7 @@ function App() {
           <Route path="course-management" element={<AdminCourseManagement />} />
           <Route path="instructor-management" element={<AdminInstructorManagement />} />
           <Route path="student-management" element={<AdminStudentManagement />} />
-          <Route path="student-insights" element={<AdminStudentInsights />} />
+
           <Route path="School-Events" element={<AdminSchoolEvents />} />
           <Route path="payments-coupons" element={<AdminPaymentsCupons />} />
           <Route path="live-classes" element={<AdminLiveClasses />} />

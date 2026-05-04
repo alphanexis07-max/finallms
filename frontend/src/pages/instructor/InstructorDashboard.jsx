@@ -109,24 +109,21 @@ export default function InstructorDashboard() {
   const [dashboard, setDashboard] = useState({})
   const [courses, setCourses] = useState([])
   const [liveClasses, setLiveClasses] = useState([])
-  const [events, setEvents] = useState([])
 
   const fetchData = async () => {
     try {
       setLoading(true)
       setError('')
-      const [meRes, dashboardRes, coursesRes, classesRes, eventsRes] = await Promise.all([
+      const [meRes, dashboardRes, coursesRes, classesRes] = await Promise.all([
         api('/auth/me'),
         api('/lms/dashboard/instructor'),
         api('/lms/courses?limit=200'),
         api('/lms/live-classes?limit=200'),
-        api('/lms/events?limit=200'),
       ])
       setMe(meRes || null)
       setDashboard(dashboardRes || {})
       setCourses(Array.isArray(coursesRes?.items) ? coursesRes.items : [])
       setLiveClasses(Array.isArray(classesRes?.items) ? classesRes.items : [])
-      setEvents(Array.isArray(eventsRes?.items) ? eventsRes.items : [])
     } catch (err) {
       const message = err?.message || 'Failed to load dashboard data'
       setError(message)
@@ -166,12 +163,6 @@ export default function InstructorDashboard() {
       .slice(0, 4)
   }, [liveClasses, myInstructorId])
 
-  const upcomingEvents = useMemo(() => {
-    return [...events]
-      .sort((a, b) => new Date(a?.starts_at || 0) - new Date(b?.starts_at || 0))
-      .slice(0, 4)
-  }, [events])
-
   const stats = [
     {
       id: 'sessions',
@@ -196,14 +187,6 @@ export default function InstructorDashboard() {
       icon: <FileText className="h-[18px] w-[18px] text-[#5b3df6]" />,
       meta: 'From backend',
       variant: 'warning',
-    },
-    {
-      id: 'events',
-      title: 'Active School Events',
-      value: String(dashboard.events ?? 0),
-      icon: <Calendar className="h-[18px] w-[18px] text-[#5b3df6]" />,
-      meta: 'From backend',
-      variant: 'success',
     },
   ]
 
@@ -257,7 +240,11 @@ export default function InstructorDashboard() {
               <EmptyState text="No live classes found." />
             ) : (
               myClasses.map((item) => (
-                <div key={item._id} className="flex items-start gap-[16px] p-[16px] border border-black/[0.08] rounded-[6px]">
+                <div 
+                  key={item._id} 
+                  onClick={() => navigate('/instructor/online-classes')}
+                  className="flex items-start gap-[16px] p-[16px] border border-black/[0.08] rounded-[6px] cursor-pointer hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{item.title || 'Untitled class'}</div>
                     <div className="text-[13px] text-[#94a3b8] mt-[4px] leading-relaxed">
@@ -293,36 +280,14 @@ export default function InstructorDashboard() {
               <EmptyState text="No courses found." />
             ) : (
               myCourses.map((item) => (
-                <div key={item._id} className="flex items-start gap-[12px] p-[16px] border border-black/[0.08] rounded-[6px]">
+                <div 
+                  key={item._id} 
+                  onClick={() => navigate('/instructor/my-courses')}
+                  className="flex items-start gap-[12px] p-[16px] border border-black/[0.08] rounded-[6px] cursor-pointer hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold text-[#0f172a] leading-snug mb-[4px]">{item.title || 'Untitled course'}</div>
                     <div className="text-[13px] text-[#94a3b8] leading-relaxed line-clamp-2">{item.description || 'No description'}</div>
-                  </div>
-                </div>
-              ))
-            )}
-          </SectionCard>
-
-          <SectionCard
-            title="School Events"
-            subtitle="Upcoming events from tenant feed"
-            actionLabel="View all"
-            onAction={() => fetchData()}
-          >
-            {upcomingEvents.length === 0 ? (
-              <EmptyState text="No events found." />
-            ) : (
-              upcomingEvents.map((item) => (
-                <div key={item._id} className="flex flex-col items-start gap-[12px] p-[16px] border border-black/[0.08] rounded-[6px] sm:flex-row sm:items-center">
-                  <IconBox/>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{item.title || 'Untitled event'}</div>
-                    <div className="text-[13px] text-[#94a3b8] mt-[4px] leading-relaxed">
-                      {item.starts_at ? new Date(item.starts_at).toLocaleString() : 'No schedule'}
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <Pill type="secondary">Upcoming</Pill>
                   </div>
                 </div>
               ))

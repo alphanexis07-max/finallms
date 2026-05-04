@@ -443,12 +443,18 @@ export default function AdminPaymentsCupons() {
       )}
 
       <div className="space-y-4 p-4 sm:p-5">
-        <section className="rounded-[8px] border border-black/[0.08] bg-[#eaf2fb] p-6">
-          <span className="inline-flex rounded-[12px] bg-[#ffd966] px-[10px] py-[5px] text-[11px] font-medium text-[#4b2e00]">Payment operations and coupon creation</span>
-          <h2 className="pt-2 text-[24px] font-bold leading-tight text-[#0f172a] sm:text-[28px]">
-            Track revenue, review transactions, and create high-performing coupons from one admin workspace.
-          </h2>
-          <p className="pt-2 text-[14px] text-[#94a3b8]">Monitor collections, failed payments, and redemptions while keeping a ready-to-publish coupon form visible for quick campaign launches.</p>
+        <section className="w-full shrink-0 rounded-[8px] border border-black/[0.08] border-solid bg-gradient-to-br from-white to-[#e8f5ff] px-4 pb-5 pt-5 sm:px-6 sm:pb-6 sm:pt-6">
+          <div className="flex flex-col gap-[11px] items-start">
+            <div className="bg-[#ffd966] flex items-center px-[10px] py-[6.5px] rounded-[12px] shrink-0">
+              <div className="text-[12px] font-medium text-[#4b2e00]">Payment operations and coupon creation</div>
+            </div>
+            <div className="max-w-[850px] text-[24px] font-bold leading-[1.2] text-[#0f172a] sm:text-[30px] lg:text-[35px]">
+              Track revenue, review transactions, and create high-performing coupons from one admin workspace.
+            </div>
+            <div className="max-w-[750px] text-[13.9px] text-[#94a3b8]">
+              Monitor collections, failed payments, and redemptions while keeping a ready-to-publish coupon form visible for quick campaign launches.
+            </div>
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setActiveView('create')}

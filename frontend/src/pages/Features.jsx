@@ -118,13 +118,13 @@ export default (props) => {
               </div>
               <div className="flex items-start self-stretch pt-4 mb-5 gap-[17px] flex-wrap">
                 <button className="flex flex-col shrink-0 items-start bg-[#FF8A33] text-left py-[17px] px-[22px] rounded-md border-0 hover:bg-[#e07a2e] transition-colors cursor-pointer"
-                  onClick={() => navigate("/contact")}>
+                  onClick={() => navigate("/login")}>
                   <span className="text-white text-sm font-bold">
                     {"Get Started"}
                   </span>
                 </button>
                 <button className="flex flex-col shrink-0 items-start bg-transparent text-left py-[13px] px-[19px] rounded-md border border-solid border-white/30 hover:bg-white/10 transition-colors cursor-pointer"
-                  onClick={() => alert("Pressed!")}>
+                  onClick={() => navigate("/login")}>
                   <span className="text-white text-sm font-bold">
                     {"Explore All Services"}
                   </span>

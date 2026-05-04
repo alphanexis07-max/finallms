@@ -387,13 +387,15 @@ export default function LandingPage(props) {
     if (!emailRegex.test(newsletterEmail)) { setNewsletterMessage("Please enter a valid email address"); return; }
     setNewsletterSubmitted(true);
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"}/inquire/newsletter`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: newsletterEmail }) }
-      );
-      if (res.ok) { setNewsletterMessage("Thank you for subscribing! You'll receive updates soon."); setNewsletterEmail(""); }
-      else setNewsletterMessage("Failed to subscribe. Please try again later.");
-    } catch { setNewsletterMessage("Failed to subscribe. Please try again later."); }
+      await api('/inquire/newsletter', { 
+        method: "POST", 
+        body: JSON.stringify({ email: newsletterEmail }) 
+      });
+      setNewsletterMessage("Thank you for subscribing! You'll receive updates soon."); 
+      setNewsletterEmail("");
+    } catch (err) { 
+      setNewsletterMessage("Failed to subscribe. Please try again later."); 
+    }
     setTimeout(() => { setNewsletterMessage(""); setNewsletterSubmitted(false); }, 5000);
   };
 

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import { api } from "../lib/api";
+import { useNavigate } from "react-router-dom";
 
 export default (props) => {
+  const navigate = useNavigate();
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansError, setPlansError] = useState("");
@@ -99,13 +101,13 @@ export default (props) => {
               </div>
               <div className="flex items-center gap-4 flex-wrap">
                 <button className="flex flex-col shrink-0 items-start bg-[#FF8A33] text-left py-[18px] px-[21px] rounded-md border-0 hover:bg-[#e07a2e] transition-colors cursor-pointer"
-                  onClick={() => alert("Pressed!")}>
+                  onClick={() => navigate("/login")}>
                   <span className="text-white text-sm font-bold">
                     {"Get Started"}
                   </span>
                 </button>
                 <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[18px] px-[23px] rounded-md border border-solid border-white/30 hover:bg-white/20 transition-colors cursor-pointer"
-                  onClick={() => alert("Pressed!")}>
+                  onClick={() => navigate("/login")}>
                   <span className="text-white text-sm font-bold">
                     {"Book Demo"}
                   </span>
@@ -525,13 +527,13 @@ export default (props) => {
             </div>
             <div className="flex shrink-0 items-center gap-4 flex-wrap justify-center">
               <button className="flex flex-col shrink-0 items-start bg-[#FF8A33] text-left py-[18px] px-[22px] rounded-md border-0 hover:bg-[#e07a2e] transition-colors cursor-pointer"
-                onClick={() => alert("Pressed!")}>
+                onClick={() => navigate("/login")}>
                 <span className="text-white text-sm font-bold">
                   {"Book Demo"}
                 </span>
               </button>
               <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[18px] px-[23px] rounded-md border border-solid border-white/30 hover:bg-white/20 transition-colors cursor-pointer"
-                onClick={() => alert("Pressed!")}>
+                onClick={() => navigate("/contact")}>
                 <span className="text-white text-sm font-bold">
                   {"Contact Us"}
                 </span>

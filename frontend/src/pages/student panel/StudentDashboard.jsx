@@ -227,7 +227,11 @@ export default function StudentDashboard() {
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No enrollments found yet.</div>
                 ) : (
                   enrolledCourseRows.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px]">
+                    <div 
+                      key={item.id} 
+                      onClick={() => navigate('/student-panel/my-courses')}
+                      className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px] cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
                       <div>
                         <p className="font-semibold text-[14px] text-[#0f172a]">{item.title}</p>
                         <p className="text-[11px] text-[#94a3b8] mt-[3px] line-clamp-2">{item.meta}</p>
@@ -255,7 +259,11 @@ export default function StudentDashboard() {
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No library resources available.</div>
                 ) : (
                   resourceRows.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px]">
+                    <div 
+                      key={item.id} 
+                      onClick={() => navigate('/student-panel/e-library')}
+                      className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px] cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
                       <div>
                         <p className="font-semibold text-[14px] text-[#0f172a]">{item.title}</p>
                         <p className="text-[11px] text-[#94a3b8] mt-[3px]">{item.meta}</p>
@@ -304,7 +312,11 @@ export default function StudentDashboard() {
                   <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No upcoming live classes.</div>
                 ) : (
                   liveClassRows.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px]">
+                    <div 
+                      key={item.id} 
+                      onClick={() => navigate('/student-panel/live-classes')}
+                      className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px] cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
                       <div>
                         <p className="font-semibold text-[14px] text-[#0f172a]">{item.title}</p>
                         <p className="text-[11px] text-[#94a3b8] mt-[3px]">{item.meta}</p>

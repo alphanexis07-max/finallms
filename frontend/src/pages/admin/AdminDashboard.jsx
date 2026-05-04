@@ -323,7 +323,10 @@ export default function AdminDashboard() {
                 const isPublished = Boolean(c.published)
                 return (
                   <div key={c._id || c.title || idx} className={`flex flex-col ${idx === 0 ? '' : 'border-t border-black/[0.08]'}`}>
-                    <div className="flex flex-col justify-between gap-3 pb-[14px] pt-[15px] sm:flex-row sm:items-center">
+                    <div 
+                      onClick={() => navigate('/admin/course-management')}
+                      className="flex flex-col justify-between gap-3 pb-[14px] pt-[15px] sm:flex-row sm:items-center cursor-pointer hover:bg-gray-50 transition-colors rounded-[6px]"
+                    >
                       <div className="flex gap-[12px] items-center">
                         <div className="bg-[#e8f5ff] flex items-center justify-center rounded-[6px] shrink-0 size-[42px]"><BookOpen className="h-[18px] w-[18px] text-[#5b3df6]" /></div>
                         <div className="flex flex-col min-w-0">
@@ -359,8 +362,11 @@ export default function AdminDashboard() {
                 const st = String(lc.status || '').toLowerCase()
                 const variant = st === 'upcoming' || st === 'active' ? 'good' : st === 'completed' ? 'neutral' : 'warn'
                 return (
-                  <div key={lc._id || idx} className={`${idx === 0 ? '' : 'border-t border-black/[0.08]'} pb-[14px] pt-[15px]`}>
-                    <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                  <div key={lc._id || idx} className={`${idx === 0 ? '' : 'border-t border-black/[0.08]'}`}>
+                    <div 
+                      onClick={() => navigate('/admin/live-classes')}
+                      className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center pb-[14px] pt-[15px] cursor-pointer hover:bg-gray-50 transition-colors rounded-[6px]"
+                    >
                       <div className="flex flex-col gap-[4px] min-w-0">
                         <div className="font-semibold text-[14px] text-[#0f172a]">{lc.title || 'Untitled class'}</div>
                         <div className="text-[13px] text-[#94a3b8]">{lc.start_at ? new Date(lc.start_at).toLocaleString() : 'No schedule'} • {lc.provider || 'provider N/A'}</div>
@@ -382,9 +388,14 @@ export default function AdminDashboard() {
             </div>
             <div className="w-full flex flex-col">
               {instructorRows.map((inst, idx) => (
-                <div key={inst._id || idx} className={`${idx === 0 ? '' : 'border-t border-black/[0.08]'} flex flex-col justify-between gap-3 pb-[14px] pt-[15px] sm:flex-row sm:items-center`}>
-                  <div className="flex items-center gap-[12px]"><Avatar name={inst.full_name || 'Instructor'} /><div className="flex flex-col min-w-0"><div className="font-semibold text-[14px] text-[#0f172a]">{inst.full_name || 'Instructor'}</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{inst.email || 'No email'}{inst.phone ? ` • ${inst.phone}` : ''}</div></div></div>
-                  <StatusPill variant={inst.is_active === false ? 'warn' : 'good'}>{inst.is_active === false ? 'Inactive' : 'Assigned'}</StatusPill>
+                <div key={inst._id || idx} className={`${idx === 0 ? '' : 'border-t border-black/[0.08]'}`}>
+                  <div 
+                    onClick={() => navigate('/admin/instructor-management')}
+                    className="flex flex-col justify-between gap-3 pb-[14px] pt-[15px] sm:flex-row sm:items-center cursor-pointer hover:bg-gray-50 transition-colors rounded-[6px]"
+                  >
+                    <div className="flex items-center gap-[12px]"><Avatar name={inst.full_name || 'Instructor'} /><div className="flex flex-col min-w-0"><div className="font-semibold text-[14px] text-[#0f172a]">{inst.full_name || 'Instructor'}</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{inst.email || 'No email'}{inst.phone ? ` • ${inst.phone}` : ''}</div></div></div>
+                    <StatusPill variant={inst.is_active === false ? 'warn' : 'good'}>{inst.is_active === false ? 'Inactive' : 'Assigned'}</StatusPill>
+                  </div>
                 </div>
               ))}
               {!loading && instructorRows.length === 0 && <div className="text-[13px] text-[#94a3b8] py-2">No instructors found.</div>}
@@ -401,9 +412,14 @@ export default function AdminDashboard() {
                 const variant = progress >= 75 ? 'good' : progress >= 40 ? 'neutral' : 'warn'
                 const label = progress ? `${progress}% progress` : 'Progress pending'
                 return (
-                  <div key={st._id || idx} className={`${idx === 0 ? '' : 'border-t border-black/[0.08]'} flex flex-col justify-between gap-3 pb-[14px] pt-[15px] sm:flex-row sm:items-center`}>
-                    <div className="flex items-center gap-[12px]"><Avatar name={st.full_name || 'Student'} /><div className="flex flex-col min-w-0"><div className="font-semibold text-[14px] text-[#0f172a]">{st.full_name || 'Student'}</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{st.email || 'No email'}</div></div></div>
-                    <StatusPill variant={variant}>{label}</StatusPill>
+                  <div key={st._id || idx} className={`${idx === 0 ? '' : 'border-t border-black/[0.08]'}`}>
+                    <div 
+                      onClick={() => navigate('/admin/student-management')}
+                      className="flex flex-col justify-between gap-3 pb-[14px] pt-[15px] sm:flex-row sm:items-center cursor-pointer hover:bg-gray-50 transition-colors rounded-[6px]"
+                    >
+                      <div className="flex items-center gap-[12px]"><Avatar name={st.full_name || 'Student'} /><div className="flex flex-col min-w-0"><div className="font-semibold text-[14px] text-[#0f172a]">{st.full_name || 'Student'}</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{st.email || 'No email'}</div></div></div>
+                      <StatusPill variant={variant}>{label}</StatusPill>
+                    </div>
                   </div>
                 )
               })}
@@ -422,7 +438,11 @@ export default function AdminDashboard() {
             </div>
             <div className="w-full flex flex-col gap-[14px]">
               {couponRows.map((coupon, idx) => (
-                <div key={coupon._id || idx} className="bg-[#e8f5ff] rounded-[6px] p-[14px] flex items-center justify-between">
+                <div 
+                  key={coupon._id || idx} 
+                  onClick={() => navigate('/admin/payments-coupons')}
+                  className="bg-[#e8f5ff] rounded-[6px] p-[14px] flex items-center justify-between cursor-pointer hover:bg-[#e0efff] transition-colors"
+                >
                   <div className="flex items-center gap-[12px]"><div className="bg-[#e8f5ff] rounded-[6px] flex items-center justify-center h-[42px] w-[42px]"><Wallet className="h-[18px] w-[18px] text-[#5b3df6]" /></div><div><div className="font-semibold text-[14px] text-[#0f172a]">{coupon.code || 'NO-CODE'}</div><div className="text-[13px] text-[#94a3b8] mt-[4px]">{coupon.discount_type === 'percent' ? `${coupon.value}% off` : `₹${Number(coupon.value || 0).toLocaleString('en-IN')} off`} • {Number(coupon.uses || 0)} redemptions</div></div></div>
                   <StatusPill variant={Number(coupon.max_uses || 0) > 0 && Number(coupon.uses || 0) / Number(coupon.max_uses || 1) > 0.8 ? 'warn' : 'good'}>{Number(coupon.max_uses || 0) > 0 && Number(coupon.uses || 0) >= Number(coupon.max_uses || 0) ? 'Exhausted' : 'Active'}</StatusPill>
                 </div>
@@ -436,7 +456,12 @@ export default function AdminDashboard() {
             <div className="flex flex-col gap-[4px] w-full"><div className="font-bold text-[18px] text-[#0f172a]">Analytics</div><div className="text-[13px] text-[#94a3b8]">Course performance and student engagement</div></div>
             <div className="w-full h-[196px] flex flex-col gap-[12px] pt-[4px]"><div className="flex gap-[14px] items-end justify-center h-full pt-[20px]">{weekdayChart.map((point) => (<div key={point.label} className="bg-gradient-to-b from-[#ffb86b] to-[#5b3df6] w-[46px] rounded-tl-[4px] rounded-tr-[4px]" style={{ height: `${point.height}px` }} />))}</div><div className="flex justify-center gap-[14px] text-[#94a3b8] text-[12px]">{weekdayChart.map((point) => (<span key={`${point.label}-text`}>{point.label}</span>))}</div></div>
             <div className="w-full flex flex-col gap-[4px] border-t border-black/[0.08] pt-[15px]">
-              <div className="flex items-center justify-between"><div className="flex flex-col gap-[4px]"><div className="font-semibold text-[14px] text-[#0f172a]">Course performance</div><div className="text-[13px] text-[#94a3b8]">Top performer: {coursePerformance.title}</div></div><StatusPill variant="good">{coursePerformance.percent}%</StatusPill></div>
+              <div 
+                onClick={() => navigate('/admin/analytics')}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors p-[6px] rounded-[6px] -mx-[6px]"
+              >
+                <div className="flex flex-col gap-[4px]"><div className="font-semibold text-[14px] text-[#0f172a]">Course performance</div><div className="text-[13px] text-[#94a3b8]">Top performer: {coursePerformance.title}</div></div><StatusPill variant="good">{coursePerformance.percent}%</StatusPill>
+              </div>
               <div className="flex items-center justify-between pt-[15px] border-t border-black/[0.08]"><div className="flex flex-col gap-[4px]"><div className="font-semibold text-[14px] text-[#0f172a]">Student engagement</div><div className="text-[13px] text-[#94a3b8]">Average watch time per learner</div></div><StatusPill>{avgWatchText}</StatusPill></div>
             </div>
           </div>

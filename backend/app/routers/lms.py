@@ -319,6 +319,7 @@ async def create_user(
     tenant_id: str = Depends(get_tenant_id),
     _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.SUB_ADMIN)),
 ):
+    from pymongo.errors import DuplicateKeyError
     now = datetime.now(timezone.utc)
     data = payload.model_dump()
     data["password_hash"] = hash_password(data.pop("password"))
@@ -326,7 +327,10 @@ async def create_user(
     data["is_active"] = True
     data["created_at"] = now
     data["updated_at"] = now
-    res = await db.users.insert_one(data)
+    try:
+        res = await db.users.insert_one(data)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
     data["_id"] = str(res.inserted_id)
     data.pop("password_hash", None)
     return data

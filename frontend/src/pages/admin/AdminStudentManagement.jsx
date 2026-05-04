@@ -27,6 +27,7 @@ import {
   Clock,
   CheckCircle,
   XCircle as XCircleIcon,
+  Ban
 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
@@ -214,6 +215,8 @@ export default function StudentManagement() {
           }))
 
           return {
+            _id: u._id,
+            is_active: u.is_active !== false,
             role: (u.role || 'student').toLowerCase(),
             id: studentId || `STU${String(idx + 1).padStart(3, '0')}`,
             name: u.full_name || 'Student',
@@ -441,6 +444,20 @@ export default function StudentManagement() {
 
     const safeInvoiceId = String(bill.invoiceNumber || bill.id || 'invoice').replace(/[^a-zA-Z0-9_-]/g, '_')
     doc.save(`${safeInvoiceId}.pdf`)
+  }
+
+  const handleToggleStatus = async (student, e) => {
+    e.stopPropagation()
+    if (!student._id) return
+    try {
+      await api(`/lms/users/${student._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !student.is_active })
+      })
+      loadStudents()
+    } catch (err) {
+      console.error('Failed to toggle status:', err)
+    }
   }
 
   const bulkActions = [
@@ -799,8 +816,22 @@ export default function StudentManagement() {
                     <div>
                       <StatusBadge status={student.enrollment.status} type="enrollment" />
                     </div>
-                    <div className="flex justify-end">
-                      <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={(e) => handleToggleStatus(student, e)}
+                        title={student.is_active ? "Suspend" : "Activate"}
+                        className={`p-2 rounded-lg border transition-colors ${
+                          student.is_active 
+                            ? "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100" 
+                            : "border-green-200 bg-green-50 text-green-600 hover:bg-green-100"
+                        }`}
+                      >
+                        {student.is_active ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedStudent(student); }}
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
                         <Eye className="h-4 w-4 text-[#94a3b8]" />
                       </button>
                     </div>

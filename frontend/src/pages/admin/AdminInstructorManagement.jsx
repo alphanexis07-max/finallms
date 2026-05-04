@@ -30,7 +30,9 @@ import {
   MoreHorizontal,
   ThumbsUp,
   Eye,
-  Trash2
+  Trash2,
+  Ban,
+  CheckCircle2
 } from 'lucide-react'
 import { api } from '../../lib/api'
 
@@ -491,37 +493,11 @@ function ViewInstructorModal({ instructor, courses = [], onClose }) {
 // Assign Course Modal Component
 function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) {
   const [selectedCourse, setSelectedCourse] = useState('')
-  const [selectedBatch, setSelectedBatch] = useState('')
   const [teachingRole, setTeachingRole] = useState('primary')
   const [note, setNote] = useState('')
   const [loading] = useState(false)
 
-  const courses = availableCourses || [
-    { id: 1, name: 'Creative English Level 1', hours: 4.5, level: 'Beginner', learners: 58 },
-    { id: 2, name: 'Creative English Level 2', hours: 4.5, level: 'Intermediate', learners: 46 },
-    { id: 3, name: 'Advanced English Writing', hours: 3, level: 'Advanced', learners: 29 },
-  ]
-
-  const batches = {
-    'Creative English Level 1': [
-      { key: 'A', title: 'Batch A - Morning', sub: 'Starts next week', days: 'Mon, Wed, Fri', time: '10:00 AM - 11:30 AM', hours: '4.5 hrs/wk', seats: '24 / 30 Enrolled' },
-      { key: 'B', title: 'Batch B - Evening', sub: 'Currently active', days: 'Tue, Thu', time: '5:00 PM - 6:30 PM', hours: '3 hrs/wk', seats: '28 / 30 Enrolled' },
-    ],
-    'Creative English Level 2': [
-      { key: 'C', title: 'Batch C - Weekend', sub: 'Starts next month', days: 'Sat, Sun', time: '10:00 AM - 1:00 PM', hours: '6 hrs/wk', seats: '0 / 30 Enrolled' },
-    ],
-    'Advanced English Writing': [
-      { key: 'D', title: 'Batch D - Evening Advanced', sub: 'Starts next week', days: 'Mon, Thu', time: '6:00 PM - 7:30 PM', hours: '3 hrs/wk', seats: '12 / 20 Enrolled' },
-    ],
-  }
-
-  const selectedBatchesList = selectedCourse ? batches[selectedCourse] || [] : []
-  const selectedBatchData = selectedBatchesList.find(b => b.key === selectedBatch)
-  const additionalHours = selectedBatchData ? parseFloat(selectedBatchData.hours) : 0
-  const currentLoad = instructor?.load ? parseInt(instructor.load) || 0 : 0
-  const newTotal = currentLoad + additionalHours
-  const isOverload = newTotal > 25
-  const loadPercent = Math.min((newTotal / 25) * 100, 100)
+  const courses = availableCourses?.length > 0 ? availableCourses : []
 
   if (!instructor) return null
 
@@ -566,74 +542,22 @@ function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) 
               <div className="relative">
                 <select
                   value={selectedCourse}
-                  onChange={(e) => {
-                    setSelectedCourse(e.target.value)
-                    setSelectedBatch('')
-                  }}
+                  onChange={(e) => setSelectedCourse(e.target.value)}
                   className="w-full appearance-none rounded-[8px] border border-black/[0.08] bg-white px-3 py-2.5 text-[14px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-[#5b3df6] cursor-pointer"
                 >
                   <option value="">Select a course...</option>
                   {courses.map(course => (
-                    <option key={course.id} value={course.name}>{course.name}</option>
+                    <option key={course._id || course.id} value={course.title}>{course.title}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
               </div>
             </div>
 
-            {/* Select Batch */}
-            <div className="mb-6 rounded-[14px] border border-black/[0.08] bg-white p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">2</div>
-                <h4 className="text-[16px] font-semibold text-[#1f2937]">Select Batch</h4>
-              </div>
-              {!selectedCourse ? (
-                <p className="text-[12px] text-[#94a3b8] italic">Please select a course first</p>
-              ) : selectedBatchesList.length === 0 ? (
-                <p className="text-[12px] text-[#f97316]">No batches available for this course</p>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {selectedBatchesList.map((batch) => (
-                    <button
-                      key={batch.key}
-                      onClick={() => setSelectedBatch(batch.key)}
-                      className={`rounded-[10px] border p-4 text-left transition-all ${
-                        selectedBatch === batch.key
-                          ? 'border-[#5b3df6] bg-[#faf9ff] shadow-sm'
-                          : 'border-black/[0.08] bg-white hover:bg-[#fafcff]'
-                      }`}
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <p className="text-[14px] font-semibold text-[#1f2937]">{batch.title}</p>
-                          <p className="mt-0.5 text-[11px] text-[#94a3b8]">{batch.sub}</p>
-                        </div>
-                        <div
-                          className={`flex h-5 w-5 items-center justify-center rounded-[4px] border-2 ${
-                            selectedBatch === batch.key
-                              ? 'border-[#5b3df6] bg-[#5b3df6]'
-                              : 'border-black/[0.2] bg-white'
-                          }`}
-                        >
-                          {selectedBatch === batch.key && <Check className="h-3 w-3 text-white" />}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[11px] text-[#64748b]">{batch.days}</p>
-                        <p className="text-[11px] text-[#64748b]">{batch.time}</p>
-                        <p className="text-[11px] text-[#64748b]">{batch.hours}</p>
-                      </div>
-                      <p className="mt-2 text-[11px] font-medium text-[#5b3df6]">{batch.seats}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Teaching Role */}
             <div className="mb-6 rounded-[14px] border border-black/[0.08] bg-white p-5">
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">3</div>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5b3df6] text-[11px] font-semibold text-white">2</div>
                 <h4 className="text-[16px] font-semibold text-[#1f2937]">Teaching Role</h4>
               </div>
               <div className="flex flex-wrap gap-6">
@@ -673,19 +597,6 @@ function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) 
               />
             </div>
 
-            {/* Warning Message */}
-            {selectedBatchData && (
-              <div className="mt-4 rounded-[10px] border border-[#ffd966] bg-[#fff8e7] p-4 flex gap-3">
-                <TriangleAlert className="h-5 w-5 text-[#f97316] flex-shrink-0" />
-                <p className="text-[12px] text-[#4b2e00]">
-                  Assigning a new batch will increase the instructor's weekly teaching load.
-                  <span className="block mt-1 font-medium">
-                    Current: {currentLoad} hrs/week → New: {newTotal} hrs/week
-                    {isOverload && <span className="ml-2 text-[#f97316]">Exceeds recommended 25 hrs/week limit.</span>}
-                  </span>
-                </p>
-              </div>
-            )}
           </div>
 
           <aside className="min-h-0 overflow-y-auto border-t border-black/[0.08] bg-[#fafcff] p-4 sm:p-6 xl:border-l xl:border-t-0">
@@ -694,26 +605,8 @@ function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) 
                 <h3 className="text-[15px] font-semibold text-[#0f172a]">Assignment summary</h3>
                 <div className="mt-3 space-y-2 text-[12px] text-[#64748b]">
                   <p><span className="text-[#94a3b8]">Course:</span> <span className="font-medium text-[#334155]">{selectedCourse || 'Not selected'}</span></p>
-                  <p><span className="text-[#94a3b8]">Batch:</span> <span className="font-medium text-[#334155]">{selectedBatchData ? selectedBatchData.title : 'Not selected'}</span></p>
                   <p><span className="text-[#94a3b8]">Role:</span> <span className="font-medium text-[#334155]">{teachingRole === 'primary' ? 'Primary Instructor' : 'Co-Instructor'}</span></p>
                 </div>
-              </div>
-
-              <div className="rounded-[14px] border border-black/[0.08] bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[15px] font-semibold text-[#0f172a]">Workload impact</h3>
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${isOverload ? 'bg-[#ffe2db] text-[#c2410c]' : 'bg-[#e8f5ff] text-[#2563eb]'}`}>
-                    {isOverload ? 'High load' : 'Safe range'}
-                  </span>
-                </div>
-                <p className="mt-2 text-[12px] text-[#64748b]">{currentLoad} hrs/week → {newTotal} hrs/week</p>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
-                  <div
-                    className={`h-full rounded-full ${isOverload ? 'bg-[#f97316]' : 'bg-[#5b3df6]'}`}
-                    style={{ width: `${Math.max(12, loadPercent)}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[11px] text-[#94a3b8]">Recommended max weekly load: 25 hrs</p>
               </div>
 
               <div className="rounded-[14px] border border-[#d8cffc] bg-[#faf9ff] p-4">
@@ -725,7 +618,7 @@ function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) 
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="mt-0.5 h-3.5 w-3.5" />
-                    Batch roster gets notified after confirmation.
+                    Course roster gets notified after confirmation.
                   </li>
                 </ul>
               </div>
@@ -740,14 +633,14 @@ function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) 
           </button>
           <button
             onClick={() => {
-              if (selectedCourse && selectedBatch) {
-                onAssign?.({ course: selectedCourse, batch: selectedBatch, role: teachingRole, note })
+              if (selectedCourse) {
+                onAssign?.({ course: selectedCourse, role: teachingRole, note })
                 onClose()
               }
             }}
-            disabled={!selectedCourse || !selectedBatch || loading}
+            disabled={!selectedCourse || loading}
             className={`inline-flex h-10 items-center gap-2 rounded-[8px] px-4 text-[13px] font-semibold transition-colors ${
-              selectedCourse && selectedBatch && !loading
+              selectedCourse && !loading
                 ? 'bg-[#5b3df6] text-white hover:bg-[#4a2ed8]'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
@@ -1202,6 +1095,22 @@ export default function AdminInstructorManagement() {
     }
   }
 
+  const handleToggleStatus = async (instructor) => {
+    setLoading(true)
+    try {
+      setError('')
+      await api(`/lms/users/${instructor._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !instructor.is_active })
+      })
+      await loadInstructors()
+    } catch (err) {
+      setError(err?.message || 'Unable to update status.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredInstructors = instructors.filter((inst) => {
     const matchesFilter =
       activeFilter === 'All instructors' ||
@@ -1440,6 +1349,18 @@ export default function AdminInstructorManagement() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => handleToggleStatus(inst)}
+                            title={inst.is_active ? "Suspend" : "Activate"}
+                            className={`inline-flex h-9 items-center gap-2 rounded-[6px] border px-3 text-[12px] font-medium transition-colors ${
+                              inst.is_active 
+                                ? "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100" 
+                                : "border-green-200 bg-green-50 text-green-600 hover:bg-green-100"
+                            }`}
+                          >
+                            {inst.is_active ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleDeleteInstructor(inst._id)}
                             className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-red-200 bg-red-50 px-3 text-[12px] font-medium text-red-600 hover:bg-red-100"
                           >
@@ -1475,7 +1396,7 @@ export default function AdminInstructorManagement() {
           setSelectedAssignInstructor(null)
         }}
         onAssign={() => {}}
-        availableCourses={[]}
+        availableCourses={courses}
       />
     )}
     {showViewModal && selectedViewInstructor && (
