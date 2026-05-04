@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CheckCheck, BookOpen, Calendar, Award, CreditCard, Sparkles, ArrowUpRight } from 'lucide-react'
+import { CheckCheck, BookOpen, Calendar, Award, CreditCard, Sparkles, ArrowUpRight, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
 
@@ -144,7 +144,21 @@ export default function Notification() {
                       </div>
                     </div>
                   </div>
-                  {item.unread && <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#5b3df6] shadow-[0_0_0_4px_rgba(91,61,246,0.12)]" />}
+                  <div className="flex flex-col items-end gap-2">
+                    {item.unread && <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#5b3df6] shadow-[0_0_0_4px_rgba(91,61,246,0.12)]" />}
+                    <button
+                      title="Delete notification"
+                      className="p-1 rounded hover:bg-red-50"
+                      onClick={async () => {
+                        if (window.confirm('Delete this notification?')) {
+                          await api(`/lms/notifications/${item.id}`, { method: 'DELETE' })
+                          load()
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
                 </article>
               )
             })}

@@ -262,11 +262,27 @@ function ViewInstructorModal({ instructor, courses = [], onClose }) {
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
                       <Phone className="h-4 w-4" />
-                      <span>{instructor.phone || '-'}</span>
+                      <span>{
+                        instructor.phone ||
+                        instructor.phone_number ||
+                        instructor.mobile ||
+                        instructor.contact ||
+                        instructor.whatsapp ||
+                        instructor.mobile_number ||
+                        '-'
+                      }</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
                       <Briefcase className="h-4 w-4" />
-                      <span>{instructor.expertise || '-'}</span>
+                      <span>{
+                        instructor.designation ||
+                        instructor.title ||
+                        instructor.position ||
+                        instructor.expertise ||
+                        instructor.subject ||
+                        instructor.department ||
+                        '-'
+                      }</span>
                     </div>
                   </div>
                 </div>
@@ -1019,6 +1035,10 @@ export default function AdminInstructorManagement() {
         statusVariant: user.is_active ? 'success' : 'secondary',
         avatar: user.avatar_url,
         expertise: user.expertise,
+        // Add all possible phone fields for modal display
+        phone: user.phone || user.phone_number || user.mobile || '',
+        phone_number: user.phone_number || '',
+        mobile: user.mobile || '',
         bank_account_holder: user.bank_account_holder || '',
         bank_name: user.bank_name || '',
         bank_account_number: user.bank_account_number || '',
@@ -1144,11 +1164,10 @@ export default function AdminInstructorManagement() {
               Instructor workspace
             </span>
             <h1 className="mb-3 max-w-[850px] text-[30px] font-bold leading-[1.2] text-[#0f172a]">
-              Create, onboard, and assign instructors across all active programs.
+              Manage instructors in one place.
             </h1>
             <p className="mb-5 max-w-[800px] text-[13.5px] leading-relaxed text-[#94a3b8]">
-              Review availability, teaching load, learner ratings, and course mapping from one operational screen.
-              Keep instructor records, batch assignments, and onboarding tasks aligned with your institute dashboard.
+              Onboard, assign, and track performance effortlessly.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <button
