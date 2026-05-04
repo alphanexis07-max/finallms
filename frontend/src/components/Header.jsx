@@ -60,14 +60,14 @@ export default function Header() {
       </div>
 
       {menuOpen ? (
-        <div className={`px-4 py-4 sm:px-6 lg:hidden ${isHomePage ? "bg-[#04776d]" : "bg-white border-b border-slate-200"}`}>
+        <div className="bg-[#04776d] px-4 py-4 sm:px-6 lg:hidden">
           <div className="flex flex-col gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setMenuOpen(false)}
-                className={`rounded-md px-3 py-2.5 text-sm no-underline ${isActive(item.path) ? "bg-white/20 text-white" : isHomePage ? "text-white" : "text-slate-700"}`}
+                className={`rounded-md px-3 py-2.5 text-sm no-underline ${isActive(item.path) ? "bg-white/20 text-white" : "text-white"}`}
               >
                 {item.label}
               </Link>
@@ -77,7 +77,7 @@ export default function Header() {
             <Link
               to="/login"
               onClick={() => setMenuOpen(false)}
-              className={`rounded-md border px-3 py-2.5 text-center text-sm no-underline ${isHomePage ? "border-white/60 text-white" : "border-slate-300 text-slate-700"}`}
+              className="rounded-md border border-white/60 px-3 py-2.5 text-center text-sm no-underline text-white"
             >
               Log in
             </Link>

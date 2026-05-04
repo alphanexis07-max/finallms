@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     sendgrid_from_email: str = ""
     frontend_url: str = "http://localhost:5173"
+    google_client_id: str = ""
 
     @property
     def secret_key(self) -> str:

@@ -3,6 +3,7 @@
 import asyncio
 from datetime import datetime, timezone
 from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from app.core.config import settings
 from app.db import mongo
@@ -43,17 +44,27 @@ router = APIRouter(prefix="/lms", tags=["lms"])
 # Delete a notification by ID
 @router.delete("/notifications/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notification(notification_id: str, user=Depends(get_current_user), tenant_id: str = Depends(get_tenant_id)):
-    from bson import ObjectId
-    # Only allow deleting notifications for the current user or tenant
+    # Idempotent delete: if the id is invalid/missing, treat as already deleted.
+    try:
+        notification_oid = ObjectId(notification_id)
+    except (InvalidId, TypeError):
+        return None
+
+    # Only allow deleting notifications for the current user or tenant.
     role = user.get("role")
-    query = {"_id": ObjectId(notification_id)}
+    queries = []
     if role in {Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value} and tenant_id:
-        query["tenant_id"] = tenant_id
+        # Prefer tenant-scoped deletion; fallback to user-scoped for legacy rows.
+        queries.append({"_id": notification_oid, "tenant_id": tenant_id})
+        queries.append({"_id": notification_oid, "user_id": user["sub"]})
     else:
-        query["user_id"] = user["sub"]
-    result = await db.notifications.delete_one(query)
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Notification not found")
+        queries.append({"_id": notification_oid, "user_id": user["sub"]})
+
+    for query in queries:
+        result = await db.notifications.delete_one(query)
+        if result.deleted_count > 0:
+            break
+
     return None
 
 # ...existing code...
@@ -142,9 +153,6 @@ from app.services.email import send_transactional_email
 from app.services.realtime import ws_manager
 from app.services.zoom import create_zoom_meeting
 from app.utils.security import hash_password
-
-router = APIRouter(prefix="/lms", tags=["lms"])
-
 
 class _DBProxy:
     def __getattr__(self, name):

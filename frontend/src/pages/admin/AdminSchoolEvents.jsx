@@ -176,8 +176,8 @@ export default function AdminSchoolEvents() {
     <div className="min-h-full bg-[#F7FAFD]">
       <div className="bg-gradient-to-b flex h-full flex-col gap-[24px] from-[#f6f8fa] p-4 to-[#f7fcff] sm:p-6 lg:p-7">
         <section className="border border-black/[0.08] border-solid content-stretch flex flex-col items-start pb-[23px] pt-[25px] px-[25px] relative rounded-[8px] shrink-0 w-full bg-gradient-to-br from-white to-[#e8f5ff]">
-          <div className="flex w-full flex-col items-start justify-between gap-4 lg:flex-row">
-            <div className="flex flex-col gap-[11px] items-start relative shrink-0">
+          <div className="flex w-full flex-col items-start justify-between gap-4 lg:flex-row lg:items-start">
+            <div className="flex min-w-0 flex-1 flex-col gap-[11px] items-start relative">
               <div className="flex gap-2 flex-wrap">
                 <Pill variant="accent">Academic year 2025</Pill>
                 <Pill variant="success">{stats.upcoming30} upcoming events</Pill>
@@ -197,7 +197,7 @@ export default function AdminSchoolEvents() {
                 <span>{stats.confirmedVenues} venues confirmed</span>
               </div>
             </div>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row lg:flex-shrink-0">
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="inline-flex items-center gap-2 h-[40px] px-[16px] rounded-[6px] text-[14px] font-medium bg-[#5b3df6] text-white hover:bg-[#4c2dd9] transition-colors cursor-pointer"

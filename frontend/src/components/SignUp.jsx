@@ -19,7 +19,13 @@ const GOOGLE_CLIENT_ID = (
   import.meta.env.REACT_APP_GOOGLE_CLIENT_ID ||
   ''
 ).trim()
-const GOOGLE_AUTH_ENABLED = GOOGLE_CLIENT_ID.length > 0
+const GOOGLE_ALLOWED_ORIGINS = String(import.meta.env.VITE_GOOGLE_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+const GOOGLE_ORIGIN_ALLOWED =
+  GOOGLE_ALLOWED_ORIGINS.length === 0 || GOOGLE_ALLOWED_ORIGINS.includes(window.location.origin)
+const GOOGLE_AUTH_ENABLED = GOOGLE_CLIENT_ID.length > 0 && GOOGLE_ORIGIN_ALLOWED
 
 export default function SignUp() {
   const navigate = useNavigate()
@@ -152,7 +158,9 @@ export default function SignUp() {
                   />
                 ) : (
                   <p className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    Google sign-up is disabled. Add `VITE_GOOGLE_CLIENT_ID` in frontend env.
+                    {GOOGLE_CLIENT_ID.length === 0
+                      ? 'Google sign-up is disabled. Add `VITE_GOOGLE_CLIENT_ID` in frontend env.'
+                      : 'Google sign-up is disabled for this origin. Add the current origin in Google OAuth settings or set `VITE_GOOGLE_ALLOWED_ORIGINS`.'}
                   </p>
                 )}
                 <div className="flex items-center w-full my-2">

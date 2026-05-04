@@ -9,10 +9,10 @@ logger = logging.getLogger("lms-api.mongo")
 
 async def connect_db():
     global client, db
-    print("🔥 CONNECTING TO DB...")
+    print("CONNECTING TO DB...")
     client = AsyncIOMotorClient(settings.mongo_uri)
     db = client[settings.mongo_db]
-    print("✅ DB CONNECTED")
+    print("DB CONNECTED")
 
 
 async def close_db() -> None:

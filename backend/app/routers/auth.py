@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 import logging
 import re
+import httpx
 from jose import jwt, JWTError
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,7 +14,8 @@ from app.schemas.auth import (
 from app.utils.security import create_access_token, hash_password, verify_and_update_password
 from app.services.email import send_transactional_email
 from app.core.config import settings
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from app.models.enums import Role
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("lms-api.auth")
@@ -31,6 +33,41 @@ class ProfileUpdateIn(BaseModel):
     bank_account_number: str | None = None
     bank_ifsc: str | None = None
     bank_upi_id: str | None = None
+
+
+class GoogleAuthIn(BaseModel):
+    credential: str = Field(min_length=20)
+
+
+async def _verify_google_credential(credential: str) -> dict:
+    url = "https://oauth2.googleapis.com/tokeninfo"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url, params={"id_token": credential})
+    except Exception as exc:  # noqa: BLE001
+        logger.error("google_token_verify_network_error error=%s", exc)
+        raise HTTPException(status_code=503, detail="Google auth is unavailable right now") from exc
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    payload = response.json()
+    if str(payload.get("email_verified", "")).lower() != "true":
+        raise HTTPException(status_code=401, detail="Google account email is not verified")
+
+    configured_client_id = (settings.google_client_id or "").strip()
+    audience = str(payload.get("aud") or "")
+    if configured_client_id and audience != configured_client_id:
+        raise HTTPException(status_code=401, detail="Google credential audience mismatch")
+
+    email = str(payload.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account email is missing")
+
+    return {
+        "email": email,
+        "full_name": str(payload.get("name") or "").strip() or email.split("@")[0],
+    }
 
 
 def email_match_query(email: str) -> dict:
@@ -173,6 +210,73 @@ async def login(payload: LoginRequest):
         role=matched_user["role"],
         tenant_id=matched_user.get("tenant_id"),
     )
+
+
+@router.post("/google-login", response_model=TokenResponse)
+async def google_login(payload: GoogleAuthIn):
+    if mongo.db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    profile = await _verify_google_credential(payload.credential)
+    user = await mongo.db.users.find_one({"email": email_match_query(profile["email"]), "is_active": {"$ne": False}})
+
+    if not user:
+        now = datetime.now(timezone.utc)
+        new_user = {
+            "full_name": profile["full_name"],
+            "email": profile["email"],
+            "password_hash": hash_password(str(ObjectId())),
+            "role": Role.STUDENT.value,
+            "tenant_id": None,
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now,
+        }
+        inserted = await mongo.db.users.insert_one(new_user)
+        user = {**new_user, "_id": inserted.inserted_id}
+    else:
+        await mongo.db.users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"updated_at": datetime.now(timezone.utc)}},
+        )
+
+    token = create_access_token(
+        {
+            "sub": str(user["_id"]),
+            "role": user.get("role") or Role.STUDENT.value,
+            "tenant_id": user.get("tenant_id"),
+        }
+    )
+    return TokenResponse(
+        access_token=token,
+        role=user.get("role") or Role.STUDENT.value,
+        tenant_id=user.get("tenant_id"),
+    )
+
+
+@router.post("/google-signup")
+async def google_signup(payload: GoogleAuthIn):
+    if mongo.db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    profile = await _verify_google_credential(payload.credential)
+    existing = await mongo.db.users.find_one({"email": email_match_query(profile["email"])})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    now = datetime.now(timezone.utc)
+    user = {
+        "full_name": profile["full_name"],
+        "email": profile["email"],
+        "password_hash": hash_password(str(ObjectId())),
+        "role": Role.STUDENT.value,
+        "tenant_id": None,
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await mongo.db.users.insert_one(user)
+    return {"message": "Google sign-up successful"}
 
 
 @router.get("/me")

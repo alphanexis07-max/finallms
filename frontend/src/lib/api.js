@@ -114,6 +114,11 @@ export async function api(path, options = {}) {
         runtimeApiBase = base
         localStorage.setItem('lms_api_base', base)
         if (!response.ok) {
+          // Allow idempotent delete semantics: deleting an already-missing resource is a no-op.
+          if (method === 'DELETE' && response.status === 404) {
+            responseCache.clear()
+            return data || {}
+          }
           throw new Error(data.detail || 'Request failed')
         }
         if (canCache) {

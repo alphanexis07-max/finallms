@@ -10,6 +10,13 @@ function iconFor(type) {
   return CreditCard
 }
 
+function normalizeNotificationId(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const objectIdMatch = raw.match(/[a-f0-9]{24}/i)
+  return objectIdMatch ? objectIdMatch[0] : raw
+}
+
 export default function Notification() {
   const [tab, setTab] = useState('all')
   const [items, setItems] = useState([])
@@ -21,7 +28,7 @@ export default function Notification() {
       .then((res) => {
         const data = res.items || res || []
         const normalized = data.map((n) => ({
-          id: n._id,
+          id: normalizeNotificationId(n._id || n.id),
           title: n.title,
           message: n.message,
           time: new Date(n.created_at || Date.now()).toLocaleString(),
@@ -151,8 +158,21 @@ export default function Notification() {
                       className="p-1 rounded hover:bg-red-50"
                       onClick={async () => {
                         if (window.confirm('Delete this notification?')) {
-                          await api(`/lms/notifications/${item.id}`, { method: 'DELETE' })
-                          load()
+                          const notificationId = normalizeNotificationId(item.id)
+                          if (!notificationId) return
+
+                          try {
+                            await api(`/lms/notifications/${encodeURIComponent(notificationId)}`, { method: 'DELETE' })
+                            setItems((prev) => prev.filter((x) => x.id !== item.id))
+                          } catch (err) {
+                            // Keep the UI stable even when backend returns 404 for stale/malformed IDs.
+                            const message = String(err?.message || '')
+                            if (message.toLowerCase().includes('not found')) {
+                              setItems((prev) => prev.filter((x) => x.id !== item.id))
+                              return
+                            }
+                            window.alert('Unable to delete notification right now.')
+                          }
                         }
                       }}
                     >

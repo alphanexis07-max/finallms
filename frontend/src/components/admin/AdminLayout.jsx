@@ -64,8 +64,8 @@ export default function AdminLayout() {
         }`}
       >
         <div className="flex items-center gap-3 px-[18px] pt-4 pb-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#ede7ff]">
-            <Layers className="h-5 w-5 text-[#5b3df6]" strokeWidth={2} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md">
+            <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
           </div>
           <div>
             <div className="text-xl font-bold leading-[22px]">LMS</div>
