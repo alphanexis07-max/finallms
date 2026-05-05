@@ -939,7 +939,7 @@ export default function AdminLiveClasses() {
       if (recipientIds.length > 0) {
         await Promise.all(
           recipientIds.map((studentId) =>
-            api('/lms/admin/certificates', {
+            api('/admin/certificates', {
               method: 'POST',
               body: JSON.stringify({
                 student_id: studentId,
@@ -1456,4 +1456,3 @@ export default function AdminLiveClasses() {
     </div>
   )
 }
-

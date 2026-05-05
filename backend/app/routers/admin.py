@@ -2,9 +2,13 @@
 # ...existing code...
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from app.deps.auth import get_current_user
+from app.deps.auth import get_current_user, get_tenant_id, require_roles
 from app.db import mongo
+from app.models.enums import Role
+from app.schemas.instructor import CertificateUploadIn
+from app.services.realtime import ws_manager
 from bson import ObjectId
+from datetime import datetime
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -104,7 +108,104 @@ async def get_admin_courses(user=Depends(get_current_user)):
     return courses
 
 @router.post("/certificates")
-async def upload_admin_certificate(data: dict, user=Depends(get_current_user)):
-    admin_required(user)
-    # TODO: Implement certificate upload logic
-    return {"success": True, "data": data}
+async def upload_admin_certificate(
+    payload: CertificateUploadIn,
+    tenant_id: str = Depends(get_tenant_id),
+    user=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUB_ADMIN)),
+):
+    def _id_variants(value: str | None) -> list:
+        raw = str(value or "").strip()
+        if not raw:
+            return []
+        variants = [raw]
+        if ObjectId.is_valid(raw):
+            variants.append(ObjectId(raw))
+        return variants
+
+    course_variants = _id_variants(payload.course_id)
+    student_variants = _id_variants(payload.student_id)
+    if not course_variants or not student_variants:
+        raise HTTPException(status_code=400, detail="Invalid certificate payload")
+
+    course_query: dict = {"_id": {"$in": course_variants}}
+    course = await mongo.db.courses.find_one(course_query)
+    if not course and tenant_id:
+        # Fallback to no tenant_id for legacy or cross-tenant courses
+        course = await mongo.db.courses.find_one({"_id": {"$in": course_variants}, "tenant_id": None})
+
+    # We proceed even if course document is not found, as some "courses" are just string tags in enrollments
+    
+    enrollment_query: dict = {
+        "course_id": {"$in": course_variants},
+        "student_id": {"$in": student_variants},
+    }
+    if tenant_id:
+        enrollment_query["tenant_id"] = tenant_id
+        enrollment = await mongo.db.enrollments.find_one(enrollment_query)
+        if not enrollment:
+            # Fallback to no tenant_id
+            enrollment_query_legacy = {
+                "course_id": {"$in": course_variants},
+                "student_id": {"$in": student_variants},
+                "tenant_id": None,
+            }
+            enrollment = await mongo.db.enrollments.find_one(enrollment_query_legacy)
+    else:
+        enrollment = await mongo.db.enrollments.find_one(enrollment_query)
+
+    if not enrollment:
+        # Check if student is in the attendee_ids of any live class for this "course_id"
+        # This is a fallback for when the system uses live class attendance instead of formal enrollments
+        live_class_query = {
+            "course_id": {"$in": course_variants},
+            "attendee_ids": {"$in": student_variants}
+        }
+        if tenant_id:
+            live_class_query["tenant_id"] = tenant_id
+        
+        live_class_check = await mongo.db.live_classes.find_one(live_class_query)
+        if not live_class_check and tenant_id:
+             live_class_query["tenant_id"] = None
+             live_class_check = await mongo.db.live_classes.find_one(live_class_query)
+             
+        if not live_class_check:
+            raise HTTPException(status_code=404, detail="Student is not enrolled or assigned to this course/class")
+
+    now = datetime.utcnow()
+    cert = {
+        "tenant_id": tenant_id,
+        "admin_id": str(user.get("sub") or ""),
+        "issued_by": str(user.get("role") or Role.ADMIN.value),
+        "student_id": str(payload.student_id),
+        "course_id": str(payload.course_id),
+        "title": str(payload.title).strip(),
+        "file_url": str(payload.file_url or "").strip(),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    result = await mongo.db.certificates.insert_one(cert)
+    cert["_id"] = str(result.inserted_id)
+
+    notification = {
+        "tenant_id": tenant_id,
+        "user_id": str(payload.student_id),
+        "title": "Certificate issued",
+        "message": f"A certificate for {cert['title']} is now available.",
+        "type": "achievement",
+        "meta": {
+            "certificate_id": cert["_id"],
+            "course_id": cert["course_id"],
+            "student_id": cert["student_id"],
+        },
+        "read": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await mongo.db.notifications.insert_one(notification)
+    await ws_manager.broadcast(f"user:{payload.student_id}", {"type": "notification.created", "data": notification})
+    if tenant_id:
+        await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "notification.created", "data": notification})
+
+    return cert
