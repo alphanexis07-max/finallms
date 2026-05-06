@@ -315,6 +315,17 @@ function ClassDetailModal({ session, attendeeUsers, onClose, onEndCourse, onRege
             )}
           </div>
 
+          {session.zoomError && (
+            <div className="flex items-start gap-3 rounded-[10px] border border-red-100 bg-red-50 p-4">
+              <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[13px] font-semibold text-red-700">Zoom Link Issue</p>
+                <p className="text-[12px] text-red-600">{session.zoomError}</p>
+                <p className="mt-2 text-[11px] text-red-500 font-medium">Click "Generate Zoom Link" below to try again.</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 pt-2">
             {session.joinLink ? (
               <a
@@ -754,6 +765,7 @@ export default function AdminLiveClasses() {
         image: c.image_url || '',
         avgRating: Number(c.avg_rating || c.rating || 0),
         ratingCount: Number(c.rating_count || 0),
+        zoomError: c.zoom_error || '',
       }
     })
   }, [classes, courseMap, userMap])
@@ -839,7 +851,7 @@ export default function AdminLiveClasses() {
         setIsCreating(false)
         return
       }
-      await api('/lms/live-classes', {
+      const res = await api('/lms/live-classes', {
         method: 'POST',
         body: JSON.stringify({
           title,
@@ -854,6 +866,12 @@ export default function AdminLiveClasses() {
           repeat_daily: true, // recurring daily class
         }),
       })
+
+      // Silently log issues if any, but don't block the UI with alerts
+      if (res?.zoom_error) {
+        console.error('Zoom generation failed:', res.zoom_error)
+      }
+
       setForm({
         title: '',
         class_name: '',

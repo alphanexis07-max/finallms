@@ -32,13 +32,63 @@ function parseEventMeta(event) {
   }
 }
 
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000
+
+function istDateTimePartsToIso(dateValue, timeValue) {
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))
+  const timeOk = /^\d{2}:\d{2}$/.test(String(timeValue || ''))
+  if (!dateOk || !timeOk) return ''
+  return `${dateValue}T${timeValue}:00+05:30`
+}
+
+function parseServerDateAsUtc(value) {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  const raw = String(value).trim()
+  if (!raw) return null
+  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(raw)
+  if (hasTimezone) {
+    const parsed = new Date(raw)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/)
+  if (!m) {
+    const fallback = new Date(raw)
+    return Number.isNaN(fallback.getTime()) ? null : fallback
+  }
+  const [, year, month, day, hour, minute, second, millisecond] = m.map(Number)
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second || 0, millisecond || 0)
+  return new Date(utcMs)
+}
+
+function formatDateInIst(value) {
+  const date = parseServerDateAsUtc(value)
+  if (!date) return '-'
+  const istDate = new Date(date.getTime() + IST_OFFSET_MS)
+  const day = String(istDate.getUTCDate()).padStart(2, '0')
+  const month = String(istDate.getUTCMonth() + 1).padStart(2, '0')
+  const year = istDate.getUTCFullYear()
+  return `${day}/${month}/${year}`
+}
+
+function formatTimeInIst(value) {
+  const date = parseServerDateAsUtc(value)
+  if (!date) return '-'
+  const istDate = new Date(date.getTime() + IST_OFFSET_MS)
+  let hour = istDate.getUTCHours()
+  const minute = String(istDate.getUTCMinutes()).padStart(2, '0')
+  const suffix = hour >= 12 ? 'pm' : 'am'
+  hour = hour % 12
+  if (hour === 0) hour = 12
+  return `${String(hour).padStart(2, '0')}:${minute} ${suffix}`
+}
+
 function formatEventDate(event) {
   const startsAt = event?.starts_at || event?.date || null
   if (!startsAt) return { dateLabel: '-', timeLabel: '-' }
-  const date = new Date(startsAt)
   return {
-    dateLabel: date.toLocaleDateString(),
-    timeLabel: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    dateLabel: formatDateInIst(startsAt),
+    timeLabel: formatTimeInIst(startsAt),
   }
 }
 
@@ -48,6 +98,7 @@ export default function AdminSchoolEvents() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [loading, setLoading] = useState(false)
   const [createBusy, setCreateBusy] = useState(false)
+  const [editId, setEditId] = useState(null)
   const [error, setError] = useState('')
   const [events, setEvents] = useState([])
   const [eventForm, setEventForm] = useState({
@@ -119,10 +170,10 @@ export default function AdminSchoolEvents() {
     }
   }, [normalizedEvents])
 
-  const handleCreateEvent = async () => {
+  const handleSaveEvent = async () => {
     if (!eventForm.eventName.trim() || !eventForm.eventDate) return
 
-    const startValue = eventForm.startTime ? `${eventForm.eventDate}T${eventForm.startTime}` : `${eventForm.eventDate}T09:00`
+    const startValue = istDateTimePartsToIso(eventForm.eventDate, eventForm.startTime || '09:00')
     const endTimeText = eventForm.endTime ? `${eventForm.startTime || '09:00'} to ${eventForm.endTime}` : eventForm.startTime || '09:00'
     const notes = [
       `Category: ${eventForm.eventCategory}`,
@@ -139,15 +190,26 @@ export default function AdminSchoolEvents() {
     try {
       setCreateBusy(true)
       setError('')
-      await api('/lms/events', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: eventForm.eventName.trim(),
-          description: notes,
-          starts_at: new Date(startValue).toISOString(),
-        }),
-      })
+      const payload = {
+        title: eventForm.eventName.trim(),
+        description: notes,
+        starts_at: startValue,
+      }
+
+      if (editId) {
+        await api(`/lms/events/${editId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        })
+      } else {
+        await api('/lms/events', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+      }
+
       setShowCreateModal(false)
+      setEditId(null)
       setEventForm({
         eventName: '',
         eventCategory: 'Academic',
@@ -162,9 +224,50 @@ export default function AdminSchoolEvents() {
       })
       loadEvents()
     } catch (err) {
-      setError(err?.message || 'Unable to create event.')
+      setError(err?.message || 'Unable to save event.')
     } finally {
       setCreateBusy(false)
+    }
+  }
+
+  const handleEditEvent = (event) => {
+    const meta = parseEventMeta(event)
+    const startsAt = event.starts_at || event.date
+    let dateStr = ''
+    let timeStr = ''
+    if (startsAt) {
+      const d = new Date(new Date(startsAt).getTime() + IST_OFFSET_MS)
+      dateStr = d.toISOString().split('T')[0]
+      timeStr = d.toISOString().split('T')[1].slice(0, 5)
+    }
+
+    // Try to extract end time from description notes if available
+    const timeMatch = (event.description || '').match(/Time: .*? to (.*)/)
+    const endTimeStr = timeMatch ? timeMatch[1].trim() : ''
+
+    setEventForm({
+      eventName: event.title,
+      eventCategory: meta.category,
+      expectedAttendees: meta.expectedAttendees,
+      eventDate: dateStr,
+      startTime: timeStr,
+      endTime: endTimeStr,
+      venue: meta.venue === 'TBA' ? '' : meta.venue,
+      coordinator: meta.coordinator === 'TBA' ? '' : meta.coordinator,
+      description: meta.notes.split('\n').filter(l => !l.startsWith('Category:') && !l.startsWith('Venue:') && !l.startsWith('Coordinator:') && !l.startsWith('Expected attendees:') && !l.startsWith('Time:') && !l.startsWith('Publish to calendar:')).join('\n').trim(),
+      publishToCalendar: (event.description || '').includes('Publish to calendar: Yes'),
+    })
+    setEditId(event._id)
+    setShowCreateModal(true)
+  }
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return
+    try {
+      await api(`/lms/events/${eventId}`, { method: 'DELETE' })
+      loadEvents()
+    } catch (err) {
+      alert(err?.message || 'Unable to delete event.')
     }
   }
 
@@ -297,6 +400,18 @@ export default function AdminSchoolEvents() {
                         >
                           View
                         </button>
+                        <button
+                          onClick={() => handleEditEvent(event)}
+                          className="inline-flex items-center h-[36px] px-[12px] rounded-[6px] text-[13px] font-medium bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd] hover:bg-[#e0f2fe] transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event._id)}
+                          className="inline-flex items-center h-[36px] px-[12px] rounded-[6px] text-[13px] font-medium bg-[#fff1f2] text-[#e11d48] border border-[#fecaca] hover:bg-[#ffe4e6] transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -344,8 +459,8 @@ export default function AdminSchoolEvents() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="w-full max-w-[560px] max-h-[90vh] overflow-y-auto bg-white rounded-[8px] shadow-xl">
             <div className="flex items-center justify-between p-5 border-b border-black/[0.08] sticky top-0 bg-white">
-              <h2 className="text-[20px] font-bold text-[#0f172a]">Create new event</h2>
-              <button onClick={() => setShowCreateModal(false)}>
+              <h2 className="text-[20px] font-bold text-[#0f172a]">{editId ? 'Edit event' : 'Create new event'}</h2>
+              <button onClick={() => { setShowCreateModal(false); setEditId(null); }}>
                 <X className="h-5 w-5 text-[#94a3b8]" />
               </button>
             </div>
@@ -480,17 +595,17 @@ export default function AdminSchoolEvents() {
 
             <div className="sticky bottom-0 flex flex-col gap-3 border-t border-black/[0.08] bg-white p-5 sm:flex-row">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => { setShowCreateModal(false); setEditId(null); }}
                 className="flex-1 h-10 border border-black/[0.08] rounded-[6px] text-[13px] font-medium text-[#64748b] hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleCreateEvent}
+                onClick={handleSaveEvent}
                 disabled={createBusy}
                 className="flex-1 h-10 bg-[#5b3df6] rounded-[6px] text-[13px] font-medium text-white hover:bg-[#4a2ed8] transition-colors disabled:opacity-60"
               >
-                {createBusy ? 'Creating...' : 'Create Event'}
+                {createBusy ? (editId ? 'Saving...' : 'Creating...') : (editId ? 'Update Event' : 'Create Event')}
               </button>
             </div>
           </div>

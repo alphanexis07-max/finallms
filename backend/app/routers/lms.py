@@ -1250,11 +1250,49 @@ async def list_events(
             {"tenant_id": {"$exists": False}},
         ]
     }
-    legacy_result = await paged(db.events, legacy_query, "starts_at", 1, skip, limit)
-    if legacy_result.get("total", 0) > 0:
-        return legacy_result
+    return await paged(db.events, legacy_query, "starts_at", 1, skip, limit)
 
-    return legacy_result
+
+@router.patch("/events/{event_id}")
+async def update_event(
+    event_id: str,
+    payload: EventUpdateIn,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR)),
+):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        return {"message": "No updates provided"}
+    updates["updated_at"] = datetime.now(timezone.utc)
+    query = {"_id": ObjectId(event_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+
+    result = await db.events.update_one(query, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    updated = await db.events.find_one(query)
+    await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "event.updated", "data": {"id": event_id}})
+    return as_dict(updated)
+
+
+@router.delete("/events/{event_id}")
+async def delete_event(
+    event_id: str,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR)),
+):
+    query = {"_id": ObjectId(event_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+
+    result = await db.events.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "event.deleted", "data": {"id": event_id}})
+    return {"message": "Event deleted"}
 
 
 @router.post("/notifications")

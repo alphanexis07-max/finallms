@@ -138,6 +138,12 @@ class EventIn(BaseModel):
     starts_at: datetime
 
 
+class EventUpdateIn(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    starts_at: datetime | None = None
+
+
 class NotificationIn(BaseModel):
     user_id: str
     title: str
