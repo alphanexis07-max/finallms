@@ -14,7 +14,14 @@ def _basic_auth_header(client_id: str, client_secret: str) -> str:
 
 async def _get_zoom_access_token() -> str:
     if not settings.account_id or not settings.client_id or not settings.client_secret:
-        raise HTTPException(status_code=500, detail="Zoom credentials are not configured")
+        missing = []
+        if not settings.account_id: missing.append("account_id")
+        if not settings.client_id: missing.append("client_id")
+        if not settings.client_secret: missing.append("client_secret")
+        
+        detail = f"Zoom credentials are not configured. Missing: {', '.join(missing)}"
+        print(f"DEBUG: {detail}") # Server-side log
+        raise HTTPException(status_code=500, detail=detail)
 
     auth = _basic_auth_header(settings.client_id, settings.client_secret)
     token_url = (

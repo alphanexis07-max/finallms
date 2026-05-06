@@ -37,3 +37,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Debug: Verify Zoom credentials on startup
+if settings.env == "dev":
+    print(f"--- Config Check ---")
+    print(f"Account ID: {'[SET]' if settings.account_id else '[MISSING]'}")
+    print(f"Client ID: {'[SET]' if settings.client_id else '[MISSING]'}")
+    print(f"--------------------")
