@@ -180,41 +180,6 @@ export default function InstructorSignup() {
 
             {/* Scrollable Form Fields */}
             <div className="flex-1 overflow-y-auto px-5 sm:px-8">
-              {/* Google Sign Up Button */}
-              <div className="flex flex-col items-center gap-3 mb-1">
-                {GOOGLE_AUTH_ENABLED ? (
-                  <GoogleLogin
-                    onSuccess={async (credentialResponse) => {
-                      try {
-                        const data = await api('/auth/google-signup', {
-                          method: 'POST',
-                          body: JSON.stringify({ credential: credentialResponse.credential, role: 'instructor' }),
-                        })
-                        setAuthSession(data.access_token, data.role, data.tenant_id)
-                        navigate(getDashboardPathByRole(data.role))
-                      } catch (err) {
-                        showToast('Google Sign Up Failed')
-                      }
-                    }}
-                    onError={() => {
-                      showToast('Google Sign Up Failed')
-                    }}
-                    width="360"
-                    theme="outline"
-                    size="large"
-                  />
-                ) : (
-                  <p className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    Google sign-up is disabled. Add `VITE_GOOGLE_CLIENT_ID` in frontend env.
-                  </p>
-                )}
-                <div className="flex items-center w-full my-2">
-                  <div className="flex-grow border-t border-gray-200"></div>
-                  <span className="mx-3 text-xs text-gray-400 font-medium">or sign up with email</span>
-                  <div className="flex-grow border-t border-gray-200"></div>
-                </div>
-              </div>
-
               <form onSubmit={handleSubmit} className="flex flex-col gap-4 pb-4">
                 <Field
                   icon={<User className="h-4 w-4" />}

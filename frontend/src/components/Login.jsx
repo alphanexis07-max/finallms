@@ -121,43 +121,6 @@ export default function Login() {
               <p className="mt-2 text-sm text-slate-500">Enter your details to access your account.</p>
             </div>
 
-             {/* Google Login Button - Improved UI */}
-            <div className="flex flex-col items-center gap-3 mb-1">
-              {GOOGLE_AUTH_ENABLED ? (
-                <GoogleLogin
-                  onSuccess={async (credentialResponse) => {
-                    try {
-                      const data = await api('/auth/google-login', {
-                        method: 'POST',
-                        body: JSON.stringify({ credential: credentialResponse.credential }),
-                      })
-                      setAuthSession(data.access_token, data.role, data.tenant_id)
-                      navigate(getDashboardPathByRole(data.role))
-                    } catch (err) {
-                      showToast(err?.message || 'Google Login Failed')
-                    }
-                  }}
-                  onError={() => {
-                    showToast('Google Login Failed')
-                  }}
-                  width="360"
-                  theme="outline"
-                  size="large"
-                />
-              ) : (
-                <p className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                  {GOOGLE_CLIENT_ID.length === 0
-                    ? 'Google sign-in is disabled. Add `VITE_GOOGLE_CLIENT_ID` in frontend env.'
-                    : 'Google sign-in is disabled for this origin. Add the current origin in Google OAuth settings or set `VITE_GOOGLE_ALLOWED_ORIGINS`.'}
-                </p>
-              )}
-              <div className="flex items-center w-full my-2">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="mx-3 text-xs text-gray-400 font-medium">or login with email</span>
-                <div className="flex-grow border-t border-gray-200"></div>
-              </div>
-            </div>
-
             <form onSubmit={onSubmit} className="space-y-5">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-[#111b2f]">Email Address</label>

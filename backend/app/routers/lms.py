@@ -760,31 +760,33 @@ async def regenerate_zoom_link(
 
 
 @router.delete("/live-classes/{live_class_id}")
-async def cancel_live_class(
+async def delete_live_class(
     live_class_id: str,
     tenant_id: str = Depends(get_tenant_id),
     _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR)),
 ):
-    result = await db.live_classes.update_one(
-        {"_id": ObjectId(live_class_id), "tenant_id": tenant_id},
-        {"$set": {"status": "cancelled", "updated_at": datetime.now(timezone.utc)}},
-    )
-    if result.matched_count == 0:
+    query = {"_id": ObjectId(live_class_id), "tenant_id": tenant_id}
+    item = await db.live_classes.find_one(query)
+    if not item:
         raise HTTPException(status_code=404, detail="Live class not found")
-    cancelled = await db.live_classes.find_one({"_id": ObjectId(live_class_id), "tenant_id": tenant_id})
-    if cancelled:
-        recipients = {cancelled.get("instructor_id"), *(cancelled.get("attendee_ids") or [])}
-        recipients = [uid for uid in recipients if uid]
-        if recipients:
-            await _create_user_notifications(
-                tenant_id=tenant_id,
-                user_ids=recipients,
-                title="Live class cancelled",
-                message=f"{cancelled.get('title', 'A live class')} has been cancelled.",
-                meta={"live_class_id": live_class_id},
-            )
-    await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.cancelled", "data": {"id": live_class_id}})
-    return {"message": "Live class cancelled"}
+
+    result = await db.live_classes.delete_one(query)
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Live class not found")
+
+    # Notify users
+    recipients = {item.get("instructor_id"), *(item.get("attendee_ids") or [])}
+    recipients = [uid for uid in recipients if uid]
+    if recipients:
+        await _create_user_notifications(
+            tenant_id=tenant_id,
+            user_ids=recipients,
+            title="Live class deleted",
+            message=f"{item.get('title', 'A live class')} has been removed.",
+            meta={"live_class_id": live_class_id},
+        )
+    await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.deleted", "data": {"id": live_class_id}})
+    return {"message": "Live class deleted"}
 
 
 @router.post("/enrollments")

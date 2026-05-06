@@ -18,6 +18,7 @@ import {
   StopCircle,
   Award,
   Upload,
+  Pencil,
 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
@@ -186,6 +187,42 @@ function EndCourseConfirmModal({ session, onClose, onConfirm, isEnding }) {
             className="h-10 rounded-[8px] bg-[#e11d48] px-4 text-[13px] font-semibold text-white disabled:opacity-60"
           >
             {isEnding ? 'Ending...' : 'Yes, End Course'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DeleteConfirmModal({ session, onClose, onConfirm, isDeleting }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-[400px] rounded-[14px] border border-black/[0.08] bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fee2e2]">
+            <Trash2 className="h-6 w-6 text-[#ef4444]" />
+          </div>
+          <h3 className="mt-3 text-[18px] font-bold text-[#0f172a]">Delete Class?</h3>
+          <p className="mt-1.5 text-[13px] text-[#64748b]">
+            Are you sure you want to delete <strong>{session?.title}</strong>? This action cannot be undone.
+          </p>
+        </div>
+        <div className="flex justify-end gap-3 border-t border-black/[0.08] px-5 py-4">
+          <button
+            onClick={onClose}
+            className="h-10 rounded-[8px] border border-black/[0.08] bg-white px-4 text-[13px] font-semibold text-[#4b5563]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="h-10 rounded-[8px] bg-[#ef4444] px-4 text-[13px] font-semibold text-white disabled:opacity-60"
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Permanently'}
           </button>
         </div>
       </div>
@@ -422,7 +459,7 @@ function CertificateIssueModal({
   )
 }
 
-function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, onAddCertificate, regeneratingId, endingId, certificateIssuingId }) {
+function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, onAddCertificate, onEdit, onDelete, regeneratingId, endingId, certificateIssuingId }) {
   const isLive = session.status === 'live'
   const isEnded = session.status === 'ended'
   return (
@@ -463,6 +500,28 @@ function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, 
               {endingId === session.id ? 'Ending...' : 'End Course'}
             </button>
           )}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(session)
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-black/[0.06] bg-white text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#5b3df6] transition-all"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(session)
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-black/[0.06] bg-white text-[#64748b] hover:bg-[#fee2e2] hover:text-[#ef4444] transition-all"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 flex items-center gap-2">
@@ -578,6 +637,9 @@ export default function AdminLiveClasses() {
   const [certificateTarget, setCertificateTarget] = useState(null)
   const [certificateIssuingId, setCertificateIssuingId] = useState('')
   const [certificateTitle, setCertificateTitle] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [isDeletingId, setIsDeletingId] = useState('')
+  const [editId, setEditId] = useState(null)
 
   const tenantId = localStorage.getItem('lms_tenant_id')
 
@@ -816,6 +878,87 @@ export default function AdminLiveClasses() {
     }
   }
 
+  const updateClass = async () => {
+    if (isCreating) return
+    setCreateError('')
+    setIsCreating(true)
+    const title = form.title.trim()
+    const courseId = courseInputMode === 'manual' ? manualCourseName.trim() : form.course_id.trim()
+    const instructorId = hostMode === 'self' ? currentUser?._id || '' : form.instructor_id.trim()
+
+    if (!title || !courseId || !form.start_date || !form.start_time) {
+      setCreateError('Please fill class title, course, and IST date/time.')
+      setIsCreating(false)
+      return
+    }
+    try {
+      const startAtIso = istDateTimePartsToIso(form.start_date, form.start_time)
+      await api(`/lms/live-classes/${editId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title,
+          class_name: form.class_name,
+          course_id: courseId,
+          instructor_id: instructorId,
+          attendee_ids: form.attendee_ids,
+          start_at: startAtIso,
+          duration_minutes: Number(form.duration_minutes || 60),
+          amount: Number(form.amount || 0),
+          image_url: form.image_url.trim(),
+        }),
+      })
+      setEditId(null)
+      setActiveView('list')
+      loadData()
+    } catch (error) {
+      setCreateError(error?.message || 'Unable to update class.')
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleEditClass = (session) => {
+    setEditId(session.id)
+    const rawClass = classes.find(c => c._id === session.id)
+    if (!rawClass) return
+
+    const startAt = parseServerDateAsUtc(rawClass.start_at)
+    const istDate = startAt ? new Date(startAt.getTime() + IST_OFFSET_MS) : new Date()
+    
+    setForm({
+      title: rawClass.title || '',
+      class_name: rawClass.class_name || '',
+      course_id: rawClass.course_id || '',
+      instructor_id: rawClass.instructor_id || '',
+      start_date: `${istDate.getUTCFullYear()}-${String(istDate.getUTCMonth() + 1).padStart(2, '0')}-${String(istDate.getUTCDate()).padStart(2, '0')}`,
+      start_time: `${String(istDate.getUTCHours()).padStart(2, '0')}:${String(istDate.getUTCMinutes()).padStart(2, '0')}`,
+      duration_minutes: rawClass.duration_minutes || 60,
+      amount: rawClass.amount || '',
+      image_url: rawClass.image_url || '',
+      attendee_ids: rawClass.attendee_ids || [],
+    })
+    setCourseInputMode('select')
+    setHostMode(rawClass.instructor_id === currentUser?._id ? 'self' : 'assign')
+    setActiveView('create')
+  }
+
+  const handleDeleteClass = async () => {
+    if (!deleteTarget?.id) return
+    try {
+      setActionError('')
+      setIsDeletingId(deleteTarget.id)
+      await api(`/lms/live-classes/${deleteTarget.id}`, { method: 'DELETE' })
+      setClasses((prev) => prev.filter((c) => String(c?._id || '') !== String(deleteTarget.id)))
+      setDeleteTarget(null)
+      if (selectedSession?.id === deleteTarget.id) setSelectedSession(null)
+      await loadData()
+    } catch (error) {
+      setActionError(error?.message || 'Unable to delete class.')
+    } finally {
+      setIsDeletingId('')
+    }
+  }
+
   // End Course: marks status as 'ended' via PATCH
   const handleEndCourse = async () => {
     if (!endCourseTarget?.id) return
@@ -967,25 +1110,25 @@ export default function AdminLiveClasses() {
       <div className="min-h-full bg-gradient-to-b from-[#f6f8fa] to-[#eef3f9] p-4 sm:p-6">
         <div className="mx-auto max-w-[1240px] rounded-[14px] border border-black/[0.08] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-col gap-3 border-b border-black/[0.06] pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <button onClick={() => setActiveView('list')} className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#5b3df6] hover:text-[#4a2ed8]">
+            <button onClick={() => { setActiveView('list'); setEditId(null); }} className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#5b3df6] hover:text-[#4a2ed8]">
               <ArrowLeft className="h-4 w-4" /> Back to Live Classes
             </button>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <button onClick={() => setActiveView('list')} className="h-10 rounded-[8px] border border-black/[0.08] bg-white px-4 text-[12px] font-semibold text-[#334155] hover:bg-[#f8fafc]">
+              <button onClick={() => { setActiveView('list'); setEditId(null); }} className="h-10 rounded-[8px] border border-black/[0.08] bg-white px-4 text-[12px] font-semibold text-[#334155] hover:bg-[#f8fafc]">
                 Cancel
               </button>
               <button
-                onClick={createClass}
+                onClick={editId ? updateClass : createClass}
                 disabled={isCreating}
                 className="h-10 rounded-[8px] bg-[#5b3df6] px-4 text-[12px] font-semibold text-white hover:bg-[#4f34df] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isCreating ? 'Creating...' : 'Create Zoom Meeting'}
+                {isCreating ? (editId ? 'Updating...' : 'Creating...') : (editId ? 'Update Class' : 'Create Zoom Meeting')}
               </button>
             </div>
           </div>
 
-          <p className="text-[12px] font-medium text-[#94a3b8]">Live Classes / Create Zoom Meeting</p>
-          <h2 className="mt-1 text-[30px] font-bold leading-tight text-[#0f172a] sm:text-[36px]">Create Zoom Meeting</h2>
+          <p className="text-[12px] font-medium text-[#94a3b8]">Live Classes / {editId ? 'Edit Class' : 'Create Zoom Meeting'}</p>
+          <h2 className="mt-1 text-[30px] font-bold leading-tight text-[#0f172a] sm:text-[36px]">{editId ? 'Edit Class' : 'Create Zoom Meeting'}</h2>
 
           {createError ? (
             <div className="mt-3 rounded-[8px] border border-[#fecaca] bg-[#fff1f2] p-3 text-[12px] text-[#991b1b]">
@@ -1178,6 +1321,7 @@ export default function AdminLiveClasses() {
             <button
               onClick={() => {
                 setForm((prev) => ({ ...prev, ...getCurrentIstDateTimeParts() }))
+                setEditId(null)
                 setActiveView('create')
               }}
               className="inline-flex h-9 items-center gap-1 rounded-[7px] bg-[#5b3df6] px-3 text-[12px] font-semibold text-white"
@@ -1226,15 +1370,6 @@ export default function AdminLiveClasses() {
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
               </div>
-              <button
-                onClick={() => {
-                  setForm((prev) => ({ ...prev, ...getCurrentIstDateTimeParts() }))
-                  setIsAddSessionOpen(true)
-                }}
-                className="inline-flex h-9 items-center gap-1 rounded-[7px] bg-[#5b3df6] px-3 text-[12px] font-semibold text-white"
-              >
-                <Plus className="h-4 w-4" /> Add session
-              </button>
             </div>
           </div>
 
@@ -1277,6 +1412,8 @@ export default function AdminLiveClasses() {
                   onRegenerate={regenerateZoom}
                   onReassign={openReassignModal}
                   onAddCertificate={openCertificateModal}
+                  onEdit={handleEditClass}
+                  onDelete={(s) => setDeleteTarget(s)}
                   regeneratingId={regeneratingId}
                   endingId={endingId}
                   certificateIssuingId={certificateIssuingId}
@@ -1452,6 +1589,16 @@ export default function AdminLiveClasses() {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {/* Delete confirm modal */}
+      {deleteTarget ? (
+        <DeleteConfirmModal
+          session={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteClass}
+          isDeleting={isDeletingId === deleteTarget.id}
+        />
       ) : null}
     </div>
   )
