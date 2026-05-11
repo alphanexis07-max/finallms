@@ -56,7 +56,7 @@ function LiveClassCard({ cls, fadeUp, getSubjectColor, formatStart, navigate }) 
     <motion.div
       variants={fadeUp}
       whileHover={{ y: -5 }}
-      className="min-w-[280px] sm:min-w-0 snap-start rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
+      className="w-[280px] sm:w-[300px] md:w-auto md:min-w-0 shrink-0 snap-start rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
       onClick={() => navigate('/signup')}
     >
       <div className="relative h-[200px] sm:h-[220px] overflow-hidden">
@@ -447,8 +447,21 @@ export default function LandingPage(props) {
 
             <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.6 }} className="flex items-center gap-4 lg:pl-20">
               <div className="flex -space-x-3">
-                {[32, 44, 68, 44].map((n, i) => (
-                  <motion.img whileHover={{ y: -5, zIndex: 20 }} key={i} src={`https://randomuser.me/api/portraits/${i % 2 === 0 ? "men" : "women"}/${n}.jpg`} alt="student" className="w-10 h-10 border-2 border-white rounded-full object-cover cursor-pointer" />
+                {[
+                  "https://images.unsplash.com/photo-1544717305-996b815c338c?auto=format&fit=crop&w=120&q=80",
+                  "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=120&q=80",
+                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80",
+                  "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=120&q=80",
+                ].map((src, i) => (
+                  <motion.img
+                    whileHover={{ y: -5, zIndex: 20 }}
+                    key={i}
+                    src={src}
+                    alt="student"
+                    className="w-10 h-10 border-2 border-white rounded-full object-cover cursor-pointer"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ))}
               </div>
               <div className="flex flex-col">
@@ -554,10 +567,10 @@ export default function LandingPage(props) {
           ) : (
             <motion.div
               ref={liveClassesRef}
-              className="flex overflow-x-auto snap-x snap-mandatory gap-5 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 md:gap-6 no-scrollbar"
+              className="flex overflow-x-auto snap-x snap-mandatory gap-5 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-visible no-scrollbar"
               variants={stagger}
             >
-              {filteredLiveClasses.map((cls) => (
+              {filteredLiveClasses.slice(0, 6).map((cls) => (
                 <LiveClassCard key={cls.id} cls={cls} fadeUp={fadeUp} getSubjectColor={getSubjectColor} formatStart={formatStart} navigate={navigate} />
               ))}
             </motion.div>
