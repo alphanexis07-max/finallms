@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 // ─── In-memory cache (persists across re-renders, cleared on page reload) ────
 const CACHE = {};
 const CACHE_TTL = 60_000; // 1 minute
+const LIVE_CLASSES_LIMIT = 12;
 
 function getCached(key) {
   const entry = CACHE[key];
@@ -182,7 +183,7 @@ function SkeletonCard() {
 
 // ─── Main Landing Page ────────────────────────────────────────────────────────
 export default function LandingPage(props) {
-  const [liveClasses, setLiveClasses] = useState(() => getCached("/lms/public/live-classes?limit=3")?.items || []);
+  const [liveClasses, setLiveClasses] = useState(() => getCached(`/lms/public/live-classes?limit=${LIVE_CLASSES_LIMIT}`)?.items || []);
   const [liveClassesLoading, setLiveClassesLoading] = useState(liveClasses.length === 0);
   const [liveClassesError, setLiveClassesError] = useState(false);
 
@@ -210,7 +211,7 @@ export default function LandingPage(props) {
       setLiveClassesError(false);
 
       try {
-        const res = await cachedApi("/lms/public/live-classes?limit=3", 8000);
+        const res = await cachedApi(`/lms/public/live-classes?limit=${LIVE_CLASSES_LIMIT}`, 8000);
         if (!mounted) return;
         const items = Array.isArray(res?.items) ? res.items : [];
         setLiveClasses(items);
@@ -323,9 +324,11 @@ export default function LandingPage(props) {
 
   const scroll = useCallback((ref, direction) => {
     if (ref.current) {
-      const { scrollLeft, clientWidth } = ref.current;
+      const { scrollLeft, clientWidth, firstElementChild } = ref.current;
+      const cardWidth = firstElementChild?.clientWidth || clientWidth * 0.7;
+      const step = cardWidth + 20;
       ref.current.scrollTo({
-        left: direction === "left" ? scrollLeft - clientWidth * 0.7 : scrollLeft + clientWidth * 0.7,
+        left: direction === "left" ? scrollLeft - step : scrollLeft + step,
         behavior: "smooth",
       });
     }
@@ -498,6 +501,22 @@ export default function LandingPage(props) {
                 Join real-time sessions with expert instructors — interactive, engaging, and career-focused.
               </p>
             </motion.div>
+            <motion.div className="flex items-center justify-center gap-3 md:justify-start" variants={fadeUp}>
+              <button
+                className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-[#0b8276] text-[#0b8276] transition-colors hover:bg-[#0b8276] hover:text-white"
+                onClick={() => scroll(liveClassesRef, "left")}
+                aria-label="Scroll live classes left"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-[#0b8276] text-white transition-colors hover:bg-[#096b61]"
+                onClick={() => scroll(liveClassesRef, "right")}
+                aria-label="Scroll live classes right"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </motion.div>
           </div>
 
           {/* ── Cards: skeleton → real data, no long blank wait ── */}
@@ -515,10 +534,10 @@ export default function LandingPage(props) {
               <p className="text-slate-500 mb-4">Could not load live classes right now.</p>
               <button
                 onClick={() => {
-                  delete CACHE["/lms/public/live-classes?limit=3"];
+                  delete CACHE[`/lms/public/live-classes?limit=${LIVE_CLASSES_LIMIT}`];
                   setLiveClassesLoading(true);
                   setLiveClassesError(false);
-                  cachedApi("/lms/public/live-classes?limit=3", 8000)
+                  cachedApi(`/lms/public/live-classes?limit=${LIVE_CLASSES_LIMIT}`, 8000)
                     .then((res) => setLiveClasses(Array.isArray(res?.items) ? res.items : []))
                     .catch(() => setLiveClassesError(true))
                     .finally(() => setLiveClassesLoading(false));
@@ -535,7 +554,7 @@ export default function LandingPage(props) {
           ) : (
             <motion.div
               ref={liveClassesRef}
-              className="flex overflow-x-auto snap-x snap-mandatory gap-5 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 md:gap-6 no-scrollbar"
+              className="flex overflow-x-auto snap-x snap-mandatory gap-5 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 md:gap-6 no-scrollbar"
               variants={stagger}
             >
               {filteredLiveClasses.map((cls) => (
