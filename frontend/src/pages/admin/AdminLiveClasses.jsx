@@ -230,7 +230,7 @@ function DeleteConfirmModal({ session, onClose, onConfirm, isDeleting }) {
   )
 }
 
-function ClassDetailModal({ session, attendeeUsers, onClose, onEndCourse, onRegenerate, regeneratingId, endingId }) {
+function ClassDetailModal({ session, attendeeUsers, onClose, onEndCourse, endingId }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-5" onClick={onClose}>
       <div
@@ -321,30 +321,27 @@ function ClassDetailModal({ session, attendeeUsers, onClose, onEndCourse, onRege
               <div>
                 <p className="text-[13px] font-semibold text-red-700">Zoom Link Issue</p>
                 <p className="text-[12px] text-red-600">{session.zoomError}</p>
-                <p className="mt-2 text-[11px] text-red-500 font-medium">Click "Generate Zoom Link" below to try again.</p>
+                <p className="mt-2 text-[11px] text-red-500 font-medium">Join link is unavailable for this class.</p>
               </div>
             </div>
           )}
 
           <div className="flex flex-wrap gap-2 pt-2">
-            {session.joinLink ? (
-              <a
-                className="inline-flex h-10 items-center gap-2 rounded-[8px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white"
-                href={session.joinLink}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Link2 className="h-4 w-4" /> Open Join Link
-              </a>
-            ) : (
-              <button
-                onClick={() => onRegenerate(session.id)}
-                disabled={regeneratingId === session.id}
-                className="inline-flex h-10 items-center gap-2 rounded-[8px] border border-[#c7d2fe] bg-[#eef2ff] px-4 text-[13px] font-semibold text-[#4338ca] disabled:opacity-60"
-              >
-                {regeneratingId === session.id ? 'Generating...' : 'Generate Zoom Link'}
-              </button>
-            )}
+            <a
+              className={`inline-flex h-10 items-center gap-2 rounded-[8px] px-4 text-[13px] font-semibold ${
+                session.joinLink
+                  ? 'bg-[#5b3df6] text-white'
+                  : 'cursor-not-allowed border border-[#cbd5e1] bg-[#f8fafc] text-[#94a3b8]'
+              }`}
+              href={session.joinLink || '#'}
+              target={session.joinLink ? '_blank' : undefined}
+              rel={session.joinLink ? 'noreferrer' : undefined}
+              onClick={(e) => {
+                if (!session.joinLink) e.preventDefault()
+              }}
+            >
+              <Link2 className="h-4 w-4" /> Open Join Link
+            </a>
             {session.status !== 'ended' && (
               <button
                 onClick={() => onEndCourse(session)}
@@ -470,7 +467,7 @@ function CertificateIssueModal({
   )
 }
 
-function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, onAddCertificate, onEdit, onDelete, regeneratingId, endingId, certificateIssuingId }) {
+function SessionCard({ session, onClick, onEndCourse, onReassign, onAddCertificate, onEdit, onDelete, endingId, certificateIssuingId }) {
   const isLive = session.status === 'live'
   const isEnded = session.status === 'ended'
   return (
@@ -576,28 +573,22 @@ function SessionCard({ session, onClick, onEndCourse, onRegenerate, onReassign, 
 
         <div className="mt-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            {session.joinLink ? (
-              <a
-                onClick={(e) => e.stopPropagation()}
-                href={session.joinLink}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 rounded-[8px] border border-[#c7d2fe] bg-[#eef2ff] px-2.5 py-1 text-[11px] font-semibold text-[#4338ca]"
-              >
-                <Link2 className="h-3 w-3" /> Join Link
-              </a>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRegenerate(session.id)
-                }}
-                disabled={regeneratingId === session.id}
-                className="inline-flex items-center gap-1 rounded-[8px] border border-[#c7d2fe] bg-[#eef2ff] px-2.5 py-1 text-[11px] font-semibold text-[#4338ca] disabled:opacity-60"
-              >
-                {regeneratingId === session.id ? 'Generating...' : 'Generate Link'}
-              </button>
-            )}
+            <a
+              onClick={(e) => {
+                if (!session.joinLink) e.preventDefault()
+                e.stopPropagation()
+              }}
+              href={session.joinLink || '#'}
+              target={session.joinLink ? '_blank' : undefined}
+              rel={session.joinLink ? 'noreferrer' : undefined}
+              className={`inline-flex items-center gap-1 rounded-[8px] px-2.5 py-1 text-[11px] font-semibold ${
+                session.joinLink
+                  ? 'border border-[#c7d2fe] bg-[#eef2ff] text-[#4338ca]'
+                  : 'cursor-not-allowed border border-[#cbd5e1] bg-[#f8fafc] text-[#94a3b8]'
+              }`}
+            >
+              <Link2 className="h-3 w-3" /> Join Link
+            </a>
             {isEnded && (
               <button
                 onClick={(e) => {
@@ -635,12 +626,10 @@ export default function AdminLiveClasses() {
   const [createError, setCreateError] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [actionError, setActionError] = useState('')
-  const [regeneratingId, setRegeneratingId] = useState('')
   const [reassignTarget, setReassignTarget] = useState(null)
   const [reassignInstructorId, setReassignInstructorId] = useState('')
   const [reassigningId, setReassigningId] = useState('')
   const [hostMode, setHostMode] = useState('self')
-  const [courseInputMode, setCourseInputMode] = useState('select')
   const [manualCourseName, setManualCourseName] = useState('')
   // End Course confirm modal state
   const [endCourseTarget, setEndCourseTarget] = useState(null)
@@ -717,18 +706,6 @@ export default function AdminLiveClasses() {
   })
 
   const courseMap = useMemo(() => new Map(courses.map((c) => [c._id, c])), [courses])
-  const courseProgramOptions = useMemo(() => {
-    const optionsByValue = new Map()
-    classes.forEach((liveClass) => {
-      const value = String(liveClass?.course_id || '').trim()
-      if (!value || optionsByValue.has(value)) return
-      const mappedCourse = courseMap.get(value)
-      const label = String(mappedCourse?.title || value).trim() || value
-      optionsByValue.set(value, { value, label })
-    })
-    return [...optionsByValue.values()].sort((a, b) => a.label.localeCompare(b.label))
-  }, [classes, courseMap])
-
   const userMap = useMemo(() => {
     const map = new Map()
     instructors.forEach((u) => map.set(u._id, u))
@@ -757,7 +734,7 @@ export default function AdminLiveClasses() {
         duration: `${c.duration_minutes || 60} mins`,
         platform: (c.meeting_provider || 'Zoom').toString().toUpperCase(),
         status,
-        joinLink: c.join_url || '',
+        joinLink: c.join_url || c.start_url || '',
         topic: c.title || 'Session',
         studentsEnrolled: (c.attendee_ids || []).length,
         attendeeIds: c.attendee_ids || [],
@@ -831,7 +808,7 @@ export default function AdminLiveClasses() {
     setCreateError('')
     setIsCreating(true)
     const title = form.title.trim()
-    const courseId = courseInputMode === 'manual' ? manualCourseName.trim() : form.course_id.trim()
+    const courseId = manualCourseName.trim()
     const instructorId = hostMode === 'self' ? currentUser?._id || '' : form.instructor_id.trim()
 
     if (!title || !courseId || !form.start_date || !form.start_time) {
@@ -884,7 +861,6 @@ export default function AdminLiveClasses() {
         image_url: '',
         attendee_ids: [],
       })
-      setCourseInputMode('select')
       setManualCourseName('')
       setIsAddSessionOpen(false)
       setActiveView('list')
@@ -901,7 +877,7 @@ export default function AdminLiveClasses() {
     setCreateError('')
     setIsCreating(true)
     const title = form.title.trim()
-    const courseId = courseInputMode === 'manual' ? manualCourseName.trim() : form.course_id.trim()
+    const courseId = manualCourseName.trim()
     const instructorId = hostMode === 'self' ? currentUser?._id || '' : form.instructor_id.trim()
 
     if (!title || !courseId || !form.start_date || !form.start_time) {
@@ -1000,19 +976,6 @@ export default function AdminLiveClasses() {
       setActionError(error?.message || 'Unable to end course.')
     } finally {
       setEndingId('')
-    }
-  }
-
-  const regenerateZoom = async (id) => {
-    try {
-      setActionError('')
-      setRegeneratingId(id)
-      await api(`/lms/live-classes/${id}/regenerate-zoom`, { method: 'POST' })
-      await loadData()
-    } catch (error) {
-      setActionError(error?.message || 'Unable to regenerate Zoom link.')
-    } finally {
-      setRegeneratingId('')
     }
   }
 
@@ -1178,21 +1141,12 @@ export default function AdminLiveClasses() {
                 </div>
                 <div>
                   <label className="mb-1.5 block text-[12px] font-semibold text-[#334155]">Course program *</label>
-                  <div className="mb-2 grid grid-cols-2 gap-2 rounded-[8px] border border-black/[0.06] bg-[#f1f5f9] p-1">
-                    <button type="button" onClick={() => setCourseInputMode('select')} className={`h-8 rounded-[7px] text-[12px] font-semibold transition-colors ${courseInputMode === 'select' ? 'bg-white text-[#0f172a] shadow-sm' : 'text-[#64748b] hover:text-[#334155]'}`}>Select</button>
-                    <button type="button" onClick={() => setCourseInputMode('manual')} className={`h-8 rounded-[7px] text-[12px] font-semibold transition-colors ${courseInputMode === 'manual' ? 'bg-white text-[#0f172a] shadow-sm' : 'text-[#64748b] hover:text-[#334155]'}`}>Manual</button>
-                  </div>
-                  {courseInputMode === 'manual' ? (
-                    <input value={manualCourseName} onChange={(e) => setManualCourseName(e.target.value)} className="h-11 w-full rounded-[8px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30" placeholder="Type course name" />
-                  ) : (
-                    <div className="relative">
-                      <select value={form.course_id} onChange={(e) => handleFormChange('course_id', e.target.value)} className="h-11 w-full appearance-none rounded-[8px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30">
-                        {courseProgramOptions.length === 0 ? <option value="">No Subjects found</option> : null}
-                        {courseProgramOptions.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
-                    </div>
-                  )}
+                  <input
+                    value={manualCourseName}
+                    onChange={(e) => setManualCourseName(e.target.value)}
+                    className="h-11 w-full rounded-[8px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
+                    placeholder="Type course program"
+                  />
                 </div>
 
                 <div>
@@ -1266,33 +1220,6 @@ export default function AdminLiveClasses() {
                 <input type="file" accept="image/*" onChange={handleImageSelect} className="w-full rounded-[8px] border border-black/[0.08] bg-white px-3 py-2 text-[12px] file:mr-3 file:rounded-[6px] file:border-0 file:bg-[#5b3df6] file:px-3 file:py-1.5 file:font-medium file:text-white" />
               </div>
 
-              <div className="mt-4">
-                <label className="mb-1.5 block text-[12px] font-semibold text-[#334155]">Invite students</label>
-                <div className="max-h-44 overflow-y-auto rounded-[8px] border border-black/[0.08] bg-white p-2">
-                  {students.length === 0 ? (
-                    <p className="text-[12px] text-[#94a3b8] p-2">No students found.</p>
-                  ) : (
-                    students.map((s) => (
-                      <label key={s._id} className="flex items-center gap-2 rounded-[7px] p-2 hover:bg-[#f8fafc] text-[12px] text-[#334155]">
-                        <input
-                          type="checkbox"
-                          checked={form.attendee_ids.includes(s._id)}
-                          onChange={(e) => {
-                            const checked = e.target.checked
-                            setForm((prev) => ({
-                              ...prev,
-                              attendee_ids: checked
-                                ? [...prev.attendee_ids, s._id]
-                                : prev.attendee_ids.filter((id) => id !== s._id),
-                            }))
-                          }}
-                        />
-                        {s.full_name || s.email}
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
             </section>
 
             <aside className="space-y-3 xl:sticky xl:top-4 xl:self-start">
@@ -1300,7 +1227,7 @@ export default function AdminLiveClasses() {
                 <h3 className="text-[16px] font-bold text-[#111827]">Session Summary</h3>
                 <div className="mt-2 space-y-2 text-[12px] text-[#64748b]">
                   <p>Title: {form.title || '-'}</p>
-                  <p>Course: {courseInputMode === 'manual' ? (manualCourseName || '-') : (courseMap.get(form.course_id)?.title || '-')}</p>
+                  <p>Course: {manualCourseName || '-'}</p>
                   <p>Host: {hostMode === 'self' ? (currentUser?.full_name || currentUser?.email || '-') : (userMap.get(form.instructor_id)?.full_name || userMap.get(form.instructor_id)?.email || '-')}</p>
                   <p>Duration: {form.duration_minutes || 60} mins</p>
                   <p>Amount: INR {Number(form.amount || 0).toFixed(2)}</p>
@@ -1427,12 +1354,10 @@ export default function AdminLiveClasses() {
                   session={session}
                   onClick={() => setSelectedSession(session)}
                   onEndCourse={(s) => setEndCourseTarget(s)}
-                  onRegenerate={regenerateZoom}
                   onReassign={openReassignModal}
                   onAddCertificate={openCertificateModal}
                   onEdit={handleEditClass}
                   onDelete={(s) => setDeleteTarget(s)}
-                  regeneratingId={regeneratingId}
                   endingId={endingId}
                   certificateIssuingId={certificateIssuingId}
                 />
@@ -1449,8 +1374,6 @@ export default function AdminLiveClasses() {
           attendeeUsers={selectedAttendees}
           onClose={() => setSelectedSession(null)}
           onEndCourse={(s) => { setEndCourseTarget(s); setSelectedSession(null) }}
-          onRegenerate={regenerateZoom}
-          regeneratingId={regeneratingId}
           endingId={endingId}
         />
       ) : null}
@@ -1516,21 +1439,12 @@ export default function AdminLiveClasses() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Course / Batch *</label>
-                  <div className="mb-2 grid grid-cols-2 gap-2 rounded-[8px] bg-[#f1f5f9] p-1">
-                    <button type="button" onClick={() => setCourseInputMode('select')} className={`h-8 rounded-[7px] text-[12px] font-semibold ${courseInputMode === 'select' ? 'bg-white text-[#0f172a]' : 'text-[#64748b]'}`}>Select</button>
-                    <button type="button" onClick={() => setCourseInputMode('manual')} className={`h-8 rounded-[7px] text-[12px] font-semibold ${courseInputMode === 'manual' ? 'bg-white text-[#0f172a]' : 'text-[#64748b]'}`}>Manual</button>
-                  </div>
-                  {courseInputMode === 'manual' ? (
-                    <input value={manualCourseName} onChange={(e) => setManualCourseName(e.target.value)} className="h-10 w-full rounded-[8px] border border-black/[0.08] px-4 text-[13px]" placeholder="Type course name" />
-                  ) : (
-                    <div className="relative">
-                      <select value={form.course_id} onChange={(e) => handleFormChange('course_id', e.target.value)} className="h-10 w-full appearance-none rounded-[8px] border border-black/[0.08] px-4 text-[13px]">
-                        {courseProgramOptions.length === 0 ? <option value="">No course found</option> : null}
-                        {courseProgramOptions.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
-                    </div>
-                  )}
+                  <input
+                    value={manualCourseName}
+                    onChange={(e) => setManualCourseName(e.target.value)}
+                    className="h-10 w-full rounded-[8px] border border-black/[0.08] px-4 text-[13px]"
+                    placeholder="Type course program"
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Host *</label>
