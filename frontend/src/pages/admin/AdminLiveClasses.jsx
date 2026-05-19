@@ -255,7 +255,6 @@ function ClassDetailModal({ session, attendeeUsers, onClose, onEndCourse, ending
               { label: 'Daily Time (IST)', value: `${session.time}`, icon: CalendarDays },
               { label: 'Duration', value: session.duration, icon: Clock3 },
               { label: 'Students Enrolled', value: String(session.studentsEnrolled), icon: Users },
-              { label: 'Amount', value: `INR ${session.amountText}`, icon: Link2 },
             ].map(({ label, value, icon }) => {
               const IconComponent = icon
               return (
@@ -542,10 +541,6 @@ function SessionCard({ session, onClick, onEndCourse, onReassign, onAddCertifica
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
             <Users className="h-3.5 w-3.5 text-[#94a3b8]" />
             <span>{session.studentsEnrolled} students assigned</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
-            <span className="font-medium text-[#4338ca]">Amount:</span>
-            <span>INR {session.amountText}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
             <Star className={`h-3.5 w-3.5 ${Number(session.avgRating || 0) > 0 ? 'fill-[#f59e0b] text-[#f59e0b]' : 'text-[#cbd5e1]'}`} />
@@ -1200,11 +1195,6 @@ export default function AdminLiveClasses() {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-[12px] font-semibold text-[#334155]">Amount</label>
-                  <input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => handleFormChange('amount', e.target.value)} className="h-11 w-full rounded-[8px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30" placeholder="0.00" />
-                </div>
-
-                <div>
                   <label className="mb-1.5 block text-[12px] font-semibold text-[#334155]">Image URL</label>
                   <input value={form.image_url} onChange={(e) => handleFormChange('image_url', e.target.value)} className="h-11 w-full rounded-[8px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30" placeholder="https://example.com/class.jpg" />
                 </div>
@@ -1225,7 +1215,6 @@ export default function AdminLiveClasses() {
                   <p>Course: {manualCourseName || '-'}</p>
                   <p>Host: {hostMode === 'self' ? (currentUser?.full_name || currentUser?.email || '-') : (userMap.get(form.instructor_id)?.full_name || userMap.get(form.instructor_id)?.email || '-')}</p>
                   <p>Duration: {form.duration_minutes || 60} mins</p>
-                  <p>Amount: INR {Number(form.amount || 0).toFixed(2)}</p>
                 </div>
               </section>
               {form.image_url ? (
@@ -1491,15 +1480,9 @@ export default function AdminLiveClasses() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Amount</label>
-                  <input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => handleFormChange('amount', e.target.value)} className="h-10 w-full rounded-[8px] border border-black/[0.08] px-4 text-[13px]" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Image URL</label>
-                  <input value={form.image_url} onChange={(e) => handleFormChange('image_url', e.target.value)} className="h-10 w-full rounded-[8px] border border-black/[0.08] px-4 text-[13px]" placeholder="https://example.com/class.jpg" />
-                </div>
+              <div>
+                <label className="mb-1 block text-[13px] font-semibold text-[#374151]">Image URL</label>
+                <input value={form.image_url} onChange={(e) => handleFormChange('image_url', e.target.value)} className="h-10 w-full rounded-[8px] border border-black/[0.08] px-4 text-[13px]" placeholder="https://example.com/class.jpg" />
               </div>
 
               <div>

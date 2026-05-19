@@ -128,34 +128,31 @@ function normalizePlanPeriodText(value, key, fallback) {
 }
 
 function buildLiveSubscriptionPlans(rawPlans, classAmountValue) {
+  const activePlans = (rawPlans || [])
+    .filter((plan) => Boolean(plan) && Boolean(plan?.active ?? true))
+    .map((plan, index) => {
+      const price = Number(plan?.price || 0)
+      return {
+        id: String(plan?.id || plan?._id || `plan-${index}`),
+        key: String(plan?.name || plan?._id || `plan-${index}`),
+        name: String(plan?.name || 'Plan'),
+        period: String(plan?.description || plan?.billing_period || plan?.period || 'Subscription plan'),
+        price: Math.max(0, price),
+      }
+    })
+
+  if (activePlans.length > 0) {
+    return activePlans
+  }
+
   const classAmount = Number(classAmountValue || 0)
-  const sourceByKey = new Map()
-
-  ;(rawPlans || []).forEach((plan) => {
-    const key = normalizePlanKey(plan?.name)
-    if (!key || sourceByKey.has(key)) return
-    sourceByKey.set(key, plan)
-  })
-
-  return LIVE_SUBSCRIPTION_TEMPLATES.map((template) => {
-    const source = sourceByKey.get(template.key)
-    const rawPrice = Number(source?.price || 0)
-
-    // If admin plan price is in 0-100 range, treat it as percent of live class amount.
-    const factor = rawPrice > 0 && rawPrice <= 100 ? rawPrice / 100 : template.defaultFactor
-    const computedAmount = classAmount > 0
-      ? Math.max(0, Math.round(classAmount * factor))
-      : Math.max(0, rawPrice)
-
-    return {
-      id: source?.id || source?._id || template.key,
-      key: template.key,
-      name: source?.name || template.name,
-      period: normalizePlanPeriodText(source?.period || source?.billing_period, template.key, template.period),
-      price: computedAmount,
-      factor,
-    }
-  })
+  return LIVE_SUBSCRIPTION_TEMPLATES.map((template) => ({
+    id: template.key,
+    key: template.key,
+    name: template.name,
+    period: template.period,
+    price: classAmount > 0 ? Math.max(0, Math.round(classAmount * template.defaultFactor)) : 0,
+  }))
 }
 
 function getMinSubscriptionLabel(rawPlans, classAmountValue) {
@@ -826,10 +823,6 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
             <Users className="h-3.5 w-3.5 text-[#94a3b8]" />
             <span>{session.studentsEnrolled} students enrolled</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
-            <span className="font-medium text-[#4338ca]">Amount:</span>
-            <span>{session.price}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
             <Star className={`h-3.5 w-3.5 ${Number(session.rating || 0) > 0 ? 'fill-[#f59e0b] text-[#f59e0b]' : 'text-[#cbd5e1]'}`} />

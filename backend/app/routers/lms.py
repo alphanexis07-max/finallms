@@ -1562,6 +1562,8 @@ async def create_plan(
     user=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
 ):
     query = {"tenant_id": tenant_id} if tenant_id else {}
+    if user.get("role") != Role.SUPER_ADMIN.value:
+        query["created_by"] = user.get("sub")
     existing_count = await db.plans.count_documents(query)
     if existing_count >= 3:
         raise HTTPException(status_code=400, detail="Maximum 3 subscription plans are allowed")
@@ -1590,6 +1592,8 @@ async def list_plans(
 
     if role == Role.SUPER_ADMIN.value and not tenant_id:
         query = {}
+    elif role in {Role.ADMIN.value, Role.SUB_ADMIN.value}:
+        query["created_by"] = user.get("sub")
 
     if active_only:
         query["active"] = True
@@ -1602,7 +1606,7 @@ async def update_plan(
     plan_id: str,
     payload: PlanUpdateIn,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    user=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
 ):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not updates:
@@ -1612,6 +1616,8 @@ async def update_plan(
     query = {"_id": ObjectId(plan_id)}
     if tenant_id:
         query["tenant_id"] = tenant_id
+    if user.get("role") != Role.SUPER_ADMIN.value:
+        query["created_by"] = user.get("sub")
     result = await db.plans.update_one(query, {"$set": updates})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Plan not found")
@@ -1624,11 +1630,13 @@ async def update_plan(
 async def delete_plan(
     plan_id: str,
     tenant_id: str = Depends(get_tenant_id),
-    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
+    user=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
 ):
     query = {"_id": ObjectId(plan_id)}
     if tenant_id:
         query["tenant_id"] = tenant_id
+    if user.get("role") != Role.SUPER_ADMIN.value:
+        query["created_by"] = user.get("sub")
     result = await db.plans.delete_one(query)
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Plan not found")
