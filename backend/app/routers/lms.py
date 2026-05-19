@@ -1482,6 +1482,13 @@ async def list_payments(
     return await paged(db.payments, query, "created_at", -1, skip, limit)
 
 
+@router.get("/payments/mine")
+async def list_my_payments(user=Depends(get_current_user), skip: int = 0, limit: int = 100):
+    """Return payments belonging to the current user (student or any authenticated user)."""
+    query = {"user_id": user.get("sub")}
+    return await paged(db.payments, query, "created_at", -1, skip, limit)
+
+
 @router.post("/payments/verify")
 async def verify_payment(payload: RazorpayVerifyIn, tenant_id: str = Depends(get_tenant_id), user=Depends(get_current_user)):
     if settings.razorpay_key_secret:

@@ -585,7 +585,7 @@ export default function LandingPage(props) {
                 whileHover={{ y: -5 }}
                 onClick={() => navigate('/signup')}
               >
-                <img src={course.image} alt={course.title} className="h-[200px] sm:h-[220px] w-full rounded-xl object-cover" loading="lazy" decoding="async" />
+                <img src={course.image} alt={course.title} className="h-[200px] sm:h-[220px] w-full rounded-xl object-contain bg-white" loading="lazy" decoding="async" />
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
                   <span>{course.rating}</span>
                   <span>{course.reviews}</span>
@@ -620,7 +620,7 @@ export default function LandingPage(props) {
               { title: "Kids & Parents", desc: "A safe, colorful, and exciting place where children love to learn new things.", img: "/kids_parents.png" },
             ].map((item) => (
               <motion.div key={item.title} variants={fadeUp} whileHover={{ y: -10, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }} className="min-w-[280px] sm:min-w-0 snap-start rounded-2xl bg-white/80 p-4 text-center shadow-sm transition-all duration-300">
-                <img src={item.img} alt={item.title} className="h-[180px] sm:h-[200px] lg:h-[220px] w-full rounded-xl object-cover" loading="lazy" />
+                <img src={item.img} alt={item.title} className="h-[180px] sm:h-[200px] lg:h-[220px] w-full rounded-xl object-contain bg-white" loading="lazy" />
                 <h3 className="mt-4 text-2xl sm:text-[28px] font-semibold text-[#111b2f]">{item.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-500">{item.desc}</p>
               </motion.div>

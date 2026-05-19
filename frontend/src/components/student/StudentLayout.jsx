@@ -12,6 +12,7 @@ import {
   Trophy,
   User,
   LogOut,
+  FileText,
 } from 'lucide-react'
 import HeaderPanel from '../HeaderPanel'
 
@@ -25,6 +26,7 @@ const nav = [
   { to: '/student-panel/school-events', label: 'School Events', icon: Calendar },
   { to: '/student-panel/tests', label: 'Tests', icon: BookOpen },
   { to: '/student-panel/certificates', label: 'Certificates', icon: Trophy },
+  { to: '/student-panel/invoices', label: 'Invoices', icon: FileText },
 ]
 
 export default function StudentLayout() {

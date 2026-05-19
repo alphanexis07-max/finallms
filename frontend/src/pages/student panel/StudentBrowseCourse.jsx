@@ -755,7 +755,7 @@ export default function StudentBrowseCourse() {
                     }}
                     className="bg-white border border-black/[0.08] border-solid rounded-[8px] overflow-hidden flex flex-col cursor-pointer transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
                   >
-                    <img src={course.image} alt={course.title} className="h-[200px] w-full object-cover" />
+                    <img src={course.image} alt={course.title} className="h-[200px] w-full object-contain bg-white" />
                     <div className="flex flex-col gap-[16px] p-[20px]">
                       <div className="flex gap-[8px] flex-wrap">
                         {course.tags.map((tag) => (

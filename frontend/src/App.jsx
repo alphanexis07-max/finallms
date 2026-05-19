@@ -62,6 +62,7 @@ import StudentLiveClasses from './pages/student panel/StudentLiveClasses'
 import StudentSchoolEvents from './pages/student panel/StudentSchoolEvents'
 import StudentTests from './pages/student panel/StudentTests'
 import StudentCertificates from './pages/student panel/StudentCertificates'
+import StudentInvoices from './pages/student panel/StudentInvoices'
 import StudentProfile from './pages/student panel/StudentProfile'
 import StudentNotification from './pages/student panel/StudentNotification'
 import Inquire from './pages/admin/AdminInquire'
@@ -167,6 +168,7 @@ function App() {
           <Route path="e-library" element={<StudentELibrary />} />
           <Route path="live-classes" element={<StudentLiveClasses />} />
           <Route path="school-events" element={<StudentSchoolEvents />} />
+          <Route path="invoices" element={<StudentInvoices />} />
           <Route path="tests" element={<StudentTests />} />
           <Route path="certificates" element={<StudentCertificates />} />
           <Route path="notifications" element={<StudentNotification />} />

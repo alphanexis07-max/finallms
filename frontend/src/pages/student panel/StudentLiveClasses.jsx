@@ -777,7 +777,7 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
           <img
             src={session.image}
             alt={session.title}
-            className="mb-3 h-36 w-full rounded-[10px] border border-black/[0.08] object-cover"
+            className="mb-3 h-36 w-full rounded-[10px] border border-black/[0.08] object-contain bg-white"
           />
         ) : (
           <div className="mb-3 flex h-36 w-full items-center justify-center rounded-[10px] border border-dashed border-black/[0.12] bg-[#f8fafc] text-[11px] font-medium text-[#94a3b8]">
