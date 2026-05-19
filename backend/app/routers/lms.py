@@ -447,13 +447,30 @@ async def update_user(
     if not updates:
         return {"message": "No updates provided"}
     updates["updated_at"] = datetime.now(timezone.utc)
-    query = {"_id": ObjectId(user_id)}
+
+    base_query = {"_id": ObjectId(user_id)}
+
+    # Try tenant-scoped update first (preferred). If no matching doc, fall back
+    # to a legacy/non-tenant-scoped update for backward compatibility.
+    user = None
     if tenant_id:
-        query["tenant_id"] = tenant_id
-    await db.users.update_one(query, {"$set": updates})
-    user = await db.users.find_one(query)
+        tenant_query = {**base_query, "tenant_id": tenant_id}
+        result = await db.users.update_one(tenant_query, {"$set": updates})
+        if result.matched_count > 0:
+            user = await db.users.find_one(tenant_query)
+        else:
+            # Fallback: try to update by _id only (legacy rows without tenant_id)
+            result2 = await db.users.update_one(base_query, {"$set": updates})
+            if result2.matched_count > 0:
+                user = await db.users.find_one(base_query)
+    else:
+        result = await db.users.update_one(base_query, {"$set": updates})
+        if result.matched_count > 0:
+            user = await db.users.find_one(base_query)
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     user = as_dict(user)
     user.pop("password_hash", None)
     return user
@@ -932,16 +949,51 @@ async def list_ratings(
 
 @router.get("/dashboard/admin")
 async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUB_ADMIN))):
-    students = await db.users.count_documents({"tenant_id": tenant_id, "role": "student"})
-    instructors = await db.users.count_documents({"tenant_id": tenant_id, "role": "instructor"})
-    courses = await db.courses.count_documents({"tenant_id": tenant_id})
+    # If tenant_id is provided, return tenant-scoped counts. Otherwise fall back to global counts
+    students = await db.users.count_documents({"tenant_id": tenant_id, "role": "student"}) if tenant_id else await db.users.count_documents({"role": "student"})
+    instructors = await db.users.count_documents({"tenant_id": tenant_id, "role": "instructor"}) if tenant_id else await db.users.count_documents({"role": "instructor"})
+    courses = await db.courses.count_documents({"tenant_id": tenant_id}) if tenant_id else await db.courses.count_documents({})
     revenue_pipeline = [
         {"$match": {"tenant_id": tenant_id, "status": "captured"}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
     ]
     revenue_docs = [x async for x in db.payments.aggregate(revenue_pipeline)]
     revenue = revenue_docs[0]["total"] if revenue_docs else 0
-    live_classes = await db.live_classes.count_documents({"tenant_id": tenant_id})
+    live_classes = await db.live_classes.count_documents({"tenant_id": tenant_id}) if tenant_id else await db.live_classes.count_documents({})
+    return {
+        "students": students,
+        "instructors": instructors,
+        "courses": courses,
+        "revenue": revenue,
+        "total_students": students,
+        "total_instructors": instructors,
+        "total_courses": courses,
+        "total_live_classes": live_classes,
+        "total_revenue": revenue,
+    }
+
+
+@router.get("/dashboard/internal")
+async def admin_dashboard_internal(request: Request):
+    """Development-only: return global dashboard stats when called from localhost.
+    Useful for debugging without a JWT."""
+    host = None
+    if request.client:
+        host = request.client.host
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    students = await db.users.count_documents({"role": "student"})
+    instructors = await db.users.count_documents({"role": "instructor"})
+    courses = await db.courses.count_documents({})
+    revenue_pipeline = [
+        {"$match": {"status": "captured"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
+    ]
+    revenue_docs = [x async for x in db.payments.aggregate(revenue_pipeline)]
+    revenue = revenue_docs[0]["total"] if revenue_docs else 0
+    live_classes = await db.live_classes.count_documents({})
+
     return {
         "students": students,
         "instructors": instructors,
@@ -1199,6 +1251,26 @@ async def list_coupons(
     limit: int = 100,
 ):
     return await paged(db.coupons, {"tenant_id": tenant_id}, "created_at", -1, skip, limit)
+
+
+@router.delete("/coupons/{coupon_id}", status_code=204)
+async def delete_coupon(
+    coupon_id: str,
+    tenant_id: str = Depends(get_tenant_id),
+    _=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR, Role.SUB_ADMIN)),
+):
+    query = {"_id": ObjectId(coupon_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+    # Try tenant-scoped delete first; if not matched, allow delete by _id only for legacy rows
+    result = await db.coupons.delete_one(query)
+    if result.deleted_count == 0 and tenant_id:
+        # fallback: delete by id only
+        result2 = await db.coupons.delete_one({"_id": ObjectId(coupon_id)})
+        if result2.deleted_count == 0:
+            # Not found
+            raise HTTPException(status_code=404, detail="Coupon not found")
+    return None
 
 
 @router.post("/events")
@@ -1489,6 +1561,11 @@ async def create_plan(
     tenant_id: str = Depends(get_tenant_id),
     user=Depends(require_roles(Role.SUPER_ADMIN, Role.ADMIN)),
 ):
+    query = {"tenant_id": tenant_id} if tenant_id else {}
+    existing_count = await db.plans.count_documents(query)
+    if existing_count >= 3:
+        raise HTTPException(status_code=400, detail="Maximum 3 subscription plans are allowed")
+
     now = datetime.now(timezone.utc)
     data = payload.model_dump() | {
         "tenant_id": tenant_id,

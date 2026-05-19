@@ -204,6 +204,14 @@ export default function AdminPaymentsCupons() {
     setCoupons(couponRows.items || couponRows || [])
   }
 
+  const handleDeleteCoupon = (coupon) => {
+    if (!coupon || !coupon._id) return
+    if (!confirm(`Delete coupon ${coupon.code || coupon._id}? This action cannot be undone.`)) return
+    api(`/lms/coupons/${coupon._id}`, { method: 'DELETE' })
+      .then(() => { loadData() })
+      .catch(() => {})
+  }
+
   useEffect(() => { loadData() }, [])
   useRealtime(tenantId ? `tenant:${tenantId}` : '', () => loadData())
 
@@ -620,10 +628,16 @@ export default function AdminPaymentsCupons() {
                       <div className="ml-0 flex flex-wrap items-center gap-2 sm:ml-2">
                         <span className="inline-flex rounded-[12px] px-2 py-1 text-[10px] font-medium bg-[#2dd4bf] text-[#023b33]">Active</span>
                         <button
-                          onClick={() => setSelectedCoupon(c)}
+                          onClick={(e) => { e.stopPropagation(); setSelectedCoupon(c) }}
                           className="rounded-[6px] border border-black/[0.08] bg-white px-2 py-1 text-[10px] font-semibold text-[#111827] hover:bg-[#f1f5f9] transition-colors"
                         >
                           View
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCoupon(c) }}
+                          className="rounded-[6px] border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition-colors"
+                        >
+                          Delete
                         </button>
                       </div>
                     </div>

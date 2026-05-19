@@ -78,6 +78,8 @@ class LiveClassUpdateIn(BaseModel):
 class EnrollmentIn(BaseModel):
     course_id: str
     student_id: str
+    coupon_code: str | None = None
+    coupon_discount: float | None = None
 
 
 class RatingIn(BaseModel):
@@ -100,6 +102,7 @@ class PlatformSettingsIn(BaseModel):
 
 class PlanIn(BaseModel):
     name: str
+    description: str = ""
     price: float
     billing_period: str = "monthly"
     active: bool = True
@@ -107,6 +110,7 @@ class PlanIn(BaseModel):
 
 class PlanUpdateIn(BaseModel):
     name: str | None = None
+    description: str | None = None
     price: float | None = None
     billing_period: str | None = None
     active: bool | None = None
@@ -154,6 +158,8 @@ class RazorpayOrderIn(BaseModel):
     amount: float
     enrollment_type: str = "course"
     target_id: str
+    coupon_code: str | None = None
+    coupon_discount: float | None = None
 
 
 class RazorpayVerifyIn(BaseModel):

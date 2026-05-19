@@ -33,10 +33,36 @@ const STATUS_CONFIG = {
   ended: { label: 'Course Ended', bg: 'bg-[#f1f5f9]', text: 'text-[#475569]', dot: 'bg-[#94a3b8]' },
 }
 
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000
-
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'))
 const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'))
+
+// Parse ISO-like server date strings. If timezone is missing, treat as UTC.
+function parseServerDate(value) {
+  if (!value) return null
+  if (value instanceof Date) return isNaN(value.getTime()) ? null : value
+  const raw = String(value).trim()
+  if (!raw) return null
+  // If contains timezone info, let Date parse it.
+  if (/([zZ]|[+-]\d{2}:\d{2})$/.test(raw)) {
+    const d = new Date(raw)
+    return isNaN(d.getTime()) ? null : d
+  }
+  // Otherwise assume UTC by appending Z.
+  const d = new Date(`${raw}Z`)
+  return isNaN(d.getTime()) ? null : d
+}
+
+function formatDateInIst(value) {
+  const date = parseServerDate(value)
+  if (!date) return 'Not scheduled'
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(date)
+}
+
+function formatTimeInIst(value) {
+  const date = parseServerDate(value)
+  if (!date) return '-'
+  return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).format(date)
+}
 
 function istDateTimePartsToIso(dateValue, timeValue) {
   const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))
@@ -46,61 +72,12 @@ function istDateTimePartsToIso(dateValue, timeValue) {
 }
 
 function getCurrentIstDateTimeParts() {
-  const now = new Date(Date.now() + IST_OFFSET_MS)
-  return {
-    start_date: `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`,
-    start_time: `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`,
-  }
-}
-
-function parseServerDateAsUtc(value) {
-  if (!value) return null
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value
-  }
-  const raw = String(value).trim()
-  if (!raw) return null
-  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(raw)
-  if (hasTimezone) {
-    const parsed = new Date(raw)
-    return Number.isNaN(parsed.getTime()) ? null : parsed
-  }
-  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/)
-  if (!m) {
-    const fallback = new Date(raw)
-    return Number.isNaN(fallback.getTime()) ? null : fallback
-  }
-  const year = Number(m[1])
-  const month = Number(m[2])
-  const day = Number(m[3])
-  const hour = Number(m[4])
-  const minute = Number(m[5])
-  const second = Number(m[6] || 0)
-  const millisecond = Number(String(m[7] || '0').padEnd(3, '0'))
-  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond)
-  return new Date(utcMs)
-}
-
-function formatDateInIst(value) {
-  const date = parseServerDateAsUtc(value)
-  if (!date) return 'Not scheduled'
-  const istDate = new Date(date.getTime() + IST_OFFSET_MS)
-  const day = String(istDate.getUTCDate()).padStart(2, '0')
-  const month = String(istDate.getUTCMonth() + 1).padStart(2, '0')
-  const year = istDate.getUTCFullYear()
-  return `${day}/${month}/${year}`
-}
-
-function formatTimeInIst(value) {
-  const date = parseServerDateAsUtc(value)
-  if (!date) return '-'
-  const istDate = new Date(date.getTime() + IST_OFFSET_MS)
-  let hour = istDate.getUTCHours()
-  const minute = String(istDate.getUTCMinutes()).padStart(2, '0')
-  const suffix = hour >= 12 ? 'pm' : 'am'
-  hour = hour % 12
-  if (hour === 0) hour = 12
-  return `${String(hour).padStart(2, '0')}:${minute} ${suffix}`
+  const now = new Date()
+  // date in YYYY-MM-DD using sv locale which yields ISO-like date
+  const date = new Intl.DateTimeFormat('sv', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+  // time in HH:MM 24-hour format
+  const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' }).format(now)
+  return { start_date: date, start_time: time }
 }
 
 /**
@@ -112,39 +89,46 @@ function formatTimeInIst(value) {
  */
 function getSessionStatus(rawStatus, startAtValue, durationMinutes) {
   const status = String(rawStatus || '').toLowerCase()
-
-  // Admin ended the course → always show as ended
   if (status === 'ended' || status === 'course_ended') return 'ended'
 
-  const startAt = parseServerDateAsUtc(startAtValue)
+  const startAt = parseServerDate(startAtValue)
   if (!startAt) return 'upcoming'
 
   const durationMs = Math.max(1, Number(durationMinutes || 60)) * 60 * 1000
   const now = Date.now()
 
-  // Calculate today's instance of the recurring class in IST
-  const nowIst = new Date(now + IST_OFFSET_MS)
-  const startIst = new Date(startAt.getTime() + IST_OFFSET_MS)
-
-  // Build today's start time using same HH:MM from original start_at
-  const todayStart = new Date(Date.UTC(
-    nowIst.getUTCFullYear(),
-    nowIst.getUTCMonth(),
-    nowIst.getUTCDate(),
-    startIst.getUTCHours(),
-    startIst.getUTCMinutes(),
-    startIst.getUTCSeconds(),
-  ))
-  const todayStartMs = todayStart.getTime() - IST_OFFSET_MS // convert back to UTC ms
-  const todayEndMs = todayStartMs + durationMs
-
-  // Before original start date → upcoming
+  // If the original startAt is in the future, course hasn't started yet.
   if (now < startAt.getTime()) return 'upcoming'
 
-  // Within today's window → live
-  if (now >= todayStartMs && now <= todayEndMs) return 'live'
+  // Determine the scheduled local time (HH:MM:SS) from the original startAt in IST
+  const timeParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(startAt)
+  const hh = timeParts.find((p) => p.type === 'hour')?.value || '00'
+  const mm = timeParts.find((p) => p.type === 'minute')?.value || '00'
+  const ss = timeParts.find((p) => p.type === 'second')?.value || '00'
 
-  // Today's window passed but class is ongoing (recurring) → upcoming (next day)
+  // Get today's date in IST
+  const todayParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const y = todayParts.find((p) => p.type === 'year')?.value
+  const M = todayParts.find((p) => p.type === 'month')?.value
+  const d = todayParts.find((p) => p.type === 'day')?.value
+
+  // Build an ISO string with India offset (+05:30) for today's scheduled instance
+  const todayIsoWithOffset = `${y}-${M}-${d}T${hh}:${mm}:${ss}+05:30`
+  const todayStart = new Date(todayIsoWithOffset)
+  const todayEnd = new Date(todayStart.getTime() + durationMs)
+
+  if (now >= todayStart.getTime() && now <= todayEnd.getTime()) return 'live'
   return 'upcoming'
 }
 
@@ -715,7 +699,7 @@ export default function AdminLiveClasses() {
 
   const sessions = useMemo(() => {
     return classes.map((c) => {
-      const start = parseServerDateAsUtc(c.start_at)
+      const start = parseServerDate(c.start_at)
       const hasValidStart = !!start
       const course = courseMap.get(c.course_id)
       const instructor = userMap.get(c.instructor_id)
@@ -847,6 +831,7 @@ export default function AdminLiveClasses() {
       // Silently log issues if any, but don't block the UI with alerts
       if (res?.zoom_error) {
         console.error('Zoom generation failed:', res.zoom_error)
+        setActionError(`Zoom generation failed: ${res.zoom_error}`)
       }
 
       setForm({
@@ -887,7 +872,7 @@ export default function AdminLiveClasses() {
     }
     try {
       const startAtIso = istDateTimePartsToIso(form.start_date, form.start_time)
-      await api(`/lms/live-classes/${editId}`, {
+      const res = await api(`/lms/live-classes/${editId}`, {
         method: 'PATCH',
         body: JSON.stringify({
           title,
@@ -901,6 +886,10 @@ export default function AdminLiveClasses() {
           image_url: form.image_url.trim(),
         }),
       })
+      if (res?.zoom_error) {
+        console.error('Zoom generation failed (update):', res.zoom_error)
+        setActionError(`Zoom generation failed: ${res.zoom_error}`)
+      }
       setEditId(null)
       setActiveView('list')
       loadData()
@@ -915,17 +904,23 @@ export default function AdminLiveClasses() {
     setEditId(session.id)
     const rawClass = classes.find(c => c._id === session.id)
     if (!rawClass) return
+    const startAt = parseServerDate(rawClass.start_at)
+    let start_date = ''
+    let start_time = ''
+    if (startAt) {
+      // YYYY-MM-DD for date input
+      start_date = new Intl.DateTimeFormat('sv', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(startAt)
+      // HH:MM (24h) for time input
+      start_time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' }).format(startAt)
+    }
 
-    const startAt = parseServerDateAsUtc(rawClass.start_at)
-    const istDate = startAt ? new Date(startAt.getTime() + IST_OFFSET_MS) : new Date()
-    
     setForm({
       title: rawClass.title || '',
       class_name: rawClass.class_name || '',
       course_id: rawClass.course_id || '',
       instructor_id: rawClass.instructor_id || '',
-      start_date: `${istDate.getUTCFullYear()}-${String(istDate.getUTCMonth() + 1).padStart(2, '0')}-${String(istDate.getUTCDate()).padStart(2, '0')}`,
-      start_time: `${String(istDate.getUTCHours()).padStart(2, '0')}:${String(istDate.getUTCMinutes()).padStart(2, '0')}`,
+      start_date: start_date,
+      start_time: start_time,
       duration_minutes: rawClass.duration_minutes || 60,
       amount: rawClass.amount || '',
       image_url: rawClass.image_url || '',

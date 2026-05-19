@@ -288,13 +288,47 @@ function StatusBadge({ status }) {
 }
 
 // Payment/Enrollment Modal
+function normalizeCouponCode(value) {
+  return String(value || '').trim().toUpperCase()
+}
+
+function getCouponDiscountQuote(amount, coupon) {
+  const baseAmount = Math.max(0, Number(amount || 0))
+  if (!coupon || baseAmount <= 0) return { discount: 0, total: baseAmount }
+
+  const couponValue = Math.max(0, Number(coupon.value || 0))
+  const discount = coupon.discount_type === 'flat'
+    ? Math.min(baseAmount, couponValue)
+    : Math.min(baseAmount, Number(((baseAmount * couponValue) / 100).toFixed(2)))
+
+  return { discount, total: Math.max(0, Number((baseAmount - discount).toFixed(2))) }
+}
+
 function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSuccess }) {
   const [step, setStep] = useState('details') // details | success
   const [selectedPlanId, setSelectedPlanId] = useState('')
   const [modalError, setModalError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [couponError, setCouponError] = useState('')
+  const [availableCoupons, setAvailableCoupons] = useState([])
 
   const normalizedPlans = buildLiveSubscriptionPlans(plans, session?.priceAmount)
+
+  useEffect(() => {
+    let mounted = true
+    api('/lms/coupons?limit=200')
+      .then((res) => {
+        if (mounted) setAvailableCoupons(res?.items || [])
+      })
+      .catch(() => {
+        if (mounted) setAvailableCoupons([])
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!selectedPlanId && normalizedPlans.length > 0) {
@@ -304,8 +338,42 @@ function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSucces
 
   const selectedPlan = normalizedPlans.find((p) => p.id === selectedPlanId) || null
   const classAmount = Number(session.priceAmount || 0)
-  const payableAmount = Number(selectedPlan?.price || classAmount || 0)
+  const baseAmount = Number(selectedPlan?.price || classAmount || 0)
+  const couponQuote = getCouponDiscountQuote(baseAmount, appliedCoupon)
+  const payableAmount = Number(couponQuote.total || 0)
   const payableLabel = `₹${Number(payableAmount || 0).toLocaleString('en-IN')}`
+
+  const handleApplyCoupon = () => {
+    const code = normalizeCouponCode(couponCode)
+    if (!code) {
+      setCouponError('Enter a coupon code first.')
+      setAppliedCoupon(null)
+      return
+    }
+
+    const match = availableCoupons.find((coupon) => normalizeCouponCode(coupon.code) === code)
+    if (!match) {
+      setCouponError('Coupon code not found.')
+      setAppliedCoupon(null)
+      return
+    }
+
+    const exhausted = Number(match.max_uses || 0) > 0 && Number(match.uses || 0) >= Number(match.max_uses || 0)
+    if (match.active === false || exhausted) {
+      setCouponError('This coupon is not available anymore.')
+      setAppliedCoupon(null)
+      return
+    }
+
+    setAppliedCoupon(match)
+    setCouponError('')
+  }
+
+  const handleRemoveCoupon = () => {
+    setCouponCode('')
+    setAppliedCoupon(null)
+    setCouponError('')
+  }
 
   const handlePay = async () => {
     setModalError('')
@@ -324,6 +392,8 @@ function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSucces
             amount,
             enrollment_type: 'live_class',
             target_id: String(session.id),
+            coupon_code: appliedCoupon?.code || '',
+            coupon_discount: Number(couponQuote.discount || 0),
           }),
         })
         await new Promise((resolve, reject) => {
@@ -362,6 +432,8 @@ function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSucces
         body: JSON.stringify({
           course_id: session.courseId,
           student_id: studentId,
+          coupon_code: appliedCoupon?.code || '',
+          coupon_discount: Number(couponQuote.discount || 0),
         }),
       })
 
@@ -441,6 +513,45 @@ function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSucces
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="rounded-[10px] border border-black/[0.08] bg-white p-4">
+                <p className="text-[12px] font-semibold text-[#0f172a]">Apply coupon</p>
+                <p className="mt-1 text-[11px] text-[#94a3b8]">Use an active coupon to reduce the live class fee.</p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Enter coupon code"
+                    className="h-10 flex-1 rounded-[8px] border border-black/[0.08] px-3 text-[13px] uppercase tracking-wide"
+                  />
+                  {appliedCoupon ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="h-10 rounded-[8px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#64748b] hover:bg-gray-50"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      className="h-10 rounded-[8px] bg-[#0f172a] px-4 text-[13px] font-semibold text-white hover:bg-[#111827]"
+                    >
+                      Apply
+                    </button>
+                  )}
+                </div>
+                {couponError ? <p className="mt-2 text-[12px] text-red-600">{couponError}</p> : null}
+                {appliedCoupon ? (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-[8px] bg-[#eefbf1] px-3 py-2 text-[12px] text-[#166534]">
+                    <span>
+                      Applied <strong>{appliedCoupon.code}</strong>
+                    </span>
+                    <span>- ₹{Number(couponQuote.discount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
               </div>
 
               {/* What you get */}

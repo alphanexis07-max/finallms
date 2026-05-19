@@ -18,14 +18,27 @@ function parseEventMeta(event) {
   }
 }
 
+function parseServerDate(value) {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  const raw = String(value).trim()
+  if (!raw) return null
+  if (/([zZ]|[+-]\d{2}:\d{2})$/.test(raw)) {
+    const parsed = new Date(raw)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+  const parsed = new Date(`${raw}Z`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 function formatEventDate(event) {
   const startsAt = event?.starts_at || event?.date || null
   if (!startsAt) return { dateLabel: '-', timeLabel: '-' }
-  const date = new Date(startsAt)
-  if (Number.isNaN(date.getTime())) return { dateLabel: '-', timeLabel: '-' }
+  const date = parseServerDate(startsAt)
+  if (!date) return { dateLabel: '-', timeLabel: '-' }
   return {
-    dateLabel: date.toLocaleDateString(),
-    timeLabel: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    dateLabel: date.toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }),
+    timeLabel: date.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }),
   }
 }
 
@@ -67,8 +80,8 @@ function buildEventEndDate(startDate, endToken) {
 }
 
 function isUpcomingOrLiveEvent(event, now) {
-  const startsAt = new Date(event?.starts_at || event?.date || 0)
-  if (Number.isNaN(startsAt.getTime())) return false
+  const startsAt = parseServerDate(event?.starts_at || event?.date || 0)
+  if (!startsAt) return false
   if (startsAt >= now) return true
 
   const parsedEndToken = parseEndTimeFromDescription(event)
@@ -115,7 +128,11 @@ export default function StudentSchoolEvents() {
   const sortedEvents = useMemo(() => {
     return [...events]
       .filter((event) => event?.starts_at || event?.date)
-      .sort((a, b) => new Date(a.starts_at || a.date || 0) - new Date(b.starts_at || b.date || 0))
+      .sort((a, b) => {
+        const aDate = parseServerDate(a.starts_at || a.date || 0)
+        const bDate = parseServerDate(b.starts_at || b.date || 0)
+        return (aDate?.getTime() || 0) - (bDate?.getTime() || 0)
+      })
   }, [events])
 
   const upcoming = useMemo(() => {

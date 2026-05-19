@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -18,9 +19,10 @@ class Settings(BaseSettings):
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
-    account_id: str = ""
-    client_id: str = ""
-    client_secret: str = ""
+    # Support ZOOM_ env var names present in repository .env files
+    account_id: str = Field("", env="ZOOM_ACCOUNT_ID")
+    client_id: str = Field("", env="ZOOM_CLIENT_ID")
+    client_secret: str = Field("", env="ZOOM_CLIENT_SECRET")
 
     cors_origins: str = "http://localhost:5173"
     platform_commission_percent: float = 20.0

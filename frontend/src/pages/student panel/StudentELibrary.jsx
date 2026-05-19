@@ -235,10 +235,6 @@ export default function StudentELibrary() {
 
                       <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3">
                         <div className="bg-[#f8fafc] rounded-[6px] p-[8px]">
-                          <p className="text-[10px] text-[#94a3b8]">Uploaded</p>
-                          <p className="text-[12px] font-semibold text-[#0f172a]">{formatDateTime(resource.created_at)}</p>
-                        </div>
-                        <div className="bg-[#f8fafc] rounded-[6px] p-[8px]">
                           <p className="text-[10px] text-[#94a3b8]">Size</p>
                           <p className="text-[12px] font-semibold text-[#0f172a]">{estimateSize(resource.file_url)}</p>
                         </div>

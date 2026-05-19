@@ -6,6 +6,7 @@ function toUiPlan(plan) {
   return {
     id: plan?._id,
     name: plan?.name || '',
+    description: plan?.description || '',
     duration: plan?.billing_period || '',
     price: Number(plan?.price || 0),
     enabled: Boolean(plan?.active ?? true),
@@ -37,6 +38,7 @@ export default function AdminSubscription() {
 
   const [adminShare, setAdminShare] = useState(30)
   const [newPlanName, setNewPlanName] = useState('')
+  const [newPlanDescription, setNewPlanDescription] = useState('')
   const [newDuration, setNewDuration] = useState('')
   const [newPrice, setNewPrice] = useState('')
   const [newActive, setNewActive] = useState(true)
@@ -45,6 +47,7 @@ export default function AdminSubscription() {
   const [editingPlanId, setEditingPlanId] = useState('')
   const [editingPlanDraft, setEditingPlanDraft] = useState({
     name: '',
+    description: '',
     duration: '',
     price: '',
     enabled: true,
@@ -66,6 +69,8 @@ export default function AdminSubscription() {
     courses.forEach((c) => map.set(c?._id, c))
     return map
   }, [courses])
+
+  const planLimitReached = plans.length >= 3
 
   const billRows = useMemo(() => {
     return payments.map((p) => {
@@ -143,6 +148,11 @@ export default function AdminSubscription() {
     setError('')
     setSuccess('')
 
+    if (planLimitReached) {
+      setError('Only 3 subscription plans are allowed. Delete one before adding a new plan.')
+      return
+    }
+
     if (!newPlanName.trim() || !newDuration.trim()) {
       setError('Plan name and duration are required.')
       return
@@ -160,12 +170,14 @@ export default function AdminSubscription() {
         method: 'POST',
         body: JSON.stringify({
           name: newPlanName.trim(),
+          description: newPlanDescription.trim(),
           billing_period: newDuration.trim(),
           price: parsedPrice,
           active: newActive,
         }),
       })
       setNewPlanName('')
+      setNewPlanDescription('')
       setNewDuration('')
       setNewPrice('')
       setNewActive(true)
@@ -184,6 +196,7 @@ export default function AdminSubscription() {
     setEditingPlanId(String(plan?.id || ''))
     setEditingPlanDraft({
       name: plan?.name || '',
+      description: plan?.description || '',
       duration: plan?.duration || '',
       price: String(Number(plan?.price || 0)),
       enabled: Boolean(plan?.enabled),
@@ -192,7 +205,7 @@ export default function AdminSubscription() {
 
   const cancelEditPlan = () => {
     setEditingPlanId('')
-    setEditingPlanDraft({ name: '', duration: '', price: '', enabled: true })
+    setEditingPlanDraft({ name: '', description: '', duration: '', price: '', enabled: true })
   }
 
   const saveEditedPlan = async () => {
@@ -215,6 +228,7 @@ export default function AdminSubscription() {
         method: 'PATCH',
         body: JSON.stringify({
           name: editingPlanDraft.name.trim(),
+          description: editingPlanDraft.description.trim(),
           billing_period: editingPlanDraft.duration.trim(),
           price: parsedPrice,
           active: editingPlanDraft.enabled,
@@ -265,6 +279,7 @@ export default function AdminSubscription() {
           <h3 className="text-[18px] font-bold text-[#0f172a]">Saved subscription plans</h3>
           <span className="rounded-[12px] bg-[#eef2ff] px-3 py-1 text-[12px] font-medium text-[#4338ca]">Live from database</span>
         </div>
+        <p className="mt-2 text-[13px] text-[#64748b]">You can keep at most 3 subscription plans. Edit and delete remain available for saved plans.</p>
 
         {error ? <p className="mt-3 text-[13px] text-red-600">{error}</p> : null}
         {success ? <p className="mt-3 text-[13px] text-green-700">{success}</p> : null}
@@ -274,6 +289,7 @@ export default function AdminSubscription() {
             <thead>
               <tr className="text-left text-[12px] font-semibold text-[#64748b]">
                 <th className="px-3 py-2">Plan</th>
+                <th className="px-3 py-2">Description</th>
                 <th className="px-3 py-2">Duration</th>
                 <th className="px-3 py-2">Price (INR)</th>
                 <th className="px-3 py-2">Status</th>
@@ -283,7 +299,7 @@ export default function AdminSubscription() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-[13px] text-[#64748b]">
+                  <td colSpan={6} className="px-3 py-4 text-[13px] text-[#64748b]">
                     Loading plans...
                   </td>
                 </tr>
@@ -301,6 +317,18 @@ export default function AdminSubscription() {
                           />
                         ) : (
                           plan.name || 'Untitled plan'
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[13px] text-[#0f172a]">
+                        {isEditing ? (
+                          <input
+                            value={editingPlanDraft.description}
+                            onChange={(e) => setEditingPlanDraft((prev) => ({ ...prev, description: e.target.value }))}
+                            placeholder="Optional description"
+                            className="h-8 w-full rounded-[6px] border border-black/[0.12] bg-white px-2 text-[12px]"
+                          />
+                        ) : (
+                          plan.description || '-'
                         )}
                       </td>
                       <td className="px-3 py-2 text-[13px] text-[#0f172a]">
@@ -387,7 +415,7 @@ export default function AdminSubscription() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-[13px] text-[#64748b]">
+                  <td colSpan={6} className="px-3 py-4 text-[13px] text-[#64748b]">
                     No plans created yet.
                   </td>
                 </tr>
@@ -396,11 +424,17 @@ export default function AdminSubscription() {
           </table>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 rounded-[8px] border border-dashed border-black/[0.15] bg-[#fcfdff] p-4 sm:grid-cols-[1.3fr_1fr_0.7fr_0.8fr_auto]">
+        <div className="mt-4 grid grid-cols-1 gap-3 rounded-[8px] border border-dashed border-black/[0.15] bg-[#fcfdff] p-4 sm:grid-cols-[1.05fr_1.15fr_1fr_0.7fr_0.8fr_auto]">
           <input
             value={newPlanName}
             onChange={(e) => setNewPlanName(e.target.value)}
             placeholder="New plan name"
+            className="h-10 rounded-[6px] border border-black/[0.08] px-3 text-[13px]"
+          />
+          <input
+            value={newPlanDescription}
+            onChange={(e) => setNewPlanDescription(e.target.value)}
+            placeholder="Description"
             className="h-10 rounded-[6px] border border-black/[0.08] px-3 text-[13px]"
           />
           <input
@@ -427,11 +461,11 @@ export default function AdminSubscription() {
           </select>
           <button
             onClick={addPlan}
-            disabled={saving}
+            disabled={saving || planLimitReached}
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-medium text-white hover:bg-[#4c2dd9] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             <PlusCircle className="h-4 w-4" />
-            {saving ? 'Saving...' : 'Add plan'}
+            {saving ? 'Saving...' : planLimitReached ? 'Plan limit reached' : 'Add plan'}
           </button>
         </div>
       </section>

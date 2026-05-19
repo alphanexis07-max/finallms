@@ -402,7 +402,7 @@ function ViewCourseModal({ course, onClose }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-[8px] border border-black/[0.08] p-3">
               <p className="text-[11px] text-[#94a3b8]">Price</p>
-              <p className="text-[14px] font-semibold text-[#0f172a]">₹{Number(course?.price || 0)}</p>
+              <p className="text-[14px] font-semibold text-[#0f172a]">{course?.course_type === 'free' ? 'Free' : `₹${Number(course?.price || 0)}`}</p>
             </div>
             <div className="rounded-[8px] border border-black/[0.08] p-3">
               <p className="text-[11px] text-[#94a3b8]">Students</p>
@@ -674,7 +674,7 @@ export default function AdminCourseManagement() {
                   )}
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-black/[0.08]">
-                  <span className="text-[12px] font-semibold text-[#0f172a]">₹{Number(course.price || 0)}</span>
+                  <span className="text-[12px] font-semibold text-[#0f172a]">{course.course_type === 'free' ? 'Free' : `₹${Number(course.price || 0)}`}</span>
                   <div className="flex gap-1.5">
                     <button onClick={() => setEditCourse(course)} className="p-1.5 text-[#64748b] hover:text-[#5b3df6] hover:bg-[#ede7ff] rounded-md transition-colors" title="Edit"><Edit className="h-4 w-4" /></button>
                     <button onClick={() => setDeleteId(course._id)} className="p-1.5 text-[#64748b] hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>

@@ -89,7 +89,15 @@ export default function AdminDashboard() {
         api('/lms/enrollments?limit=200').catch(() => ({ items: [] })),
       ])
 
-      setStats(dash || {})
+      // Normalize dashboard response: backend may return `total_students` or `students`.
+      const normalizedDash = {
+        total_students: (dash && (dash.total_students ?? dash.students)) || (s && (s.total || (Array.isArray(s) ? s.length : undefined))) || 0,
+        total_instructors: (dash && (dash.total_instructors ?? dash.instructors)) || 0,
+        total_courses: (dash && (dash.total_courses ?? dash.courses)) || (c && (c.total || 0)) || 0,
+        total_live_classes: (dash && (dash.total_live_classes ?? dash.live_classes)) || 0,
+        total_revenue: (dash && (dash.total_revenue ?? dash.revenue)) || 0,
+      }
+      setStats(normalizedDash)
       setCourses(c.items || [])
       setLiveClasses(lc.items || [])
       setInstructors(i.items || [])

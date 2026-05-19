@@ -74,6 +74,25 @@ function formatDate(value) {
   })
 }
 
+function normalizeCouponCode(value) {
+  return String(value || '').trim().toUpperCase()
+}
+
+function getCouponDiscountQuote(amount, coupon) {
+  const baseAmount = Math.max(0, Number(amount || 0))
+  if (!coupon || baseAmount <= 0) {
+    return { discount: 0, total: baseAmount }
+  }
+
+  const couponValue = Math.max(0, Number(coupon.value || 0))
+  const discount = coupon.discount_type === 'flat'
+    ? Math.min(baseAmount, couponValue)
+    : Math.min(baseAmount, Number(((baseAmount * couponValue) / 100).toFixed(2)))
+
+  const total = Math.max(0, Number((baseAmount - discount).toFixed(2)))
+  return { discount, total }
+}
+
 function parseUserIdFromToken() {
   const token = getToken()
   if (!token) return ''
@@ -241,10 +260,23 @@ function CourseDetailModal({ course, onClose, onEnroll, enrolled }) {
   )
 }
 
-function CheckoutModal({ course, onClose, onPay, submitting }) {
+function CheckoutModal({
+  course,
+  couponCode,
+  setCouponCode,
+  onApplyCoupon,
+  onRemoveCoupon,
+  couponError,
+  appliedCoupon,
+  couponQuote,
+  onClose,
+  onPay,
+  submitting,
+}) {
   if (!course) return null
 
-  const payableAmount = course.priceLabel
+  const payableAmount = `Rs. ${Number(couponQuote.total || 0).toLocaleString('en-IN')}`
+  const discountAmount = Number(couponQuote.discount || 0)
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-3 sm:p-4 backdrop-blur-[2px]" onClick={onClose}>
@@ -272,6 +304,48 @@ function CheckoutModal({ course, onClose, onPay, submitting }) {
               <div className="flex items-center justify-between gap-4">
                 <span>{course.title}</span>
                 <span className="font-semibold text-[#0f172a]">{payableAmount}</span>
+              </div>
+              <div className="rounded-[14px] border border-black/[0.08] bg-[#fafcff] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex-1">
+                    <p className="text-[12px] font-semibold text-[#0f172a]">Apply coupon</p>
+                    <p className="mt-1 text-[11px] text-[#94a3b8]">Enter a coupon code to reduce the total due.</p>
+                  </div>
+                  <div className="flex w-full gap-2 sm:w-auto">
+                    <input
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Enter coupon code"
+                      className="h-10 min-w-0 flex-1 rounded-[10px] border border-black/[0.08] px-3 text-[13px] uppercase tracking-wide sm:w-[200px]"
+                    />
+                    {appliedCoupon ? (
+                      <button
+                        type="button"
+                        onClick={onRemoveCoupon}
+                        className="h-10 rounded-[10px] border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#64748b] hover:bg-gray-50"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onApplyCoupon}
+                        className="h-10 rounded-[10px] bg-[#0f172a] px-4 text-[13px] font-semibold text-white hover:bg-[#111827]"
+                      >
+                        Apply
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {couponError ? <p className="mt-2 text-[12px] text-red-600">{couponError}</p> : null}
+                {appliedCoupon ? (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-[10px] bg-[#eefbf1] px-3 py-2 text-[12px] text-[#166534]">
+                    <span>
+                      Applied <strong>{appliedCoupon.code}</strong> ({appliedCoupon.discount_type === 'flat' ? `₹${Number(appliedCoupon.value || 0).toLocaleString('en-IN')}` : `${Number(appliedCoupon.value || 0)}%`} off)
+                    </span>
+                    <span>- Rs. {discountAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null}
               </div>
               <div className="flex items-center justify-between gap-4 border-t border-black/[0.08] pt-3">
                 <span className="text-[13px] font-semibold text-[#0f172a]">Total due</span>
@@ -373,6 +447,10 @@ export default function StudentBrowseCourse() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [coupons, setCoupons] = useState([])
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [couponError, setCouponError] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -381,12 +459,14 @@ export default function StudentBrowseCourse() {
     Promise.all([
       api('/lms/courses?limit=500'),
       api('/lms/enrollments?limit=500').catch(() => ({ items: [] })),
+      api('/lms/coupons?limit=200').catch(() => ({ items: [] })),
     ])
-      .then(([courseData, enrollmentData]) => {
+      .then(([courseData, enrollmentData, couponData]) => {
         const fetchedCourses = (courseData?.items || []).map(toDisplayCourse)
         const enrolledSet = new Set((enrollmentData?.items || []).map((item) => item.course_id))
         setCourses(fetchedCourses)
         setEnrolledIds(enrolledSet)
+        setCoupons(couponData?.items || [])
       })
       .catch((err) => {
         setCourses([])
@@ -417,6 +497,46 @@ export default function StudentBrowseCourse() {
 
     setCheckoutCourse(course)
     setSelectedCourse(null)
+    setCouponCode('')
+    setAppliedCoupon(null)
+    setCouponError('')
+  }
+
+  const couponQuote = useMemo(
+    () => getCouponDiscountQuote(checkoutCourse?.price || 0, appliedCoupon),
+    [checkoutCourse, appliedCoupon],
+  )
+
+  const handleApplyCoupon = () => {
+    const code = normalizeCouponCode(couponCode)
+    if (!code) {
+      setCouponError('Enter a coupon code first.')
+      setAppliedCoupon(null)
+      return
+    }
+
+    const match = coupons.find((coupon) => normalizeCouponCode(coupon.code) === code)
+    if (!match) {
+      setCouponError('Coupon code not found.')
+      setAppliedCoupon(null)
+      return
+    }
+
+    const exhausted = Number(match.max_uses || 0) > 0 && Number(match.uses || 0) >= Number(match.max_uses || 0)
+    if (match.active === false || exhausted) {
+      setCouponError('This coupon is not available anymore.')
+      setAppliedCoupon(null)
+      return
+    }
+
+    setAppliedCoupon(match)
+    setCouponError('')
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponCode('')
+    setCouponError('')
   }
 
   const createEnrollment = async (course) => {
@@ -428,20 +548,23 @@ export default function StudentBrowseCourse() {
       return
     }
 
-    const isPaidCourse = course.course_type === 'paid' && Number(course.price || 0) > 0
+    const payableQuote = getCouponDiscountQuote(course.price || 0, appliedCoupon)
+    const isPaidCourse = Number(payableQuote.total || 0) > 0
 
     try {
       setSubmitting(true)
       setError('')
 
       if (isPaidCourse) {
-        const chargeAmount = Number(course.price || 0)
+        const chargeAmount = Number(payableQuote.total || 0)
         const order = await api('/lms/payments/order', {
           method: 'POST',
           body: JSON.stringify({
             amount: Number(chargeAmount || 0),
             enrollment_type: 'course',
             target_id: course._id,
+            coupon_code: appliedCoupon?.code || '',
+            coupon_discount: Number(payableQuote.discount || 0),
           }),
         })
 
@@ -505,6 +628,8 @@ export default function StudentBrowseCourse() {
         body: JSON.stringify({
           course_id: course._id,
           student_id: studentId,
+          coupon_code: appliedCoupon?.code || '',
+          coupon_discount: Number(payableQuote.discount || 0),
         }),
       })
 
@@ -702,6 +827,13 @@ export default function StudentBrowseCourse() {
       {checkoutCourse && (
         <CheckoutModal
           course={checkoutCourse}
+          couponCode={couponCode}
+          setCouponCode={setCouponCode}
+          onApplyCoupon={handleApplyCoupon}
+          onRemoveCoupon={handleRemoveCoupon}
+          couponError={couponError}
+          appliedCoupon={appliedCoupon}
+          couponQuote={couponQuote}
           onClose={() => setCheckoutCourse(null)}
           onPay={createEnrollment}
           submitting={submitting}

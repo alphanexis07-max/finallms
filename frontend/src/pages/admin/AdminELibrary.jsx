@@ -264,7 +264,7 @@ export default function AdminELibrary() {
                 <div>
                   <p className="text-[14px] font-semibold text-[#0f172a]">{item.title}</p>
                   <p className="mt-1 text-[12px] text-[#94a3b8]">
-                    {item.grade} • {item.format} • Uploaded by {item.uploadedBy} • {item.uploadedOn}
+                    {item.grade} • {item.format} • Uploaded by {item.uploadedBy}
                   </p>
                 </div>
               </div>

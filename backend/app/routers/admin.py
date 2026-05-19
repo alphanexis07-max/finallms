@@ -91,8 +91,21 @@ async def get_admin_student_insights(user=Depends(get_current_user)):
 @router.get("/dashboard")
 async def get_admin_dashboard(user=Depends(get_current_user)):
     admin_required(user)
-    # TODO: Replace with real dashboard data
-    return {"courses": 0, "tests": 0}
+    total_students = await mongo.db.users.count_documents({"role": "student"})
+    total_courses = await mongo.db.courses.count_documents({})
+    total_live_classes = await mongo.db.live_classes.count_documents({})
+    # Calculate total revenue from captured payments
+    revenue_agg = await mongo.db.payments.aggregate([
+        {"$match": {"status": "captured"}},
+        {"$group": {"_id": None, "sum": {"$sum": "$amount"}}}
+    ]).to_list(length=1)
+    total_revenue = revenue_agg[0]["sum"] if revenue_agg else 0
+    return {
+        "total_students": total_students,
+        "total_courses": total_courses,
+        "total_live_classes": total_live_classes,
+        "total_revenue": total_revenue,
+    }
 
 @router.get("/courses")
 async def get_admin_courses(user=Depends(get_current_user)):
