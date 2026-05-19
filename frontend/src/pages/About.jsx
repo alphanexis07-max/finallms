@@ -15,12 +15,11 @@ export default (props) => {
           }}>
           <div className="flex flex-col lg:flex-row items-center self-stretch gap-8 lg:gap-14">
             <div className="flex-1">
-              <button className="flex flex-col items-start bg-white/10 text-left py-[13px] px-3.5 mb-4 rounded-xl border-0 cursor-pointer hover:bg-white/20 transition-colors w-fit"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-white/10 text-left py-[13px] px-3.5 mb-4 rounded-xl border-0 cursor-pointer hover:bg-white/20 transition-colors w-fit">
                 <span className="text-white text-[15px]">
                   {"About EduMart — Powering the Future of Learning"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col self-stretch pb-[1px] mb-[17px]">
                 <span className="text-white text-4xl sm:text-5xl lg:text-[45px] font-bold leading-tight">
                   {"Redefining learning experiences with technology, innovation, and limitless access."}
@@ -98,12 +97,11 @@ export default (props) => {
         <div className="flex flex-col lg:flex-row items-stretch self-stretch py-[88px] px-4 sm:px-8 md:px-16 lg:px-36 gap-9 max-w-[1400px] mx-auto">
           <div className="flex-1 bg-white pt-10 px-6 sm:px-10 rounded-lg shadow-md hover:shadow-lg transition-shadow">
             <div className="flex flex-col items-start self-stretch">
-              <button className="flex flex-col items-start bg-[#EEF2F6] text-left py-[11px] px-3.5 rounded-xl border-0 cursor-pointer hover:bg-[#e2e8f0] transition-colors"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-[#EEF2F6] text-left py-[11px] px-3.5 rounded-xl border-0 cursor-pointer hover:bg-[#e2e8f0] transition-colors">
                 <span className="text-[#0b8276] text-[13px] font-bold">
                   {"Our Vision"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start self-stretch pb-[1px] mt-4">
                 <span className="text-[#111b2f] text-2xl sm:text-[28px] font-bold max-w-[426px]">
                   {"Building a future where learning is seamless, scalable, and accessible to everyone."}
@@ -123,12 +121,11 @@ export default (props) => {
           </div>
 
           <div className="flex-1 flex flex-col items-start bg-white pt-10 px-6 sm:px-10 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <button className="flex flex-col items-start bg-[#EEF2F6] text-left py-[11px] px-3.5 mb-[23px] rounded-xl border-0 cursor-pointer hover:bg-[#e2e8f0] transition-colors w-fit"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-[#EEF2F6] text-left py-[11px] px-3.5 mb-[23px] rounded-xl border-0 cursor-pointer hover:bg-[#e2e8f0] transition-colors w-fit">
               <span className="text-[#0b8276] text-[13px] font-bold">
                 {"Why choose EduMart"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col self-stretch mb-[67px] gap-[15px]">
               <div className="flex items-start self-stretch gap-3.5">
                 <div className="w-10 h-10 flex items-center justify-center bg-[#EEF2F6] rounded-lg">
@@ -188,12 +185,11 @@ export default (props) => {
         {/* Our Core Values Section */}
         <div className="flex flex-col items-center self-stretch bg-[#f7efeb] py-16 sm:py-24 px-4 sm:px-8 md:px-16 lg:px-[120px] gap-14">
           <div className="flex flex-col items-center pb-1.5 px-[18px] text-center">
-            <button className="flex flex-col items-start bg-white text-left py-[11px] px-3.5 mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-white text-left py-[11px] px-3.5 mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
               <span className="text-[#0b8276] text-[13px] font-bold">
                 {"Our Core Values"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col items-center pb-[1px] mb-[17px]">
               <span className="text-[#111b2f] text-3xl sm:text-4xl lg:text-[42px] font-bold text-center">
                 {"Our Values That Define Us"}
@@ -261,12 +257,11 @@ export default (props) => {
             background: "linear-gradient(135deg, #0e7c67 0%, #1a5c3a 100%)"
           }}>
           <div className="flex flex-col items-center pb-[3px] px-[39px] text-center">
-            <button className="flex flex-col items-start bg-white/10 text-left py-[11px] px-[15px] mb-[19px] rounded-xl border-0 cursor-pointer hover:bg-white/20 transition-colors"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-white/10 text-left py-[11px] px-[15px] mb-[19px] rounded-xl border-0 cursor-pointer hover:bg-white/20 transition-colors">
               <span className="text-white text-[13px] font-bold">
                 {"Our Journey"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col items-center pb-[1px] mb-[18px]">
               <span className="text-white text-3xl sm:text-4xl lg:text-[42px] font-bold text-center max-w-[670px]">
                 {"From Vision to Impact Our Journey"}
@@ -281,12 +276,11 @@ export default (props) => {
 
           <div className="flex flex-col lg:flex-row items-stretch self-stretch gap-6">
             <div className="flex flex-1 flex-col items-start bg-white/10 pt-7 px-6 pb-8 rounded-lg hover:bg-white/15 transition-colors">
-              <button className="flex flex-col items-start bg-white/20 text-left py-[13px] px-[21px] mb-[22px] rounded-xl border-0 cursor-pointer"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-white/20 text-left py-[13px] px-[21px] mb-[22px] rounded-xl border-0 cursor-pointer">
                 <span className="text-white text-[13px] font-bold">
                   {"The Beginning"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start pb-[1px] mb-6">
                 <span className="text-white text-[19px] font-bold">
                   {"Launched with a vision"}
@@ -299,12 +293,11 @@ export default (props) => {
               </div>
             </div>
             <div className="flex flex-1 flex-col items-start bg-white/10 pt-7 px-6 pb-8 rounded-lg hover:bg-white/15 transition-colors">
-              <button className="flex flex-col items-start bg-white/20 text-left py-[13px] px-5 mb-[22px] rounded-xl border-0 cursor-pointer"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-white/20 text-left py-[13px] px-5 mb-[22px] rounded-xl border-0 cursor-pointer">
                 <span className="text-white text-[13px] font-bold">
                   {"Growth"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start pb-[1px] mb-6">
                 <span className="text-white text-[19px] font-bold">
                   {"Expanding our reach"}
@@ -317,12 +310,11 @@ export default (props) => {
               </div>
             </div>
             <div className="flex flex-1 flex-col items-start bg-white/10 pt-7 px-6 pb-8 rounded-lg hover:bg-white/15 transition-colors">
-              <button className="flex flex-col items-start bg-white/20 text-left py-[13px] px-[19px] mb-[22px] rounded-xl border-0 cursor-pointer"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-white/20 text-left py-[13px] px-[19px] mb-[22px] rounded-xl border-0 cursor-pointer">
                 <span className="text-white text-[13px] font-bold">
                   {"Innovation"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start pb-[1px] mb-6">
                 <span className="text-white text-[19px] font-bold">
                   {"Tech-driven learning"}
@@ -335,12 +327,11 @@ export default (props) => {
               </div>
             </div>
             <div className="flex flex-1 flex-col items-start bg-white/10 pt-7 px-6 pb-8 rounded-lg hover:bg-white/15 transition-colors">
-              <button className="flex flex-col items-start bg-white/20 text-left py-[13px] px-[19px] mb-[22px] rounded-xl border-0 cursor-pointer"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-white/20 text-left py-[13px] px-[19px] mb-[22px] rounded-xl border-0 cursor-pointer">
                 <span className="text-white text-[13px] font-bold">
                   {"Today & Beyond"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start pb-[1px] mb-6">
                 <span className="text-white text-[19px] font-bold">
                   {"Empowering learners"}
@@ -358,12 +349,11 @@ export default (props) => {
         {/* Our Team Section */}
         <div className="flex flex-col items-center self-stretch bg-[#f7efeb] py-16 sm:py-24 px-4 sm:px-8 md:px-16 lg:px-[120px] gap-14">
           <div className="flex flex-col items-center pb-0.5 px-2 text-center">
-            <button className="flex flex-col items-start bg-white text-left py-[13px] px-[15px] mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-white text-left py-[13px] px-[15px] mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
               <span className="text-[#0b8276] text-[13px] font-bold">
                 {"Our Leadership"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col items-center pb-[1px] mb-[18px]">
               <span className="text-[#111b2f] text-3xl sm:text-4xl lg:text-[42px] font-bold text-center">
                 {"Meet the team behind EduMart"}

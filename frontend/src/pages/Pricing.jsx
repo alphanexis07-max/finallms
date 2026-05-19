@@ -70,24 +70,21 @@ export default (props) => {
           <div className="flex flex-col lg:flex-row items-center self-stretch mb-[31px] gap-8 lg:gap-12">
             <div className="flex flex-1 flex-col items-start">
               <div className="flex items-center mb-[23px] flex-wrap gap-2">
-                <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[9px] px-3.5 rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
-                  onClick={() => alert("Pressed!")}>
+                <div className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[9px] px-3.5 rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer">
                   <span className="text-white text-[13px] font-bold">
                     {"Start free. Upgrade when you're ready."}
                   </span>
-                </button>
-                <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[9px] px-[15px] rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
-                  onClick={() => alert("Pressed!")}>
+                </div>
+                <div className="flex flex-col shrink-0 items-start bg-white/10 text-left py-[9px] px-[15px] rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer">
                   <span className="text-white text-[13px] font-bold">
                     {"Zero setup cost. Instant access."}
                   </span>
-                </button>
-                <button className="flex flex-col shrink-0 items-start bg-white/10 text-left py-2.5 px-[15px] rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
-                  onClick={() => alert("Pressed!")}>
+                </div>
+                <div className="flex flex-col shrink-0 items-start bg-white/10 text-left py-2.5 px-[15px] rounded-xl border border-solid border-white/20 hover:bg-white/20 transition-colors cursor-pointer">
                   <span className="text-white text-[13px] font-bold">
                     {"Designed for modern educators & creators"}
                   </span>
-                </button>
+                </div>
               </div>
               <div className="flex flex-col items-start self-stretch pb-[1px] mb-7">
                 <span className="text-white text-4xl sm:text-5xl lg:text-[64px] font-bold max-w-full lg:w-[501px] leading-tight">
@@ -122,12 +119,11 @@ export default (props) => {
               }}>
               <div className="flex flex-col self-stretch bg-white py-7 px-4 sm:px-6 gap-5 rounded-lg">
                 <div className="flex items-center bg-[#F3F6F9] p-1.5 rounded-xl w-fit">
-                  <button className="flex flex-col shrink-0 items-start bg-white text-left py-[11px] px-4 rounded-xl border-0 shadow-sm cursor-pointer"
-                    onClick={() => alert("Pressed!")}>
+                  <div className="flex flex-col shrink-0 items-start bg-white text-left py-[11px] px-4 rounded-xl border-0 shadow-sm cursor-pointer">
                     <span className="text-[#15192D] text-[13px] font-bold">
                       {"Monthly billing"}
                     </span>
-                  </button>
+                  </div>
                   <div className="flex flex-col shrink-0 items-start py-[11px] px-[15px] rounded-xl">
                     <span className="text-[#15192D] text-[13px] font-bold">
                       {"Yearly billing"}
@@ -149,12 +145,11 @@ export default (props) => {
                         </span>
                       </div>
                     </div>
-                    <button className="flex flex-col shrink-0 items-start bg-[#FF8A3324] text-left py-[9px] px-3.5 rounded-xl border-0 cursor-pointer hover:bg-[#FF8A3340] transition-colors"
-                      onClick={() => alert("Pressed!")}>
+                    <div className="flex flex-col shrink-0 items-start bg-[#FF8A3324] text-left py-[9px] px-3.5 rounded-xl border-0 cursor-pointer hover:bg-[#FF8A3340] transition-colors">
                       <span className="text-[#FF8A33] text-[13px] font-bold">
                         {"Most Popular"}
                       </span>
-                    </button>
+                    </div>
                   </div>
 
                   <div className="flex justify-between items-start flex-wrap gap-3">
@@ -245,12 +240,11 @@ export default (props) => {
         {/* Pricing Plans Section - Matching Features.jsx "Six modules" style */}
         <div className="flex flex-col items-center self-stretch bg-[#f7efeb] py-16 sm:py-24 px-4 sm:px-8 md:px-16 lg:px-[120px] gap-14">
           <div className="flex flex-col items-center pb-1.5 px-[18px] text-center">
-            <button className="flex flex-col items-start bg-white text-left py-[9px] px-[13px] mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-white text-left py-[9px] px-[13px] mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
               <span className="text-[#0b8276] text-[13px] font-bold">
                 {"Pricing"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col items-center pb-[1px] mb-[21px]">
               <span className="text-[#111b2f] text-3xl sm:text-4xl lg:text-[44px] font-bold text-center max-w-[654px]">
                 {"Pick the plan that matches your growth stage"}
@@ -341,98 +335,15 @@ export default (props) => {
           )}
         </div>
 
-        {/* Compare Plans Table - Matching Features.jsx style */}
-        <div className="self-stretch py-[88px] px-4 sm:px-8">
-          <div className="flex flex-col items-center self-stretch bg-white max-w-[1152px] mx-auto pt-10 rounded-lg shadow-md"
-            style={{
-              boxShadow: "0px 18px 40px rgba(0,0,0,0.05)"
-            }}>
-            <div className="flex flex-col items-center mb-[33px] text-center">
-              <button className="flex flex-col items-start bg-[#FF8A331C] text-left py-[9px] px-3.5 mb-4 rounded-xl border-0 cursor-pointer hover:bg-[#FF8A3330] transition-colors"
-                onClick={() => alert("Pressed!")}>
-                <span className="text-[#FF8A33] text-[13px] font-bold">
-                  {"Compare plans"}
-                </span>
-              </button>
-              <span className="text-[#111b2f] text-3xl sm:text-[38px] font-bold mb-3 text-center">
-                {"Compare plans. Choose with confidence."}
-              </span>
-              <div className="flex flex-col items-start py-[3px] px-2">
-                <span className="text-slate-500 text-base text-center max-w-[623px]">
-                  {"Understand exactly what each plan offers and pick what fits your goals best."}
-                </span>
-              </div>
-            </div>            {/* Table Header */}
-            <div className="grid grid-cols-4 gap-4 self-stretch mb-8 px-4 sm:px-10 border-b border-gray-100 pb-4">
-              <div className="text-[#111b2f] text-sm font-bold">Features</div>
-              <div className="text-[#111b2f] text-[15px] font-bold text-center">Basic</div>
-              <div className="text-[#111b2f] text-[15px] font-bold text-center">Pro</div>
-              <div className="text-[#111b2f] text-[15px] font-bold text-center">Enterprise</div>
-            </div>
-
-            {/* Table Rows */}
-            <div className="flex flex-col self-stretch px-4 sm:px-10 gap-6">
-              {/* Student capacity */}
-              <div className="grid grid-cols-4 gap-4 items-center">
-                <div className="text-[#111b2f] text-sm font-bold">Student capacity</div>
-                <div className="text-slate-500 text-sm text-center">100</div>
-                <div className="text-slate-500 text-sm text-center">Unlimited</div>
-                <div className="text-slate-500 text-sm text-center">Unlimited</div>
-              </div>
-
-              {/* Published courses */}
-              <div className="grid grid-cols-4 gap-4 items-center">
-                <div className="text-[#111b2f] text-sm font-bold">Published courses</div>
-                <div className="text-slate-500 text-sm text-center">5</div>
-                <div className="text-slate-500 text-sm text-center">Unlimited</div>
-                <div className="text-slate-500 text-sm text-center">Unlimited</div>
-              </div>
-
-              {/* Custom domain */}
-              <div className="grid grid-cols-4 gap-4 items-center">
-                <div className="text-[#111b2f] text-sm font-bold">Custom domain</div>
-                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
-                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
-                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
-              </div>
-
-              {/* Advanced analytics */}
-              <div className="grid grid-cols-4 gap-4 items-center">
-                <div className="text-[#111b2f] text-sm font-bold">Advanced analytics</div>
-                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
-                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
-                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
-              </div>
-
-              {/* Multi-tenant setup */}
-              <div className="grid grid-cols-4 gap-4 items-center">
-                <div className="text-[#111b2f] text-sm font-bold">Multi-tenant setup</div>
-                <div className="flex justify-center"><X className="w-5 h-5 text-red-400" /></div>
-                <div className="text-slate-500 text-sm text-center">Optional</div>
-                <div className="flex justify-center"><Check className="w-5 h-5 text-[#0b8276]" /></div>
-              </div>
-
-              {/* Dedicated support */}
-              <div className="grid grid-cols-4 gap-4 items-center mb-10">
-                <div className="text-[#111b2f] text-sm font-bold">Dedicated support</div>
-                <div className="text-slate-500 text-sm text-center">Email</div>
-                <div className="text-slate-500 text-sm text-center">Priority</div>
-                <div className="text-slate-500 text-sm text-center">Success manager</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* FAQ Section - Matching Features.jsx "How teams use it" style but reversed */}
         <div className="flex flex-col self-stretch py-[78px] px-4 sm:px-8 gap-4 max-w-[1152px] mx-auto">
           <div className="flex flex-col lg:flex-row items-start self-stretch gap-8">
             <div className="flex flex-1 flex-col items-start gap-[18px]">
-              <button className="flex flex-col items-start bg-[#7C4DFF1C] text-left py-2.5 px-3.5 rounded-xl border-0 cursor-pointer hover:bg-[#7C4DFF30] transition-colors"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-[#7C4DFF1C] text-left py-2.5 px-3.5 rounded-xl border-0 cursor-pointer hover:bg-[#7C4DFF30] transition-colors">
                 <span className="text-[#7C4DFF] text-[13px] font-bold">
                   {"FAQ"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start pt-[7px] pl-[1px] pr-[92px]">
                 <span className="text-[#111b2f] text-3xl sm:text-[40px] font-bold max-w-[326px]">
                   {"Frequently asked questions about billing"}
@@ -443,12 +354,6 @@ export default (props) => {
                   {"Everything your team usually asks before choosing a plan or booking a demo."}
                 </span>
               </div>
-              <button className="flex flex-col items-start bg-transparent text-left py-[18px] px-[23px] rounded-md border border-solid border-[#00000012] hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => alert("Pressed!")}>
-                <span className="text-[#111b2f] text-sm font-bold">
-                  {"Talk to sales"}
-                </span>
-              </button>
             </div>
 
             <div className="flex flex-1 flex-col gap-4">

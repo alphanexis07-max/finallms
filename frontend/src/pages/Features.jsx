@@ -100,12 +100,11 @@ export default (props) => {
           }}>
           <div className="flex flex-col lg:flex-row items-center self-stretch mb-[31px] gap-8 lg:gap-12">
             <div className="flex flex-1 flex-col items-start">
-              <button className="flex items-center bg-white/10 text-left py-2 px-3.5 mb-[19px] gap-2 rounded-xl border-0 hover:bg-white/20 transition-colors"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex items-center bg-white/10 text-left py-2 px-3.5 mb-[19px] gap-2 rounded-xl border-0 hover:bg-white/20 transition-colors">
                 <span className="text-white text-[13px] font-bold">
                   {"Our Services"}
                 </span>
-              </button>
+              </div>
               <div className="flex flex-col items-start self-stretch pb-[1px] mb-5">
                 <span className="text-white text-4xl sm:text-5xl lg:text-[64px] font-bold max-w-full lg:w-[507px] leading-tight">
                   {"Everything you need to power modern learning all in one platform"}
@@ -142,12 +141,11 @@ export default (props) => {
                       {"Why Choose EduMart?"}
                     </span>
                   </div>
-                  <button className="flex flex-col shrink-0 items-start bg-[#5B3CFF1A] text-left py-2.5 px-3 rounded-xl border-0 cursor-pointer hover:bg-[#5B3CFF30] transition-colors"
-                    onClick={() => alert("Pressed!")}>
+                  <div className="flex flex-col shrink-0 items-start bg-[#5B3CFF1A] text-left py-2.5 px-3 rounded-xl border-0 cursor-pointer hover:bg-[#5B3CFF30] transition-colors">
                     <span className="text-[#5B3CFF] text-xs font-bold">
                       {"Loved by learners across India"}
                     </span>
-                  </button>
+                  </div>
                 </div>
                 <div className="flex flex-col self-stretch gap-[17px]">
                   <div className="flex flex-col sm:flex-row justify-center items-stretch self-stretch gap-[17px]">
@@ -223,12 +221,11 @@ export default (props) => {
         {/* All Services Section */}
         <div className="flex flex-col items-center self-stretch bg-[#f7efeb] py-16 sm:py-24 px-4 sm:px-8 md:px-16 lg:px-[120px] gap-14">
           <div className="flex flex-col items-center pb-1.5 px-[18px] text-center">
-            <button className="flex flex-col items-start bg-white text-left py-[9px] px-[13px] mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-white text-left py-[9px] px-[13px] mb-5 rounded-xl border-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
               <span className="text-[#0b8276] text-[13px] font-bold">
                 {"What We Offer"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col items-center pb-[1px] mb-[21px]">
               <span className="text-[#111b2f] text-3xl sm:text-4xl lg:text-[44px] font-bold text-center max-w-[702px]">
                 {"A complete ecosystem for modern education"}
@@ -279,12 +276,11 @@ export default (props) => {
             background: "linear-gradient(135deg, #0e7c67 0%, #1a5c3a 100%)"
           }}>
           <div className="flex flex-col items-center pb-[5px] px-1 text-center">
-            <button className="flex flex-col items-start bg-white/10 text-left py-2.5 px-3.5 mb-[21px] rounded-xl border-0 cursor-pointer hover:bg-white/20 transition-colors"
-              onClick={() => alert("Pressed!")}>
+            <div className="flex flex-col items-start bg-white/10 text-left py-2.5 px-3.5 mb-[21px] rounded-xl border-0 cursor-pointer hover:bg-white/20 transition-colors">
               <span className="text-white text-[13px] font-bold">
                 {"Why Choose Us"}
               </span>
-            </button>
+            </div>
             <div className="flex flex-col items-center pb-[1px] mb-[29px]">
               <span className="text-white text-3xl sm:text-4xl lg:text-[44px] font-bold text-center max-w-[684px]">
                 {"Transforming education through technology and innovation"}
@@ -357,12 +353,11 @@ export default (props) => {
         <div className="self-stretch bg-[#f7efeb] py-[88px] px-4 sm:px-8 md:px-16 lg:px-36">
           <div className="flex flex-col lg:flex-row items-center self-stretch bg-white max-w-[1152px] mx-auto p-6 sm:p-8 lg:p-11 gap-8 rounded-lg shadow-lg">
             <div className="flex flex-1 flex-col items-start pb-[5px] text-center lg:text-left">
-              <button className="flex flex-col items-start bg-[#EEF2F6] text-left py-[9px] px-3.5 mb-1 rounded-xl border-0 cursor-pointer hover:bg-[#e2e8f0] transition-colors"
-                onClick={() => alert("Pressed!")}>
+              <div className="flex flex-col items-start bg-[#EEF2F6] text-left py-[9px] px-3.5 mb-1 rounded-xl border-0 cursor-pointer hover:bg-[#e2e8f0] transition-colors">
                 <span className="text-[#0b8276] text-[13px] font-bold">
                   {"Ready to begin?"}
                 </span>
-              </button>
+              </div>
               <span className="text-[#111b2f] text-2xl sm:text-3xl lg:text-[34px] font-bold max-w-[672px] mb-[19px]">
                 {"Start your learning journey with EduMart today"}
               </span>
