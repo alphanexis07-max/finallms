@@ -300,9 +300,9 @@ export default function LandingPage(props) {
   }, [uploadedCourses, getYoutubeVideoId]);
 
   const howItWorksSteps = [
-    { title: "Find Courses", description: "We have helped over 3,400 new students to get into the most popular tech teams. Book Your Seat", icon: Search, highlighted: false },
-    { title: "Book Your Seat", description: "We have helped over 3,400 new students to get into the most popular tech teams. Book Your Seat", icon: ClipboardCheck, highlighted: true },
-    { title: "Get Certificate", description: "We have helped over 3,400 new students to get into the most popular tech teams. Book Your Seat", icon: BadgeCheck, highlighted: false },
+    { title: "Find Courses", description: "Explore industry-focused programs designed to build practical skills and career-ready expertise through structured learning paths.", icon: Search, highlighted: false },
+    { title: "Book Your Seat", description: "Secure your enrollment instantly with a simple registration process and reserve your place in upcoming batches before seats fill up.", icon: ClipboardCheck, highlighted: true },
+    { title: "Get Certificate", description: "Earn a verified completion certificate to showcase your skills, strengthen your portfolio, and enhance professional credibility.", icon: BadgeCheck, highlighted: false },
   ];
 
   const { scrollYProgress } = useScroll();
@@ -513,22 +513,6 @@ export default function LandingPage(props) {
               <p className="mt-2 text-sm text-slate-600 md:text-left">
                 Join real-time sessions with expert instructors — interactive, engaging, and career-focused.
               </p>
-            </motion.div>
-            <motion.div className="flex items-center justify-center gap-3 md:justify-start" variants={fadeUp}>
-              <button
-                className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-[#0b8276] text-[#0b8276] transition-colors hover:bg-[#0b8276] hover:text-white"
-                onClick={() => scroll(liveClassesRef, "left")}
-                aria-label="Scroll live classes left"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-[#0b8276] text-white transition-colors hover:bg-[#096b61]"
-                onClick={() => scroll(liveClassesRef, "right")}
-                aria-label="Scroll live classes right"
-              >
-                <ChevronRight size={20} />
-              </button>
             </motion.div>
           </div>
 

@@ -21,34 +21,55 @@ const TermsAndConditions = () => {
     },
   };
 
+  // Sections based on the attached PDF
   const sections = [
     {
-      title: "General",
-      content: "All products, prices, and offers listed on the website are subject to change without prior notice. We reserve the right to accept or reject any order at our sole discretion.",
+      title: "Acceptance of Terms",
+      content: "By accessing or using our services, you confirm that you have read, understood, and agreed to these Terms & Conditions. If you do not agree with any part of these terms, you should discontinue use of the platform immediately.",
     },
     {
-      title: "Use of Website",
-      content: "You agree not to misuse the website for fraudulent transactions, spamming, or activities that may harm the website's integrity. Content, images, and product descriptions are the property of Karom Edusupplies Private Limited and cannot be copied without permission.",
+      title: "Eligibility",
+      content: "Users must: Be legally capable of entering into binding agreements; Provide accurate and complete registration information; Use the platform lawfully and responsibly.",
     },
     {
-      title: "Pricing & Payment",
-      content: "All prices are inclusive of applicable taxes unless stated otherwise. Payments must be made through the secure gateways provided on our platform.",
+      title: "User Accounts",
+      content: "Users are responsible for: Maintaining confidentiality of account credentials; Protecting login information; All activities conducted through their accounts. Karom Edusupplies Private Limited reserves the right to suspend or terminate accounts violating platform policies or applicable laws.",
     },
     {
-      title: "Shipping & Delivery",
-      content: "Delivery timelines are indicative and may vary due to logistics, holidays, or unforeseen delays. We are not liable for delays caused by courier partners or force majeure events.",
+      title: "Course Access and Usage",
+      content: "All educational materials, videos, content, branding, graphics, and resources are protected intellectual property and are intended solely for personal educational use. Users may not: Reproduce, copy, or redistribute course materials; Share account access with unauthorized users; Use platform content for unauthorized commercial purposes; Modify or misuse copyrighted materials.",
     },
     {
-      title: "Returns & Refunds",
-      content: "Refer to our Refund Policy for details on returns, cancellations, and refunds.",
+      title: "Payments",
+      content: "Certain courses or services may require payment. Users agree to: Provide accurate billing information; Pay applicable fees and taxes; Follow payment provider terms and conditions. Failure to complete payments may result in restricted or suspended access to services.",
+    },
+    {
+      title: "Intellectual Property",
+      content: "All trademarks, logos, designs, platform assets, educational content, and intellectual property remain the exclusive property of Karom Edusupplies Private Limited or its licensors. Unauthorized usage is strictly prohibited and may result in legal action.",
+    },
+    {
+      title: "Prohibited Activities",
+      content: "Users may not: Violate applicable laws or regulations; Upload malicious or harmful content; Attempt unauthorized access to systems or servers; Disrupt platform operations or security; Engage in fraudulent, abusive, or deceptive activities.",
+    },
+    {
+      title: "Disclaimer",
+      content: "The platform and services are provided on an 'as-is' and 'as-available' basis without warranties of any kind. Karom Edusupplies Private Limited does not guarantee: Continuous or uninterrupted availability; Specific educational outcomes; Employment, placement, or certification guarantees.",
     },
     {
       title: "Limitation of Liability",
-      content: "Karom Edusupplies Private Limited is not liable for indirect, incidental, or consequential damages arising from the use of our products or website.",
+      content: "To the maximum extent permitted by applicable law, Karom Edusupplies Private Limited shall not be liable for: Indirect or consequential damages; Financial or business losses; Service interruptions; Loss of data or information; Technical issues caused by third-party providers.",
     },
     {
-      title: "Jurisdiction",
-      content: "These terms shall be governed by and interpreted under the laws of India. Any disputes shall be subject to the jurisdiction of the courts in Indore, Madhya Pradesh.",
+      title: "Termination",
+      content: "We reserve the right to suspend, restrict, or terminate user access without prior notice for violations of these Terms & Conditions or misuse of the platform.",
+    },
+    {
+      title: "Governing Law",
+      content: "These Terms & Conditions shall be governed and interpreted in accordance with applicable laws and jurisdiction.",
+    },
+    {
+      title: "Changes to Terms",
+      content: "Karom Edusupplies Private Limited reserves the right to update or modify these Terms at any time. Continued use of the platform after updates constitutes acceptance of revised terms.",
     },
   ];
 
@@ -87,7 +108,7 @@ const TermsAndConditions = () => {
                 </h1>
                 <p className="text-slate-600 text-base leading-relaxed">
                   Welcome to <span className="font-semibold text-[#0b8276]">Karom Edusupplies Private Limited</span>. 
-                  By accessing or using our website, you agree to the following terms.
+                  By accessing or using our website, products, or services, you agree to be bound by these Terms & Conditions.
                 </p>
               </div>
             </motion.div>
@@ -141,8 +162,8 @@ const TermsAndConditions = () => {
                       Acknowledgment
                     </h3>
                     <p className="text-slate-500 text-sm leading-relaxed">
-                      By using our website, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. 
-                      If you do not agree with any part of these terms, please do not use our website.
+                      By using our platform, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions. 
+                      If you do not agree with any part of these terms, please discontinue use of the platform immediately.
                     </p>
                   </div>
                 </div>
@@ -159,15 +180,17 @@ const TermsAndConditions = () => {
             >
               <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
                 <h3 className="text-base sm:text-lg font-semibold text-[#111b2f] mb-3">
-                  Contact Us
+                  Contact Information
                 </h3>
                 <p className="text-slate-500 text-sm leading-relaxed mb-2">
                   If you have any questions about these Terms & Conditions, please contact us:
                 </p>
                 <div className="mt-3 space-y-1 text-sm text-slate-600">
-                  <p>📧 <span className="text-[#0b8276]">karominfo@kacpl.in</span></p>
-                  <p>📞 +91 78987 81533</p>
-                  <p>📍 Scheme No 54, Vijay Nagar, Indore, Madhya Pradesh, India – 452010</p>
+                  <p>🏢 <span className="font-medium">Karom Edusupplies Private Limited</span></p>
+                  <p>📍 Scheme No. 54, Vijay Nagar, Indore, Madhya Pradesh, India</p>
+                  <p>📞 <a href="tel:+917898781533" className="text-[#0b8276] hover:underline">+91 78987 81533</a></p>
+                  <p>✉️ <a href="mailto:karominfo@kacpl.in" className="text-[#0b8276] hover:underline">karominfo@kacpl.in</a></p>
+                  <p>🌐 <a href="https://learn.edu-mart.com/" target="_blank" rel="noopener noreferrer" className="text-[#0b8276] hover:underline">https://learn.edu-mart.com/</a></p>
                 </div>
               </div>
             </motion.div>

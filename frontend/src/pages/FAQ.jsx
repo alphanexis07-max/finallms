@@ -6,30 +6,27 @@ const FAQ = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIndex, setActiveIndex] = useState(null);
 
+  // FAQs based on the attached PDF
   const faqs = [
     {
+      question: "What is Learn.edu-mart.com?",
+      answer: "Learn.edu-mart.com is an online learning and educational platform owned and operated by Karom Edusupplies Private Limited, designed to provide courses, learning resources, and skill development programs for students and professionals."
+    },
+    {
       question: "How do I enroll in a course?",
-      answer: "To enroll in a course, simply browse our course catalog, click on the course that interests you, and click the 'Register' or 'Buy Now' button. You'll need to create an account if you haven't already."
+      answer: "Users can browse available courses on the platform, select their preferred program, complete the payment process, and gain access to course materials through their registered account."
     },
     {
-      question: "Can I access my courses offline?",
-      answer: "While most of our platform requires an active internet connection to stream high-quality video content, certain materials like PDFs and resources can be downloaded for offline use."
+      question: "Are payments secure on the platform?",
+      answer: "Yes. Payments are processed through secure third-party payment gateways. Karom Edusupplies Private Limited does not directly store sensitive card or banking information on its servers."
     },
     {
-      question: "Do I get a certificate after completion?",
-      answer: "Yes! Every course on EduMart comes with a Certificate of Completion once you finish all the lessons and pass the final evaluation."
+      question: "Can I request a refund after purchasing a course?",
+      answer: "Refund requests are subject to our Refund Policy and may be considered in eligible cases such as duplicate payments, technical access issues, or services not delivered as described."
     },
     {
-      question: "What payment methods are supported?",
-      answer: "We support a wide range of payment options including Credit/Debit Cards, UPI (Google Pay, PhonePe), and Net Banking via our secure payment gateway."
-    },
-    {
-      question: "Can I get a refund if I'm not satisfied?",
-      answer: "We have a 7-day refund policy for most of our courses. Please refer to our Refund Policy page for more detailed terms and conditions."
-    },
-    {
-      question: "Are the live classes recorded?",
-      answer: "Yes, all live classes are recorded and uploaded to the dashboard within 24 hours so you can re-watch them anytime if you missed the session."
+      question: "How can I contact customer support?",
+      answer: "For support, inquiries, or assistance, you can contact us using the details below:\n\n📍 Address: Scheme No. 54, Vijay Nagar, Indore, Madhya Pradesh, India\n📞 Contact: +91 78987 81533\n✉️ Email: karominfo@kacpl.in\n🌐 Website: https://learn.edu-mart.com/"
     }
   ];
 
@@ -54,7 +51,7 @@ const FAQ = () => {
             transition={{ delay: 0.2 }}
             className="mt-4 text-lg text-slate-500"
           >
-            Have questions? We're here to help you get the most out of EduMart.
+            Find answers to common questions about our platform and services.
           </motion.p>
         </div>
 
@@ -104,7 +101,7 @@ const FAQ = () => {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
-                      <div className="px-6 pb-6 text-slate-600 leading-relaxed">
+                      <div className="px-6 pb-6 text-slate-600 leading-relaxed whitespace-pre-line">
                         {faq.answer}
                       </div>
                     </motion.div>
@@ -119,15 +116,20 @@ const FAQ = () => {
           )}
         </div>
 
-        {/* Still have questions? */}
+        {/* Still have questions? - Contact Section */}
         <div className="mt-16 text-center bg-[#0e7c67] rounded-3xl p-8 sm:p-12 text-white overflow-hidden relative">
           <div className="relative z-10">
             <h2 className="text-3xl font-bold mb-4">Still have questions?</h2>
             <p className="text-white/80 mb-8 max-w-lg mx-auto">
               If you couldn't find what you were looking for, our support team is happy to assist you.
             </p>
+            <div className="space-y-2 text-white/90 text-sm mb-8">
+              <p>📞 <a href="tel:+917898781533" className="hover:underline">+91 78987 81533</a></p>
+              <p>✉️ <a href="mailto:karominfo@kacpl.in" className="hover:underline">karominfo@kacpl.in</a></p>
+              <p>📍 Scheme No. 54, Vijay Nagar, Indore, Madhya Pradesh, India</p>
+            </div>
             <button 
-              onClick={() => window.location.href = '/contact'}
+              onClick={() => window.location.href = 'mailto:karominfo@kacpl.in'}
               className="bg-white text-[#0e7c67] font-bold py-3 px-8 rounded-xl hover:bg-slate-100 transition-colors"
             >
               Contact Support

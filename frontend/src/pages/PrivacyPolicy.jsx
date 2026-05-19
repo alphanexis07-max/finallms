@@ -21,31 +21,52 @@ const PrivacyPolicy = () => {
     },
   };
 
+  // Sections based on the attached PDF
   const sections = [
     {
       title: "Information We Collect",
       icon: "📋",
-      content: "The App may collect basic information such as your name, email, phone number, delivery address, and payment details when you place an order. We may also collect app usage data (like device type and logs) to improve the service.",
+      content: "We may collect personal information such as name, email address, contact details, payment information, and other data necessary to provide our services. This includes information provided during account registration, course enrollment, and payment processing."
     },
     {
       title: "How We Use Information",
       icon: "⚙️",
-      content: "To process and deliver your orders. To provide customer support and updates about your purchases. To improve the App's performance and features.",
+      content: "We use collected information to: Provide access to courses and learning services; Improve user experience and platform functionality; Process enrollments and payments; Send notifications, updates, and support communications; Prevent fraud, abuse, and unauthorized activities; Comply with applicable legal and regulatory obligations."
     },
     {
-      title: "Sharing of Information",
+      title: "Cookies and Tracking Technologies",
+      icon: "🍪",
+      content: "We may use cookies, analytics tools, and related technologies to: Improve website functionality; Analyze traffic and usage patterns; Remember user preferences; Enhance security and platform performance. Users may disable cookies through browser settings; however, certain features may not function properly."
+    },
+    {
+      title: "Data Sharing",
       icon: "🔄",
-      content: "We do not sell or rent your personal information. Information may be shared with trusted partners such as delivery services and payment providers. Information may be disclosed if required by law.",
+      content: "We do not sell personal information to third parties. Information may be shared only with: Authorized service providers; Payment gateway partners; Legal authorities when required by law; Technology providers supporting platform operations. All third parties are expected to maintain appropriate confidentiality and security standards."
     },
     {
       title: "Data Security",
       icon: "🔒",
-      content: "We use reasonable measures to keep your information safe. However, no online service is 100% secure.",
+      content: "We implement reasonable administrative, technical, and organizational measures to protect user information against unauthorized access, misuse, disclosure, or alteration. However, no digital platform or online transmission system can guarantee absolute security."
     },
     {
-      title: "Your Choices",
+      title: "User Rights",
       icon: "✅",
-      content: "You can update or delete your account information by contacting support. You can opt out of promotional messages anytime.",
+      content: "Depending on applicable laws and regulations, users may have rights to: Access personal data; Request correction of inaccurate information; Request deletion of information; Withdraw consent where applicable; Request restriction of data processing. Requests may be submitted through official contact channels."
+    },
+    {
+      title: "Third-Party Links",
+      icon: "🔗",
+      content: "Our platform may contain links to third-party websites or services. Karom Edusupplies Private Limited is not responsible for the privacy practices, content, or policies of external platforms."
+    },
+    {
+      title: "Children's Privacy",
+      icon: "👶",
+      content: "Our services are not intentionally directed toward children without appropriate parental or guardian supervision where legally required."
+    },
+    {
+      title: "Policy Updates",
+      icon: "📝",
+      content: "We may periodically update this Privacy Policy. Updated versions become effective immediately upon publication on the website. Users are encouraged to review this page regularly."
     },
   ];
 
@@ -80,12 +101,10 @@ const PrivacyPolicy = () => {
             >
               <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
                 <h1 className="text-xl sm:text-2xl font-bold text-[#111b2f] mb-3">
-                  Privacy Policy for Karom Edusupplies Private Limited
+                  Privacy Policy
                 </h1>
                 <p className="text-slate-600 text-base leading-relaxed">
-                  <span className="font-semibold text-[#0b8276]">Karom Edumart</span> (“the App”) is an online shopping application 
-                  that allows users to buy various products. We are committed to protecting your privacy and ensuring the security 
-                  of your personal information.
+                  At <span className="font-semibold text-[#0b8276]">Karom Edusupplies Private Limited</span>, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, and safeguard your data when you use our platform.
                 </p>
               </div>
             </motion.div>
@@ -147,7 +166,7 @@ const PrivacyPolicy = () => {
               </div>
             </motion.div>
 
-            {/* Contact Information */}
+            {/* Contact Information - from PDF */}
             <motion.div
               initial="hidden"
               whileInView="show"
@@ -157,17 +176,32 @@ const PrivacyPolicy = () => {
             >
               <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
                 <h3 className="text-base sm:text-lg font-semibold text-[#111b2f] mb-3">
-                  Contact Us
+                  Contact Information
                 </h3>
                 <p className="text-slate-500 text-sm leading-relaxed mb-2">
-                  If you have any questions about this Privacy Policy, please contact us at:
+                  If you have any questions about this Privacy Policy or wish to exercise your user rights, please contact us:
                 </p>
                 <div className="mt-3 space-y-1 text-sm text-slate-600">
-                  <p>📧 <span className="text-[#0b8276]">support@karom-edusupplies.com</span></p>
-                  <p>📞 +91 78987 81533</p>
-                  <p>📍 Scheme No 54, Vijay Nagar, Indore, Madhya Pradesh, India – 452010</p>
+                  <p>🏢 <span className="font-medium">Karom Edusupplies Private Limited</span></p>
+                  <p>📍 Scheme No. 54, Vijay Nagar, Indore, Madhya Pradesh, India</p>
+                  <p>📞 <a href="tel:+917898781533" className="text-[#0b8276] hover:underline">+91 78987 81533</a></p>
+                  <p>✉️ <a href="mailto:karominfo@kacpl.in" className="text-[#0b8276] hover:underline">karominfo@kacpl.in</a></p>
+                  <p>🌐 <a href="https://learn.edu-mart.com/" target="_blank" rel="noopener noreferrer" className="text-[#0b8276] hover:underline">https://learn.edu-mart.com/</a></p>
                 </div>
               </div>
+            </motion.div>
+
+            {/* Copyright Footer */}
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              variants={fadeUp}
+              className="w-full text-center"
+            >
+              <p className="text-slate-400 text-xs">
+                Copyright © {new Date().getFullYear()} Karom Edusupplies Private Limited. All rights reserved.
+              </p>
             </motion.div>
           </div>
         </div>

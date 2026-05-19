@@ -21,40 +21,81 @@ const RefundPolicy = () => {
     },
   };
 
+  // Sections based on the attached PDF
   const sections = [
     {
-      title: "Eligibility for Refund",
+      title: "Course Enrollment",
+      icon: "📚",
+      color: "#0b8276",
+      points: [
+        "Users are encouraged to review all course details, eligibility requirements, pricing, and descriptions carefully before making any payment or enrollment decision.",
+      ],
+    },
+    {
+      title: "Refund Eligibility",
       icon: "✅",
       color: "#0b8276",
       points: [
-        "Products must be returned in unused condition, with original packaging and invoice.",
-        "Refund requests must be raised within 7 days of delivery.",
-        "Items damaged due to misuse, mishandling, or normal wear & tear are not eligible.",
+        "Duplicate payment transactions",
+        "Technical issues preventing access to purchased services",
+        "Accidental purchases reported within the eligible timeframe",
+        "Services not delivered as described",
+        "All refund requests are reviewed on a case-by-case basis, and refund approval remains at the sole discretion of Karom Edusupplies Private Limited.",
       ],
     },
     {
-      title: "Process for Refund",
-      icon: "🔄",
-      color: "#FF8A33",
-      points: [
-        "Raise a refund/return request via our website or customer support email within the eligible period.",
-        "Once we receive and inspect the returned product, the refund will be initiated to your original mode of payment within 7–10 working days.",
-      ],
-    },
-    {
-      title: "Non-Refundable Items",
+      title: "Non-Refundable Situations",
       icon: "🚫",
       color: "#e74c3c",
       points: [
-        "Customized products, perishable items, or products marked as 'non-returnable' are not eligible.",
+        "Change of mind after successful course access",
+        "Partial or complete course consumption",
+        "Failure to attend live or scheduled sessions",
+        "Violation of platform policies or terms",
+        "Subscription periods already utilized",
+        "Downloaded or accessed digital resources",
       ],
     },
     {
-      title: "Cancellation",
-      icon: "❌",
+      title: "Refund Request Process",
+      icon: "🔄",
+      color: "#FF8A33",
+      points: [
+        "Submit a refund request through official support channels",
+        "Provide valid payment proof and transaction details",
+        "Share relevant supporting information if requested",
+        "Allow reasonable processing time for verification and review",
+        "Incomplete or unverifiable requests may be rejected.",
+      ],
+    },
+    {
+      title: "Processing Time",
+      icon: "⏱️",
       color: "#f39c12",
       points: [
-        "Orders can be cancelled before dispatch. Once shipped, cancellation will be treated as a return.",
+        "Approved refunds may take several business days to process depending on banking institutions, payment gateways, and financial providers.",
+        "Karom Edusupplies Private Limited shall not be responsible for delays caused by third-party payment providers or banks.",
+      ],
+    },
+    {
+      title: "Payment Disputes & Chargebacks",
+      icon: "⚠️",
+      color: "#e67e22",
+      points: [
+        "Users are encouraged to contact our support team before initiating chargebacks or payment disputes.",
+        "Fraudulent disputes, unauthorized claims, abuse of refund systems, or policy violations may result in:",
+        "• Immediate account suspension",
+        "• Permanent restriction from platform services",
+        "• Legal action where applicable",
+      ],
+    },
+    {
+      title: "Policy Modifications",
+      icon: "📝",
+      color: "#16a085",
+      points: [
+        "Karom Edusupplies Private Limited reserves the right to modify, update, or change this Refund Policy at any time without prior notice.",
+        "Continued use of the platform after updates constitutes acceptance of the revised policy.",
       ],
     },
   ];
@@ -66,7 +107,7 @@ const RefundPolicy = () => {
         <div className="flex flex-col items-center self-stretch bg-white py-[1px] px-4 sm:px-8 md:px-16 lg:px-36 pt-20 pb-12">
           <div className="flex flex-col items-center self-stretch py-1.5 mb-[11px] mx-8">
             <span className="text-[#111b2f] text-3xl sm:text-4xl lg:text-[48px] font-bold text-center">
-              Refund & Cancellation Policy
+              Refund Policy
             </span>
           </div>
           <div className="flex flex-col items-start py-1 px-[17px] mb-3">
@@ -90,11 +131,11 @@ const RefundPolicy = () => {
             >
               <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
                 <h1 className="text-xl sm:text-2xl font-bold text-[#111b2f] mb-3">
-                  Refund & Cancellation Policy
+                  Refund Policy
                 </h1>
                 <p className="text-slate-600 text-base leading-relaxed">
                   At <span className="font-semibold text-[#0b8276]">Karom Edusupplies Private Limited</span>, we strive to provide our customers with quality products and smooth services. 
-                  However, if you are not entirely satisfied with your purchase, our Refund Policy is as follows:
+                  Please review our refund policy carefully before making any payment or enrollment decision.
                 </p>
               </div>
             </motion.div>
@@ -141,7 +182,32 @@ const RefundPolicy = () => {
               ))}
             </motion.div>
 
-            {/* Important Note */}
+            {/* Contact Information Section - from PDF */}
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              variants={fadeUp}
+              className="w-full"
+            >
+              <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
+                <h3 className="text-base sm:text-lg font-semibold text-[#111b2f] mb-3">
+                  Contact Information
+                </h3>
+                <p className="text-slate-500 text-sm leading-relaxed mb-2">
+                  For any refund-related queries or to submit a refund request, please contact us:
+                </p>
+                <div className="mt-3 space-y-1 text-sm text-slate-600">
+                  <p>🏢 <span className="font-medium">Karom Edusupplies Private Limited</span></p>
+                  <p>📍 Scheme No. 54, Vijay Nagar, Indore, Madhya Pradesh, India</p>
+                  <p>📞 <a href="tel:+917898781533" className="text-[#0b8276] hover:underline">+91 78987 81533</a></p>
+                  <p>✉️ <a href="mailto:karominfo@kacpl.in" className="text-[#0b8276] hover:underline">karominfo@kacpl.in</a></p>
+                  <p>🌐 <a href="https://learn.edu-mart.com/" target="_blank" rel="noopener noreferrer" className="text-[#0b8276] hover:underline">https://learn.edu-mart.com/</a></p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Important Note about Chargebacks */}
             <motion.div
               initial="hidden"
               whileInView="show"
@@ -159,78 +225,11 @@ const RefundPolicy = () => {
                       Important Note
                     </h3>
                     <p className="text-slate-500 text-sm leading-relaxed">
-                      Please ensure you check all products upon delivery. For any issues, contact our customer support immediately 
-                      to ensure a smooth refund or replacement process.
+                      Please contact our support team before initiating chargebacks or payment disputes. 
+                      Fraudulent disputes or abuse of refund systems may result in account suspension, 
+                      permanent restriction from platform services, or legal action.
                     </p>
                   </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Quick Summary Table */}
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.2 }}
-              variants={fadeUp}
-              className="w-full"
-            >
-              <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
-                <h3 className="text-base sm:text-lg font-semibold text-[#111b2f] mb-4">
-                  Quick Summary
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">⏱️</span>
-                    <div>
-                      <p className="font-medium text-[#111b2f]">Return Window</p>
-                      <p className="text-sm text-slate-500">Within 7 days of delivery</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">💰</span>
-                    <div>
-                      <p className="font-medium text-[#111b2f]">Refund Timeline</p>
-                      <p className="text-sm text-slate-500">7-10 working days</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📦</span>
-                    <div>
-                      <p className="font-medium text-[#111b2f]">Condition</p>
-                      <p className="text-sm text-slate-500">Unused with original packaging</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🚫</span>
-                    <div>
-                      <p className="font-medium text-[#111b2f]">Non-Refundable</p>
-                      <p className="text-sm text-slate-500">Customized & perishable items</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Contact Information */}
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.2 }}
-              variants={fadeUp}
-              className="w-full"
-            >
-              <div className="bg-[#f7efeb] rounded-xl p-6 sm:p-8">
-                <h3 className="text-base sm:text-lg font-semibold text-[#111b2f] mb-3">
-                  Raise a Request
-                </h3>
-                <p className="text-slate-500 text-sm leading-relaxed mb-2">
-                  To raise a refund or return request, please contact us:
-                </p>
-                <div className="mt-3 space-y-1 text-sm text-slate-600">
-                  <p>📧 <span className="text-[#0b8276]">support@karom-edusupplies.com</span></p>
-                  <p>📞 +91 78987 81533</p>
-                  <p>📍 Scheme No 54, Vijay Nagar, Indore, Madhya Pradesh, India – 452010</p>
                 </div>
               </div>
             </motion.div>
