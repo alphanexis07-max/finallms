@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
+import { parseServerDate, formatDateInIst, formatTimeInIst } from '../../lib/dates'
 
 // Removed 'Cancelled' filter, updated filter labels
 const FILTERS = ['All Classes', 'Live/Upcoming', 'Completed']
@@ -36,33 +37,7 @@ const STATUS_CONFIG = {
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'))
 const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'))
 
-// Parse ISO-like server date strings. If timezone is missing, treat as UTC.
-function parseServerDate(value) {
-  if (!value) return null
-  if (value instanceof Date) return isNaN(value.getTime()) ? null : value
-  const raw = String(value).trim()
-  if (!raw) return null
-  // If contains timezone info, let Date parse it.
-  if (/([zZ]|[+-]\d{2}:\d{2})$/.test(raw)) {
-    const d = new Date(raw)
-    return isNaN(d.getTime()) ? null : d
-  }
-  // Otherwise assume UTC by appending Z.
-  const d = new Date(`${raw}Z`)
-  return isNaN(d.getTime()) ? null : d
-}
-
-function formatDateInIst(value) {
-  const date = parseServerDate(value)
-  if (!date) return 'Not scheduled'
-  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(date)
-}
-
-function formatTimeInIst(value) {
-  const date = parseServerDate(value)
-  if (!date) return '-'
-  return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).format(date)
-}
+// Use shared date helpers from lib/dates for consistent IST formatting
 
 function istDateTimePartsToIso(dateValue, timeValue) {
   const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))
@@ -610,6 +585,7 @@ export default function AdminLiveClasses() {
   const [reassigningId, setReassigningId] = useState('')
   const [hostMode, setHostMode] = useState('self')
   const [manualCourseName, setManualCourseName] = useState('')
+  const [courseInputMode, setCourseInputMode] = useState('select')
   // End Course confirm modal state
   const [endCourseTarget, setEndCourseTarget] = useState(null)
   const [endingId, setEndingId] = useState('')

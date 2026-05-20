@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { api, loadRazorpayScript } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
+import { parseServerDate, formatDateInIst, formatTimeInIst } from '../../lib/dates'
 
 const A1 = 'https://i.pravatar.cc/40?img=1'
 const A2 = 'https://i.pravatar.cc/40?img=2'
@@ -162,70 +163,13 @@ function getMinSubscriptionLabel(rawPlans, classAmountValue) {
   return `from ₹${Number(minPrice || 0).toLocaleString('en-IN')}`
 }
 
-function parseServerDateAsUtc(value) {
-  if (!value) return null
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value
-  }
-
-  const raw = String(value).trim()
-  if (!raw) return null
-
-  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(raw)
-  if (hasTimezone) {
-    const parsed = new Date(raw)
-    return Number.isNaN(parsed.getTime()) ? null : parsed
-  }
-
-  // Legacy rows without timezone are treated as IST local wall time.
-  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/)
-  if (!m) {
-    const fallback = new Date(raw)
-    return Number.isNaN(fallback.getTime()) ? null : fallback
-  }
-
-  const year = Number(m[1])
-  const month = Number(m[2])
-  const day = Number(m[3])
-  const hour = Number(m[4])
-  const minute = Number(m[5])
-  const second = Number(m[6] || 0)
-  const millisecond = Number(String(m[7] || '0').padEnd(3, '0'))
-  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond) - IST_OFFSET_MS
-  return new Date(utcMs)
-}
-
-function toIstDate(value) {
-  const raw = parseServerDateAsUtc(value)
-  if (!raw || Number.isNaN(raw.getTime())) return null
-  return new Date(raw.getTime() + IST_OFFSET_MS)
-}
-
-function formatDateInIst(value) {
-  const istDate = toIstDate(value)
-  if (!istDate) return 'Not scheduled'
-  const day = String(istDate.getUTCDate()).padStart(2, '0')
-  const month = String(istDate.getUTCMonth() + 1).padStart(2, '0')
-  const year = istDate.getUTCFullYear()
-  return `${day}/${month}/${year}`
-}
-
-function formatTimeInIst(value) {
-  const istDate = toIstDate(value)
-  if (!istDate) return '-'
-  let hour = istDate.getUTCHours()
-  const minute = String(istDate.getUTCMinutes()).padStart(2, '0')
-  const suffix = hour >= 12 ? 'pm' : 'am'
-  hour = hour % 12
-  if (hour === 0) hour = 12
-  return `${String(hour).padStart(2, '0')}:${minute} ${suffix}`
-}
+// Use shared date helpers from lib/dates for parsing/formatting
 
 function getSessionStatus(rawStatus, startAtValue, durationMinutes) {
   const status = String(rawStatus || '').toLowerCase()
   if (status === 'ended' || status === 'course_ended') return 'ended'
 
-  const startAt = parseServerDateAsUtc(startAtValue)
+  const startAt = parseServerDate(startAtValue)
   if (!startAt) return 'upcoming'
 
   const durationMs = Math.max(1, Number(durationMinutes || 60)) * 60 * 1000
@@ -261,11 +205,11 @@ function getObjectIdTimestampMs(value) {
 
 function getLiveClassSortTimestamp(row) {
   const directDate =
-    parseServerDateAsUtc(row?.created_at) ||
-    parseServerDateAsUtc(row?.createdAt) ||
-    parseServerDateAsUtc(row?.updated_at) ||
-    parseServerDateAsUtc(row?.updatedAt) ||
-    parseServerDateAsUtc(row?.start_at)
+    parseServerDate(row?.created_at) ||
+    parseServerDate(row?.createdAt) ||
+    parseServerDate(row?.updated_at) ||
+    parseServerDate(row?.updatedAt) ||
+    parseServerDate(row?.start_at)
 
   if (directDate && !Number.isNaN(directDate.getTime())) {
     return directDate.getTime()
@@ -976,8 +920,16 @@ export default function StudentLiveClasses() {
       const rows = classesRes.items || []
       const mapped = rows.map((r, idx) => {
         const course = courseMap.get(r.course_id) || {}
-        const startAt = parseServerDateAsUtc(r.start_at)
+        const startAt = parseServerDate(r.start_at)
         const hasValidStart = !!startAt
+        try {
+          // Debug: log raw and parsed start times to help diagnose timezone parsing
+          // Remove this log once issue is confirmed
+          // eslint-disable-next-line no-console
+          console.log('[LIVE-CLASS-TIME]', { id: r._id, raw: r.start_at, parsed: startAt, dateLabel: hasValidStart ? formatDateInIst(r.start_at) : null, timeLabel: hasValidStart ? formatTimeInIst(r.start_at) : null })
+        } catch (e) {
+          // ignore logging errors
+        }
         const attendeeIds = (r.attendee_ids || []).map((id) => String(id))
         // Mark as enrolled if student is in attendee_ids OR has an enrollment for this course
         if (

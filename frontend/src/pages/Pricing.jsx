@@ -113,7 +113,7 @@ export default (props) => {
             </div>
 
             {/* Card - Matching Features.jsx style */}
-            <div className="flex-1 w-full bg-white/5 p-4 sm:p-7 rounded-lg backdrop-blur-sm"
+            {/* <div className="flex-1 w-full bg-white/5 p-4 sm:p-7 rounded-lg backdrop-blur-sm"
               style={{
                 boxShadow: "0px 24px 60px rgba(0,0,0,0.2)"
               }}>
@@ -233,7 +233,7 @@ export default (props) => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -365,7 +365,7 @@ export default (props) => {
                 </div>
                 <div className="flex flex-col items-start self-stretch pb-[1px]">
                   <span className="text-slate-500 text-sm">
-                    {"Yes. Every new account gets a 14-day free trial so you can explore course creation, checkout, and student management before subscribing."}
+                    {"No free trial is available, but our plans are designed to give you complete value from your very first login with instant access to all core features."}
                   </span>
                 </div>
               </div>

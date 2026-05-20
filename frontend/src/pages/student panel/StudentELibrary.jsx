@@ -269,7 +269,7 @@ export default function StudentELibrary() {
                           <a
                             href={resource.file_url}
                             download={resource.title ? `${resource.title}.pdf` : 'resource.pdf'}
-                            className="bg-[#5b3df6] inline-flex items-center gap-[6px] h-[36px] justify-center px-[14px] rounded-[6px]"
+                            className="bg-[#5b3df6] inline-flex items-center gap-[6px] h-[36px] justify-center px-[5px] rounded-[6px]"
                           >
                             <Download className="h-[14px] w-[14px] text-white" />
                             <div className="flex flex-col font-medium h-[15px] justify-center leading-[0] text-white text-[12px]">

@@ -659,23 +659,7 @@ export default function StudentBrowseCourse() {
               All data — including course cards, price, type, and enrollment state comes from LMS.
             </div>
           </div> 
-          <div className="mt-4 flex items-center gap-[12px] flex-wrap">
-            <div className="bg-white border border-black/[0.08] flex items-center h-[36px] justify-center px-[16px] rounded-[12px] shrink-0">
-              <div className="flex flex-col font-medium h-[17px] justify-center leading-[0] text-[#0f172a] text-[12px]">
-                {courses.length} courses available
-              </div>
-            </div>
-            <div className="bg-white border border-black/[0.08] flex items-center h-[36px] justify-center px-[16px] rounded-[12px] shrink-0">
-              <div className="flex flex-col font-medium h-[17px] justify-center leading-[0] text-[#0f172a] text-[12px]">
-                {thisMonthCount} new this month
-              </div>
-            </div>
-            <div className="bg-white border border-black/[0.08] flex items-center h-[36px] justify-center px-[16px] rounded-[12px] shrink-0">
-              <div className="flex flex-col font-medium h-[17px] justify-center leading-[0] text-[#0f172a] text-[12px]">
-                {enrolledIds.size} enrolled by you
-              </div>
-            </div>
-          </div>
+          
         </section>
 
         <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[16px] items-start p-[21px] rounded-[8px]">

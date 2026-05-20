@@ -130,7 +130,7 @@ export default (props) => {
                 </button>
               </div>
             </div>
-            <div className="flex-1 w-full bg-white/5 p-4 sm:p-7 rounded-lg backdrop-blur-sm"
+            {/* <div className="flex-1 w-full bg-white/5 p-4 sm:p-7 rounded-lg backdrop-blur-sm"
               style={{
                 boxShadow: "0px 24px 48px rgba(0,0,0,0.2)"
               }}>
@@ -214,7 +214,7 @@ export default (props) => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 

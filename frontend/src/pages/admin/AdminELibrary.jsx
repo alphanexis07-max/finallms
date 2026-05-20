@@ -124,6 +124,18 @@ export default function AdminELibrary() {
       setFormError('Please provide a file URL or select a file')
       return
     }
+    // Ensure only PDFs are uploaded or provided
+    if (fileUrl.startsWith('data:')) {
+      if (!fileUrl.startsWith('data:application/pdf')) {
+        setFormError('Only PDF files are allowed')
+        return
+      }
+    } else {
+      if (!fileUrl.toLowerCase().endsWith('.pdf')) {
+        setFormError('Only PDF files are allowed')
+        return
+      }
+    }
     try {
       setSubmitting(true)
       setError('')
@@ -176,13 +188,18 @@ export default function AdminELibrary() {
       e.target.value = ''
       return
     }
+    const ext = (file.name.split('.').pop() || '').toUpperCase()
+    if (ext !== 'PDF') {
+      setFormError('Only PDF files are allowed')
+      e.target.value = ''
+      return
+    }
     try {
       setFormError('')
       setSelectedFileName(file.name)
       const dataUrl = await fileToDataUrl(file)
       setFileUrl(dataUrl)
-      const ext = (file.name.split('.').pop() || '').toUpperCase()
-      if (ext) setFormat(ext)
+      setFormat('PDF')
     } catch (err) {
       setFormError(err.message || 'Failed to read file')
     }
@@ -367,15 +384,11 @@ export default function AdminELibrary() {
                 <div>
                   <label className="mb-1 block text-[13px] font-semibold text-[#0f172a]">Format</label>
                   <select
-                    disabled={submitting}
+                    disabled
                     value={format}
-                    onChange={(e) => setFormat(e.target.value)}
                     className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]"
                   >
                     <option>PDF</option>
-                    <option>DOCX</option>
-                    <option>PPT</option>
-                    <option>MP4</option>
                   </select>
                 </div>
               </div>
