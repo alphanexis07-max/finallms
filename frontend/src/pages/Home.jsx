@@ -448,10 +448,10 @@ export default function LandingPage(props) {
             <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.6 }} className="flex items-center gap-4 lg:pl-20">
               <div className="flex -space-x-3">
                 {[
-                  "https://images.unsplash.com/photo-1544717305-996b815c338c?auto=format&fit=crop&w=120&q=80",
-                  "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=120&q=80",
-                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80",
-                  "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=120&q=80",
+                  "https://images.rawpixel.com/image_800/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI1LTA2L3Jhd3BpeGVsb2ZmaWNlN19waG90b19vZl95b3VuZ19pbmRpYW5fYm95X2hvbGRpbmdfc3R1ZGVudF9iYWNrcF9mMTgzNzMwYy00ZDdmLTRlNzUtOGE1MC1iZmFkNTI5MjMyYjFfMS5qcGc.jpg",
+                  "https://plus.unsplash.com/premium_photo-1682091992663-2e4f4a5534ba?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8aW5kaWFuJTIwc3R1ZGVudHxlbnwwfHwwfHx8MA%3D%3D",
+                  "https://img.magnific.com/free-photo/young-smiling-pretty-caucasian-schoolgirl-wearing-back-bag-holds-books-looking-camera-green-with-copy-space_141793-62662.jpg?semt=ais_hybrid&w=740&q=80",
+                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5E_xHSGG7EQX6VvCH1bRUwkx1Pvzx-1rs9w&s",
                 ].map((src, i) => (
                   <motion.img
                     whileHover={{ y: -5, zIndex: 20 }}
@@ -754,14 +754,29 @@ export default function LandingPage(props) {
             <button className="hidden md:flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-[#4D73EE] hover:bg-slate-100 transition-colors" onClick={() => scroll(reviewsRef, "left")}><ChevronLeft size={18} /></button>
             <motion.div ref={reviewsRef} className="flex-1 flex overflow-x-auto snap-x snap-mandatory gap-5 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 md:grid md:grid-cols-3 no-scrollbar" variants={stagger}>
               {[
-                { name: "Emma", role: "student", avatar: "/StudentAvtar.jpg" },
-                { name: "John Doe", role: "CEO", avatar: "/Ceo.png" },
-                { name: "Zoey", role: "Web Developer", avatar: "/lms-software-gestion-aprendizaje.webp" },
+                { 
+                  name: "Ravi Sharma", 
+                  role: "Student", 
+                  avatar: "https://i.pinimg.com/736x/0e/1b/49/0e1b4984c22ff810051677b8c7a29e7d.jpg?auto=format&fit=crop&w=120&q=80",
+                  text: "The platform is easy to use and the course structure was well organized. I liked that the lessons were simple and practical instead of being overly complicated."
+                },
+                { 
+                  name: "Aman Gupta", 
+                  role: "Student", 
+                  avatar: "https://images.rawpixel.com/image_800/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI1LTA2L3Jhd3BpeGVsb2ZmaWNlN19waG90b19vZl95b3VuZ19pbmRpYW5fYm95X2hvbGRpbmdfc3R1ZGVudF9iYWNrcF9mMTgzNzMwYy00ZDdmLTRlNzUtOGE1MC1iZmFkNTI5MjMyYjFfMS5qcGc.jpg?auto=format&fit=crop&w=120&q=80",
+                  text: "I joined to improve my skills and found the learning material quite useful. The dashboard and course navigation were also smooth on mobile."
+                },
+                { 
+                  name: "Sneha Patel", 
+                  role: "Student", 
+                  avatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5E_xHSGG7EQX6VvCH1bRUwkx1Pvzx-1rs9w&s",
+                  text: "The explanations were straightforward and beginner friendly. I appreciated that the platform focused more on practical understanding."
+                },
               ].map((review) => (
                 <motion.div key={review.name} className="min-w-[280px] sm:min-w-0 snap-start rounded-xl bg-white p-5 sm:p-6 text-center shadow-sm hover:shadow-md transition-all" variants={fadeUp} whileHover={{ y: -5 }}>
                   <div className="flex flex-col items-center gap-3">
                     <img src={review.avatar} alt={review.name} className="h-12 w-12 rounded-full object-cover" loading="lazy" />
-                    <p className="text-sm italic leading-relaxed text-slate-500">"This platform completely changed how I learn. The courses are practical, engaging, and truly valuable."</p>
+                    <p className="text-sm italic leading-relaxed text-slate-500">"{review.text}"</p>
                   </div>
                   <h3 className="mt-4 text-xl sm:text-[24px] font-semibold text-slate-700">{review.name}</h3>
                   <p className="text-sm italic text-[#0b8276]">{review.role}</p>
