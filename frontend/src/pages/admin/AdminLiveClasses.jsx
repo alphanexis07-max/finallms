@@ -640,6 +640,7 @@ export default function AdminLiveClasses() {
         return true
       })
 
+      console.log('[DEBUG-LOAD] Raw classes from API:', classesRes.items || [])
       setClasses(classesRes.items || [])
       setCourses(coursesRes.items || [])
       setInstructors(finalInstructors)
@@ -672,6 +673,7 @@ export default function AdminLiveClasses() {
     return classes.map((c) => {
       const start = parseServerDate(c.start_at)
       const hasValidStart = !!start
+      console.log(`[DEBUG-PARSE] Class: "${c.title}", raw start_at: "${c.start_at}", parsed: ${start?.toISOString()}, formatted time: ${hasValidStart ? formatTimeInIst(c.start_at) : 'N/A'}`)
       const course = courseMap.get(c.course_id)
       const instructor = userMap.get(c.instructor_id)
       const status = getSessionStatus(c.status, c.start_at, c.duration_minutes)
@@ -783,6 +785,7 @@ export default function AdminLiveClasses() {
         setIsCreating(false)
         return
       }
+      console.log('[DEBUG-CREATE] Sending start_at:', startAtIso, 'from date:', form.start_date, 'time:', form.start_time)
       const res = await api('/lms/live-classes', {
         method: 'POST',
         body: JSON.stringify({

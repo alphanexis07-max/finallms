@@ -670,21 +670,21 @@ function AssignCourseModal({ instructor, onClose, onAssign, availableCourses }) 
   )
 }
 
+// Create Instructor Modal with manual text inputs for expertise and experience
 function CreateInstructorModal({ onClose, onCreate }) {
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     password: '',
     phone: '',
-    expertise: 'STEM',
-    experience: '3-5 years',
+    expertise: '',
+    experience: '',
     bio: '',
   })
   const [selectedDays, setSelectedDays] = useState(['Mon', 'Wed'])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const expertiseOptions = ['STEM', 'Coding', 'English', 'Math']
   const scheduleOptions = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   const formCompletion = [form.fullName, form.email, form.password, form.phone].filter(Boolean).length
@@ -827,36 +827,22 @@ function CreateInstructorModal({ onClose, onCreate }) {
 
                   <div>
                     <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Primary expertise</label>
-                    <div className="relative">
-                      <select
-                        value={form.expertise}
-                        onChange={(e) => handleChange('expertise', e.target.value)}
-                        className="h-11 w-full appearance-none rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
-                      >
-                        {expertiseOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
-                    </div>
+                    <input
+                      value={form.expertise}
+                      onChange={(e) => handleChange('expertise', e.target.value)}
+                      className="h-11 w-full rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+                      placeholder="e.g., Mathematics, Physics, Computer Science, English Literature..."
+                    />
                   </div>
 
                   <div>
                     <label className="mb-1.5 block text-[12px] font-medium text-[#0f172a]">Experience</label>
-                    <div className="relative">
-                      <select
-                        value={form.experience}
-                        onChange={(e) => handleChange('experience', e.target.value)}
-                        className="h-11 w-full appearance-none rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
-                      >
-                        <option>1-2 years</option>
-                        <option>3-5 years</option>
-                        <option>5+ years</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
-                    </div>
+                    <input
+                      value={form.experience}
+                      onChange={(e) => handleChange('experience', e.target.value)}
+                      className="h-11 w-full rounded-[10px] border border-black/[0.08] bg-white px-3 text-[13px] text-[#0f172a] outline-none transition placeholder:text-[#94a3b8] focus:border-[#5b3df6] focus:ring-2 focus:ring-[#5b3df6]/15"
+                      placeholder="e.g., 3-5 years, 10+ years, Fresher..."
+                    />
                   </div>
 
                   <div className="sm:col-span-2">
@@ -912,7 +898,7 @@ function CreateInstructorModal({ onClose, onCreate }) {
                     <p className="mt-0.5 text-[12px] text-[#94a3b8]">{form.email || 'name@institute.com'}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <span className="inline-flex items-center rounded-full bg-[#e8f5ff] px-3 py-1 text-[11px] font-medium text-[#2563eb]">
-                        {form.expertise} expert
+                        {form.expertise || 'STEM'} expert
                       </span>
                       <span className="inline-flex items-center rounded-full bg-[#f0f4f8] px-3 py-1 text-[11px] font-medium text-[#64748b]">
                         {selectedDays.length} active days
@@ -1358,13 +1344,6 @@ export default function AdminInstructorManagement() {
                             className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-black/[0.08] bg-white px-3 text-[12px] font-medium text-[#0f172a] hover:bg-gray-50"
                           >
                             <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleActionClick('Assign', inst)}
-                            className="inline-flex h-9 items-center gap-2 rounded-[6px] bg-[#5b3df6] px-3 text-[12px] font-medium text-white hover:bg-[#4b2fd5]"
-                          >
-                            Assign
                           </button>
                           <button
                             type="button"

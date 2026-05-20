@@ -253,6 +253,7 @@ export default function StudentManagement() {
               name: c?.title || c?.course_title || 'Certificate of Completion',
               issueDate: c?.created_at || c?.issue_date || new Date().toISOString(),
               grade: c?.grade || 'Pass',
+              certificateUrl: c?.certificate_url || c?.url || null,
             })),
             bills,
             progress: {
@@ -449,6 +450,87 @@ export default function StudentManagement() {
 
     const safeInvoiceId = String(bill.invoiceNumber || bill.id || 'invoice').replace(/[^a-zA-Z0-9_-]/g, '_')
     doc.save(`${safeInvoiceId}.pdf`)
+  }
+
+  const handleDownloadCertificate = async (certificate, studentName) => {
+    if (!certificate) return
+    
+    try {
+      // If certificate has a URL, try to download it
+      if (certificate.certificateUrl) {
+        const response = await fetch(certificate.certificateUrl)
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${studentName || 'certificate'}_${certificate.id || Date.now()}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } else {
+        // Generate a PDF certificate if no URL is available
+        const doc = new jsPDF()
+        const margin = 20
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        
+        // Add decorative border
+        doc.setDrawColor(91, 61, 246)
+        doc.setLineWidth(1)
+        doc.rect(margin - 5, margin - 5, pageWidth - (margin - 5) * 2, pageHeight - (margin - 5) * 2)
+        
+        doc.setDrawColor(91, 61, 246)
+        doc.setLineWidth(0.5)
+        doc.rect(margin - 2, margin - 2, pageWidth - (margin - 2) * 2, pageHeight - (margin - 2) * 2)
+        
+        // Title
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(28)
+        doc.setTextColor(91, 61, 246)
+        doc.text('CERTIFICATE OF COMPLETION', pageWidth / 2, 60, { align: 'center' })
+        
+        // Award text
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(14)
+        doc.setTextColor(100, 100, 100)
+        doc.text('This certificate is proudly presented to', pageWidth / 2, 90, { align: 'center' })
+        
+        // Student name
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(24)
+        doc.setTextColor(0, 0, 0)
+        doc.text(studentName || 'Student', pageWidth / 2, 115, { align: 'center' })
+        
+        // Certificate details
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(12)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`for successfully completing`, pageWidth / 2, 140, { align: 'center' })
+        
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(16)
+        doc.setTextColor(91, 61, 246)
+        doc.text(certificate.name || 'Course', pageWidth / 2, 160, { align: 'center' })
+        
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(11)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`Grade: ${certificate.grade || 'Pass'}`, pageWidth / 2, 185, { align: 'center' })
+        doc.text(`Date: ${new Date(certificate.issueDate).toLocaleDateString()}`, pageWidth / 2, 195, { align: 'center' })
+        
+        // Footer
+        doc.setFontSize(10)
+        doc.setTextColor(150, 150, 150)
+        doc.text('Authorized Signature', pageWidth - 60, pageHeight - 40)
+        doc.line(pageWidth - 100, pageHeight - 45, pageWidth - 30, pageHeight - 45)
+        
+        doc.save(`${studentName || 'certificate'}_${certificate.name || 'completion'}.pdf`)
+      }
+    } catch (error) {
+      console.error('Error downloading certificate:', error)
+      alert('Failed to download certificate. Please try again.')
+    }
   }
 
   const handleToggleStatus = async (student, e) => {
@@ -819,7 +901,7 @@ export default function StudentManagement() {
               </div>
 
               <div className="flex overflow-x-auto border-b border-gray-100 px-4 sm:px-5">
-                {['overview', 'progress', 'certificates', 'bills', 'notes'].map((tab) => (
+                {['overview', 'certificates', 'bills', 'notes'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -899,82 +981,6 @@ export default function StudentManagement() {
                   </div>
                 )}
 
-                {activeTab === 'progress' && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
-                      <div className="text-center">
-                        <div className="relative inline-flex">
-                          <ProgressRing percentage={selectedStudent.progress.overall} size={80} strokeWidth={6} />
-                          <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
-                            {selectedStudent.progress.overall}%
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">Overall Progress</p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6 flex-1 w-full">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{selectedStudent.progress.attendance}%</p>
-                          <p className="text-xs text-gray-500">Attendance</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{selectedStudent.progress.assignmentsCompleted}/{selectedStudent.progress.totalAssignments}</p>
-                          <p className="text-xs text-gray-500">Assignments</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-gray-900">{selectedStudent.progress.averageQuizScore}%</p>
-                          <p className="text-xs text-gray-500">Avg. Quiz Score</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-3">Subject-wise Performance</h3>
-                      <div className="space-y-3">
-                        {selectedStudent.progress.subjects.map((subject, idx) => (
-                          <div key={idx}>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-gray-700">{subject.name}</span>
-                              <span className="font-medium text-gray-900">{subject.percentage}%</span>
-                            </div>
-                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-[#5b3df6]"
-                                style={{ width: `${subject.percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-3">Performance Trend</h3>
-                      <div className="h-48 flex items-end gap-3">
-                        {selectedStudent.progress.performanceHistory.map((point, idx) => (
-                          <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                            <div
-                              className="w-full bg-[#5b3df6] rounded-t-lg transition-all"
-                              style={{ height: `${point.score * 0.6}px` }}
-                            />
-                            <span className="text-xs text-gray-500">{point.month}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {selectedStudent.progress.teacherRemarks.length > 0 && (
-                      <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                        <h3 className="font-semibold text-amber-800 mb-2">Teacher's Remarks</h3>
-                        <ul className="space-y-1">
-                          {selectedStudent.progress.teacherRemarks.map((remark, idx) => (
-                            <li key={idx} className="text-sm text-amber-700">• {remark}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {activeTab === 'certificates' && (
                   <div>
                     {selectedStudent.certificates.length === 0 ? (
@@ -993,7 +999,10 @@ export default function StudentManagement() {
                                 <p className="text-xs text-gray-500">Issued: {new Date(cert.issueDate).toLocaleDateString()} • Grade: {cert.grade}</p>
                               </div>
                             </div>
-                            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50">
+                            <button 
+                              onClick={() => handleDownloadCertificate(cert, selectedStudent.name)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+                            >
                               <Download className="h-4 w-4" />
                               Download
                             </button>
@@ -1142,7 +1151,6 @@ export default function StudentManagement() {
                                 setNoteLoading(true);
                                 setNoteError('');
                                 try {
-                                  // Upload note to backend
                                   await api('/lms/notifications', {
                                     method: 'POST',
                                     body: JSON.stringify({
@@ -1151,9 +1159,7 @@ export default function StudentManagement() {
                                       message: noteInput.trim(),
                                     }),
                                   });
-                                  // Reload students to refresh notes
                                   await loadStudents();
-                                  // Find and set updated selectedStudent
                                   setSelectedStudent(prev => {
                                     if (!prev) return prev;
                                     const updated = students.find(s => s.id === prev.id);
