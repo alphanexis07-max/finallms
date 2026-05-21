@@ -6,6 +6,8 @@ export default function AdminELibrary() {
   const [resources, setResources] = useState([])
   const [classOptions, setClassOptions] = useState([])
   const [classOptionsLoading, setClassOptionsLoading] = useState(true)
+  const [scope, setScope] = useState('global')
+  const [selectedLiveClassId, setSelectedLiveClassId] = useState('')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -46,21 +48,11 @@ export default function AdminELibrary() {
     try {
       const response = await api('/lms/live-classes?limit=300')
       const items = response.items || response || []
-      const uniqueClasses = [...new Set(
-        items
-          .map((item) =>
-            String(
-              item?.class_name ||
-                item?.className ||
-                item?.title ||
-                item?.subject ||
-                ''
-            ).trim()
-          )
-          .filter((value) => value.length > 0)
-      )]
-      setClassOptions(uniqueClasses)
-      if (uniqueClasses.length > 0) setGrade(uniqueClasses[0])
+      const opts = items
+        .map((item) => ({ id: item._id || item.id, label: (item.title || item.class_name || item.subject || '').trim() }))
+        .filter((o) => o.label && o.id)
+      setClassOptions(opts)
+      if (opts.length > 0) setGrade(opts[0].label)
     } catch (err) {
       console.error('Failed to load class options:', err)
       setClassOptions([])
@@ -98,6 +90,8 @@ export default function AdminELibrary() {
     setImageUrl(item.imageUrl || '')
     setSelectedFileName('')
     setSelectedImageName('')
+    setScope(item.target_type ? 'live_class' : 'global')
+    setSelectedLiveClassId(item.target_id || '')
     setShowUploadModal(true)
     setFormError('')
     setError('')
@@ -147,6 +141,10 @@ export default function AdminELibrary() {
         format,
         file_url: fileUrl.trim(),
         image_url: imageUrl.trim(),
+      }
+      if (scope === 'live_class' && selectedLiveClassId) {
+        payload.target_type = 'live_class'
+        payload.target_id = selectedLiveClassId
       }
 
       if (editItem) {
@@ -374,8 +372,8 @@ export default function AdminELibrary() {
                       <option value="">No live classes found</option>
                     ) : (
                       classOptions.map((cls) => (
-                        <option key={cls} value={cls}>
-                          {cls}
+                        <option key={cls.id} value={cls.label}>
+                          {cls.label}
                         </option>
                       ))
                     )}
@@ -391,6 +389,30 @@ export default function AdminELibrary() {
                     <option>PDF</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="mt-2">
+                <label className="mb-1 block text-[13px] font-semibold text-[#0f172a]">Visibility</label>
+                <div className="flex items-center gap-4">
+                  <label className="inline-flex items-center gap-2">
+                    <input type="radio" name="scope" checked={scope === 'global'} onChange={() => setScope('global')} />
+                    <span className="text-[13px]">All students</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2">
+                    <input type="radio" name="scope" checked={scope === 'live_class'} onChange={() => setScope('live_class')} />
+                    <span className="text-[13px]">Only students of a live class</span>
+                  </label>
+                </div>
+                {scope === 'live_class' ? (
+                  <div className="mt-2">
+                    <select value={selectedLiveClassId} onChange={(e) => setSelectedLiveClassId(e.target.value)} className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]">
+                      <option value="">Select live class</option>
+                      {classOptions.map((c) => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
               </div>
 
               <div>

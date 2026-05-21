@@ -333,6 +333,7 @@ function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSucces
             amount,
             enrollment_type: 'live_class',
             target_id: String(session.id),
+            target_title: session.title,
             coupon_code: appliedCoupon?.code || '',
             coupon_discount: Number(couponQuote.discount || 0),
           }),

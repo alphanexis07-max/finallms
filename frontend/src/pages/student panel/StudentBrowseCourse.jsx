@@ -563,6 +563,7 @@ export default function StudentBrowseCourse() {
             amount: Number(chargeAmount || 0),
             enrollment_type: 'course',
             target_id: course._id,
+            target_title: course.title,
             coupon_code: appliedCoupon?.code || '',
             coupon_discount: Number(payableQuote.discount || 0),
           }),

@@ -376,12 +376,21 @@ export default function AdminPaymentsCupons() {
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-[#334155]">Coupon code</label>
-                  <input value={couponForm.code} onChange={(e) => setCouponForm((f) => ({ ...f, code: e.target.value }))} className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" placeholder="e.g. NEWBATCH25" />
+                  <input 
+                    value={couponForm.code} 
+                    onChange={(e) => setCouponForm((f) => ({ ...f, code: e.target.value }))} 
+                    className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" 
+                    placeholder="e.g. NEWBATCH25" 
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-[#334155]">Discount type</label>
                   <div className="relative">
-                    <select value={couponForm.discount_type} onChange={(e) => setCouponForm((f) => ({ ...f, discount_type: e.target.value === 'Flat amount' ? 'flat' : 'percent' }))} className="h-10 w-full appearance-none rounded-[7px] border border-black/[0.08] px-3 text-[13px]">
+                    <select 
+                      value={couponForm.discount_type === 'flat' ? 'Flat amount' : 'Percentage'} 
+                      onChange={(e) => setCouponForm((f) => ({ ...f, discount_type: e.target.value === 'Flat amount' ? 'flat' : 'percent' }))} 
+                      className="h-10 w-full appearance-none rounded-[7px] border border-black/[0.08] px-3 text-[13px]"
+                    >
                       <option>Percentage</option>
                       <option>Flat amount</option>
                     </select>
@@ -390,28 +399,38 @@ export default function AdminPaymentsCupons() {
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-[#334155]">Value</label>
-                  <input value={couponForm.value} onChange={(e) => setCouponForm((f) => ({ ...f, value: Number(e.target.value || 0) }))} className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" placeholder="25" />
+                  <input 
+                    type="number"
+                    value={couponForm.value} 
+                    onChange={(e) => setCouponForm((f) => ({ ...f, value: Number(e.target.value || 0) }))} 
+                    className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" 
+                    placeholder="25" 
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-[12px] font-medium text-[#334155]">Usage limit</label>
-                  <input value={couponForm.max_uses} onChange={(e) => setCouponForm((f) => ({ ...f, max_uses: Number(e.target.value || 0) }))} className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" placeholder="300" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[12px] font-medium text-[#334155]">Valid from</label>
-                  <input type="date" className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[12px] font-medium text-[#334155]">Valid till</label>
-                  <input type="date" className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" />
+                  <input 
+                    type="number"
+                    value={couponForm.max_uses} 
+                    onChange={(e) => setCouponForm((f) => ({ ...f, max_uses: Number(e.target.value || 0) }))} 
+                    className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" 
+                    placeholder="300" 
+                  />
                 </div>
               </div>
               <div className="mt-3">
                 <label className="mb-1 block text-[12px] font-medium text-[#334155]">Applicable courses</label>
-                <input className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" placeholder="Coding + STEM courses" />
+                <input 
+                  className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" 
+                  placeholder="Coding + STEM courses" 
+                />
               </div>
               <div className="mt-3">
                 <label className="mb-1 block text-[12px] font-medium text-[#334155]">Description</label>
-                <textarea className="h-24 w-full resize-none rounded-[7px] border border-black/[0.08] px-3 py-2 text-[13px]" placeholder="Campaign objective and notes..." />
+                <textarea 
+                  className="h-24 w-full resize-none rounded-[7px] border border-black/[0.08] px-3 py-2 text-[13px]" 
+                  placeholder="Campaign objective and notes..." 
+                />
               </div>
             </section>
 
@@ -487,7 +506,7 @@ export default function AdminPaymentsCupons() {
           <StatCard label="Failed payments" value={String(failedPayments)} badge="Needs follow-up" badgeClass="bg-[#ffd966] text-[#4b2e00]" />
         </div>
 
-        {/* Main content - removed right sidebar (coupon quick view gone) */}
+        {/* Main content */}
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.65fr_1fr]">
           <div className="space-y-3">
             {/* Transactions */}
@@ -647,7 +666,7 @@ export default function AdminPaymentsCupons() {
             </section>
           </div>
 
-          {/* Right sidebar - Revenue insights only (Coupon quick view removed) */}
+          {/* Right sidebar - Revenue insights only */}
           <div className="space-y-3">
             <section className="rounded-[8px] border border-black/[0.08] bg-white p-4">
               <h3 className="text-[22px] font-bold text-[#111827]">Revenue insights</h3>

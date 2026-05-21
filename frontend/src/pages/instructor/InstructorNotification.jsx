@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CheckCheck, BookOpen, Calendar, Award, CreditCard, Sparkles, ArrowUpRight, Trash2 } from 'lucide-react'
+import { CheckCheck, BookOpen, Calendar, Award, CreditCard, Sparkles, Trash2 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
 
@@ -24,7 +24,6 @@ export default function Notification() {
           id: n._id,
           title: n.title,
           message: n.message,
-          time: new Date(n.created_at || Date.now()).toLocaleString(),
           type: n.type || 'course',
           unread: !n.read,
         }))
@@ -138,10 +137,7 @@ export default function Notification() {
                     <div className="min-w-0">
                       <h3 className="truncate text-[15px] font-semibold text-[#0f172a]">{item.title}</h3>
                       <p className="mt-1 max-w-[820px] text-[13px] leading-6 text-[#64748b]">{item.message}</p>
-                      <div className="mt-2 flex items-center gap-2 text-[11px] text-[#94a3b8]">
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                        <span>{item.time}</span>
-                      </div>
+                      
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">

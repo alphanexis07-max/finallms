@@ -27,12 +27,509 @@ import {
   Clock,
   CheckCircle,
   XCircle as XCircleIcon,
-  Ban
+  Ban,
+  Printer,
+  X
 } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+
+// ── Helper Functions for Invoice (matching StudentInvoice) ──────────────────────────────────────────
+function formatDate(value) {
+  if (!value) return '-'
+  try {
+    const d = new Date(value)
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return String(value)
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  try {
+    const d = new Date(value)
+    return d.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return String(value)
+  }
+}
+
+function formatMoney(value) {
+  return `₹${Number(value || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`
+}
+
+function getInvoiceNumber(inv) {
+  const raw = String(inv?.order_id || inv?._id || '').trim()
+  if (!raw) return 'INV-00000000'
+  const timestamp = inv.created_at ? new Date(inv.created_at).getTime().toString().slice(-6) : Math.random().toString(36).substring(2, 8).toUpperCase()
+  return `INV-${timestamp}${raw.slice(-4)}`
+}
+
+function getInvoiceKindLabel(inv) {
+  const kind = String(inv?.enrollment_type || inv?.billingType || inv?.payment_for || 'payment').toLowerCase()
+  if (kind.includes('live')) return 'Live Class Enrollment'
+  if (kind.includes('subscription')) return 'Subscription Payment'
+  if (kind.includes('course')) return 'Course Enrollment'
+  return 'Payment Receipt'
+}
+
+function getItemName(inv) {
+  if (!inv) return 'LMS Service Payment'
+
+  const candidates = [
+    inv.target_title,
+    inv.course_name,
+    inv.courseName,
+    inv.course_title,
+    inv.courseTitle,
+    inv.itemName,
+    inv.item_name,
+    inv.product_name,
+    inv.productName,
+    inv.title,
+    inv.name,
+    inv.description,
+    inv.target_name,
+    inv.target?.name,
+    inv.target?.title,
+    inv.course?.name,
+    inv.course?.title,
+    inv.product?.title,
+    inv.items?.[0]?.name,
+    inv.items?.[0]?.title,
+    inv.cart?.items?.[0]?.name,
+    inv.cart?.items?.[0]?.title,
+    inv.meta?.course?.name,
+    inv.meta?.title,
+  ]
+
+  for (const c of candidates) {
+    if (c) return String(c).trim()
+  }
+
+  if (inv.order && Array.isArray(inv.order.items) && inv.order.items.length > 0) {
+    const it = inv.order.items[0]
+    if (it?.name) return String(it.name).trim()
+    if (it?.title) return String(it.title).trim()
+  }
+
+  if (inv?.target_id) return `Course #${String(inv.target_id).slice(-6)}`
+  if (inv?.course_id) return `Course #${String(inv.course_id).slice(-6)}`
+
+  return 'LMS Service Payment'
+}
+
+function getGSTNumber() {
+  return '23AAHFK1234F1Z9'
+}
+
+function getBusinessAddress() {
+  return 'Scheme No 54, Vijay Nagar, Indore, Madhya Pradesh - 452010, India'
+}
+
+function getBusinessEmail() {
+  return 'karominfo@kacpl.in'
+}
+
+function getBusinessPhone() {
+  return '+91 78987 81533'
+}
+
+function buildInvoiceHtml(inv, customer) {
+  const invoiceNo = getInvoiceNumber(inv)
+  const invoiceDate = formatDate(inv.created_at || inv.createdAt || inv.created)
+  const dueDate = formatDate(new Date(new Date(inv.created_at || inv.createdAt || inv.created).getTime() + 15 * 24 * 60 * 60 * 1000))
+  const paymentStatus = String(inv.status || 'captured').toUpperCase()
+  const amount = Number(inv.amount || 0)
+  const gst = amount * 0.18
+  const cgst = gst / 2
+  const sgst = gst / 2
+  const total = amount + gst
+  const kind = getInvoiceKindLabel(inv)
+  const itemLabel = getItemName(inv)
+  const customerName = String(customer?.full_name || customer?.name || 'Student').trim()
+  const customerEmail = String(customer?.email || '-').trim()
+  const customerPhone = String(customer?.phone || '-').trim()
+  const customerId = String(customer?._id || customer?.sub || '-').trim()
+  const paymentMethod = inv?.payment_method || 'Razorpay'
+  const paymentId = inv?.payment_id || '-'
+  const orderId = inv?.order_id || '-'
+
+  const statusColor = paymentStatus === 'CAPTURED' ? '#166534' : paymentStatus === 'FAILED' ? '#991b1b' : '#92400e'
+  const statusBg = paymentStatus === 'CAPTURED' ? '#dcfce7' : paymentStatus === 'FAILED' ? '#fee2e2' : '#fef3c7'
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>${invoiceNo} - Tax Invoice</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          background: #e2e8f0;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+          color: #1e293b;
+          padding: 40px 20px;
+        }
+        .invoice-container {
+          max-width: 1100px;
+          margin: 0 auto;
+          background: white;
+          border-radius: 20px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
+        }
+        .invoice-header {
+          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          padding: 40px 50px;
+          color: white;
+        }
+        .header-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 40px;
+        }
+        .logo-section h1 {
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          margin-bottom: 8px;
+        }
+        .logo-section p {
+          color: #94a3b8;
+          font-size: 13px;
+        }
+        .invoice-title {
+          text-align: right;
+        }
+        .invoice-title .invoice-badge {
+          font-size: 14px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          color: #94a3b8;
+          margin-bottom: 8px;
+        }
+        .invoice-title .invoice-number {
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          margin-bottom: 8px;
+        }
+        .invoice-title .invoice-date {
+          font-size: 13px;
+          color: #94a3b8;
+        }
+        .header-bottom {
+          display: flex;
+          justify-content: space-between;
+          gap: 30px;
+          padding-top: 30px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .company-info h3, .customer-info h3 {
+          font-size: 14px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: #94a3b8;
+          margin-bottom: 12px;
+        }
+        .company-info p, .customer-info p {
+          font-size: 13px;
+          line-height: 1.6;
+          color: #cbd5e1;
+        }
+        .company-info p:first-of-type, .customer-info p:first-of-type {
+          color: white;
+          font-weight: 500;
+          margin-bottom: 4px;
+        }
+        .invoice-body {
+          padding: 40px 50px;
+        }
+        .status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 20px;
+          border-radius: 50px;
+          font-size: 13px;
+          font-weight: 600;
+          background: ${statusBg};
+          color: ${statusColor};
+          margin-bottom: 30px;
+        }
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          margin-bottom: 40px;
+        }
+        .detail-card {
+          background: #f8fafc;
+          padding: 20px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+        .detail-card .label {
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: #64748b;
+          margin-bottom: 8px;
+        }
+        .detail-card .value {
+          font-size: 15px;
+          font-weight: 600;
+          color: #0f172a;
+        }
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+        }
+        .items-table th {
+          text-align: left;
+          padding: 15px 0;
+          border-bottom: 2px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: #64748b;
+        }
+        .items-table td {
+          padding: 15px 0;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 14px;
+        }
+        .items-table .item-title {
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 4px;
+        }
+        .items-table .item-desc {
+          font-size: 12px;
+          color: #64748b;
+        }
+        .totals-section {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 20px;
+        }
+        .totals-box {
+          width: 320px;
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 20px;
+          border: 1px solid #e2e8f0;
+        }
+        .totals-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px 0;
+          font-size: 14px;
+        }
+        .totals-row.total {
+          border-top: 2px solid #e2e8f0;
+          margin-top: 10px;
+          padding-top: 15px;
+          font-size: 18px;
+          font-weight: 700;
+          color: #5b3df6;
+        }
+        .payment-info {
+          margin-top: 40px;
+          padding: 20px;
+          background: #f8fafc;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+        .payment-info h4 {
+          font-size: 14px;
+          font-weight: 600;
+          margin-bottom: 15px;
+          color: #0f172a;
+        }
+        .payment-details {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+        }
+        .payment-detail {
+          font-size: 13px;
+        }
+        .payment-detail strong {
+          color: #64748b;
+          font-weight: 500;
+          margin-right: 8px;
+        }
+        .footer {
+          background: #f8fafc;
+          padding: 30px 50px;
+          text-align: center;
+          border-top: 1px solid #e2e8f0;
+          font-size: 12px;
+          color: #64748b;
+        }
+        .footer p {
+          margin-bottom: 8px;
+        }
+        .footer a {
+          color: #5b3df6;
+          text-decoration: none;
+        }
+        @media print {
+          body {
+            background: white;
+            padding: 0;
+          }
+          .invoice-container {
+            box-shadow: none;
+            border-radius: 0;
+          }
+          .status-badge {
+            print-color-adjust: exact;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="invoice-container">
+        <div class="invoice-header">
+          <div class="header-top">
+            <div class="logo-section">
+              <h1>KACPL</h1>
+              <p>Knowledge Accelerator Corporate Private Limited</p>
+            </div>
+            <div class="invoice-title">
+              <div class="invoice-badge">TAX INVOICE</div>
+              <div class="invoice-number">${invoiceNo}</div>
+              <div class="invoice-date">Issue Date: ${invoiceDate}</div>
+            </div>
+          </div>
+          <div class="header-bottom">
+            <div class="company-info">
+              <h3>From</h3>
+              <p>KACPL Learning Hub Pvt Ltd</p>
+              <p>${getBusinessAddress()}</p>
+              <p>GST: ${getGSTNumber()}</p>
+              <p>Email: ${getBusinessEmail()}</p>
+              <p>Phone: ${getBusinessPhone()}</p>
+            </div>
+            <div class="customer-info">
+              <h3>Bill To</h3>
+              <p>${customerName}</p>
+              <p>Email: ${customerEmail}</p>
+              <p>Phone: ${customerPhone}</p>
+              <p>Student ID: ${customerId}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="invoice-body">
+          <div class="status-badge">
+            <span>●</span> Payment Status: ${paymentStatus}
+          </div>
+          
+          <div class="details-grid">
+            <div class="detail-card">
+              <div class="label">Invoice Date</div>
+              <div class="value">${invoiceDate}</div>
+            </div>
+            <div class="detail-card">
+              <div class="label">Due Date</div>
+              <div class="value">${dueDate}</div>
+            </div>
+            <div class="detail-card">
+              <div class="label">Payment Mode</div>
+              <div class="value">${paymentMethod}</div>
+            </div>
+          </div>
+          
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width: 50%">Description</th>
+                <th style="width: 25%">HSN/SAC</th>
+                <th style="width: 25%">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="item-title">${kind}</div>
+                  <div class="item-desc">${itemLabel}</div>
+                </td>
+                <td>998429</td>
+                <td style="text-align: right">${formatMoney(amount)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="totals-section">
+            <div class="totals-box">
+              <div class="totals-row">
+                <span>Subtotal</span>
+                <span>${formatMoney(amount)}</span>
+              </div>
+              <div class="totals-row">
+                <span>CGST (9%)</span>
+                <span>${formatMoney(cgst)}</span>
+              </div>
+              <div class="totals-row">
+                <span>SGST (9%)</span>
+                <span>${formatMoney(sgst)}</span>
+              </div>
+              <div class="totals-row total">
+                <span>Total Amount</span>
+                <span>${formatMoney(total)}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="payment-info">
+            <h4>Payment Information</h4>
+            <div class="payment-details">
+              <div class="payment-detail"><strong>Transaction ID:</strong> ${paymentId}</div>
+              <div class="payment-detail"><strong>Order ID:</strong> ${orderId}</div>
+              <div class="payment-detail"><strong>Payment Date:</strong> ${formatDateTime(inv.created_at || inv.createdAt || inv.created)}</div>
+              <div class="payment-detail"><strong>Payment Gateway:</strong> ${paymentMethod}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>This is a system generated invoice and does not require a physical signature.</p>
+          <p>For any queries, please contact <a href="mailto:${getBusinessEmail()}">${getBusinessEmail()}</a> or call ${getBusinessPhone()}</p>
+          <p>Thank you for choosing KACPL Learning Hub!</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
 
 // ── Helper Components ──────────────────────────────────────────
 function StatusBadge({ status, type }) {
@@ -48,19 +545,31 @@ function StatusBadge({ status, type }) {
     }
     if (type === 'payment') {
       switch (status) {
+        case 'captured': return 'bg-[#2dd4bf] text-[#023b33]'
         case 'paid': return 'bg-[#2dd4bf] text-[#023b33]'
         case 'pending': return 'bg-[#ffd966] text-[#4b2e00]'
+        case 'created': return 'bg-[#ffd966] text-[#4b2e00]'
         case 'overdue': return 'bg-red-100 text-red-700'
+        case 'failed': return 'bg-red-100 text-red-700'
         case 'partial': return 'bg-orange-100 text-orange-700'
+        default: return 'bg-gray-100 text-gray-600'
+      }
+    }
+    if (type === 'subscription') {
+      switch (status) {
+        case 'active': return 'bg-[#2dd4bf] text-[#023b33]'
+        case 'inactive': return 'bg-gray-100 text-gray-600'
         default: return 'bg-gray-100 text-gray-600'
       }
     }
     return 'bg-gray-100 text-gray-600'
   }
 
+  const displayStatus = status === 'captured' ? 'Paid' : status === 'created' ? 'Pending' : status
+
   return (
     <span className={`inline-flex h-[28px] items-center rounded-[12px] px-[10px] text-[12px] font-medium ${getStyles()}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {String(displayStatus).charAt(0).toUpperCase() + String(displayStatus).slice(1)}
     </span>
   )
 }
@@ -137,6 +646,8 @@ export default function StudentManagement() {
   const [noteType, setNoteType] = useState('info')
   const [noteLoading, setNoteLoading] = useState(false)
   const [noteError, setNoteError] = useState('')
+  const [selectedInvoice, setSelectedInvoice] = useState(null)
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const tenantId = localStorage.getItem('lms_tenant_id')
 
   const loadStudents = () =>
@@ -204,6 +715,14 @@ export default function StudentManagement() {
             date: payment?.created_at || new Date().toISOString(),
             status: String(payment?.status || 'pending').toLowerCase(),
             amount: Number(payment?.amount || 0),
+            payment_id: payment?.payment_id,
+            order_id: payment?.order_id,
+            enrollment_type: payment?.enrollment_type,
+            payment_method: payment?.payment_method,
+            created_at: payment?.created_at,
+            target_id: payment?.target_id,
+            target_title: payment?.target_title,
+            course_name: payment?.course_name,
             items: [
               {
                 description: payment?.enrollment_type === 'live_class' ? 'Live class enrollment' : 'Course enrollment',
@@ -404,59 +923,98 @@ export default function StudentManagement() {
     doc.save(`student-management-${new Date().toISOString().slice(0, 10)}.pdf`)
   }
 
-  const handleDownloadInvoice = (bill, student) => {
-    if (!bill || !student) return
-
-    const doc = new jsPDF()
-    const margin = 14
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(18)
-    doc.text('Invoice', margin, 18)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.text(`Invoice No: ${bill.invoiceNumber || '-'}`, margin, 28)
-    doc.text(`Date: ${bill.date ? new Date(bill.date).toLocaleDateString() : '-'}`, margin, 34)
-    doc.text(`Status: ${String(bill.status || '-').toUpperCase()}`, margin, 40)
-
-    doc.setFont('helvetica', 'bold')
-    doc.text('Bill To', margin, 52)
-    doc.setFont('helvetica', 'normal')
-    doc.text(student.name || '-', margin, 58)
-    doc.text(student.email || '-', margin, 64)
-    doc.text(student.phone || '-', margin, 70)
-
-    autoTable(doc, {
-      startY: 78,
-      head: [['Description', 'Amount']],
-      body: (bill.items || []).map((item) => [
-        item.description || 'Item',
-        `INR ${Number(item.amount || 0).toLocaleString()}`,
-      ]),
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [91, 61, 246], textColor: [255, 255, 255] },
-      columnStyles: {
-        0: { cellWidth: 130 },
-        1: { halign: 'right' },
-      },
+  // Updated invoice handlers matching StudentInvoice style
+  const openInvoice = (bill, student) => {
+    const invData = {
+      _id: bill.id,
+      order_id: bill.order_id,
+      payment_id: bill.payment_id,
+      amount: bill.amount,
+      status: bill.status,
+      created_at: bill.date,
+      enrollment_type: bill.enrollment_type,
+      payment_method: bill.payment_method,
+      target_id: bill.target_id,
+      target_title: bill.target_title,
+      course_name: bill.course_name,
+    }
+    const win = window.open('', '_blank')
+    if (!win) return
+    const html = buildInvoiceHtml(invData, {
+      full_name: student.name,
+      email: student.email,
+      phone: student.phone,
+      _id: student._id
     })
+    win.document.open()
+    win.document.write(html)
+    win.document.close()
+  }
 
-    const lastY = doc.lastAutoTable?.finalY || 90
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(12)
-    doc.text(`Total: INR ${Number(bill.amount || 0).toLocaleString()}`, margin, lastY + 12)
+  const downloadInvoice = (bill, student) => {
+    const invData = {
+      _id: bill.id,
+      order_id: bill.order_id,
+      payment_id: bill.payment_id,
+      amount: bill.amount,
+      status: bill.status,
+      created_at: bill.date,
+      enrollment_type: bill.enrollment_type,
+      payment_method: bill.payment_method,
+      target_id: bill.target_id,
+      target_title: bill.target_title,
+      course_name: bill.course_name,
+    }
+    const html = buildInvoiceHtml(invData, {
+      full_name: student.name,
+      email: student.email,
+      phone: student.phone,
+      _id: student._id
+    })
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const invoiceNo = getInvoiceNumber(invData)
+    a.download = `${invoiceNo}.html`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
 
-    const safeInvoiceId = String(bill.invoiceNumber || bill.id || 'invoice').replace(/[^a-zA-Z0-9_-]/g, '_')
-    doc.save(`${safeInvoiceId}.pdf`)
+  const printInvoice = (bill, student) => {
+    const invData = {
+      _id: bill.id,
+      order_id: bill.order_id,
+      payment_id: bill.payment_id,
+      amount: bill.amount,
+      status: bill.status,
+      created_at: bill.date,
+      enrollment_type: bill.enrollment_type,
+      payment_method: bill.payment_method,
+      target_id: bill.target_id,
+      target_title: bill.target_title,
+      course_name: bill.course_name,
+    }
+    const win = window.open('', '_blank')
+    if (!win) return
+    const html = buildInvoiceHtml(invData, {
+      full_name: student.name,
+      email: student.email,
+      phone: student.phone,
+      _id: student._id
+    })
+    win.document.open()
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => win.print(), 500)
   }
 
   const handleDownloadCertificate = async (certificate, studentName) => {
     if (!certificate) return
     
     try {
-      // If certificate has a URL, try to download it
       if (certificate.certificateUrl) {
         const response = await fetch(certificate.certificateUrl)
         const blob = await response.blob()
@@ -469,13 +1027,11 @@ export default function StudentManagement() {
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
       } else {
-        // Generate a PDF certificate if no URL is available
         const doc = new jsPDF()
         const margin = 20
         const pageWidth = doc.internal.pageSize.getWidth()
         const pageHeight = doc.internal.pageSize.getHeight()
         
-        // Add decorative border
         doc.setDrawColor(91, 61, 246)
         doc.setLineWidth(1)
         doc.rect(margin - 5, margin - 5, pageWidth - (margin - 5) * 2, pageHeight - (margin - 5) * 2)
@@ -484,25 +1040,21 @@ export default function StudentManagement() {
         doc.setLineWidth(0.5)
         doc.rect(margin - 2, margin - 2, pageWidth - (margin - 2) * 2, pageHeight - (margin - 2) * 2)
         
-        // Title
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(28)
         doc.setTextColor(91, 61, 246)
         doc.text('CERTIFICATE OF COMPLETION', pageWidth / 2, 60, { align: 'center' })
         
-        // Award text
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(14)
         doc.setTextColor(100, 100, 100)
         doc.text('This certificate is proudly presented to', pageWidth / 2, 90, { align: 'center' })
         
-        // Student name
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(24)
         doc.setTextColor(0, 0, 0)
         doc.text(studentName || 'Student', pageWidth / 2, 115, { align: 'center' })
         
-        // Certificate details
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(12)
         doc.setTextColor(100, 100, 100)
@@ -519,7 +1071,6 @@ export default function StudentManagement() {
         doc.text(`Grade: ${certificate.grade || 'Pass'}`, pageWidth / 2, 185, { align: 'center' })
         doc.text(`Date: ${new Date(certificate.issueDate).toLocaleDateString()}`, pageWidth / 2, 195, { align: 'center' })
         
-        // Footer
         doc.setFontSize(10)
         doc.setTextColor(150, 150, 150)
         doc.text('Authorized Signature', pageWidth - 60, pageHeight - 40)
@@ -582,7 +1133,7 @@ export default function StudentManagement() {
   return (
     <div className="min-h-screen bg-[#F7FAFD]">
       <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-7">
-        {/* Hero Section - matches instructor management style */}
+        {/* Hero Section */}
         <section className="flex flex-col items-start justify-between gap-6 rounded-[10px] border border-black/[0.08] bg-gradient-to-br from-white to-[#e8f5ff] p-5 sm:p-7 lg:flex-row lg:gap-8">
           <div className="min-w-0 flex-1">
             <span className="mb-4 inline-flex items-center rounded-[10px] bg-[#f0f4f8] px-3 py-1.5 text-[11px] font-medium text-[#64748b]">
@@ -592,7 +1143,7 @@ export default function StudentManagement() {
               Track enrollment, progress, attendance, and follow-ups from one dedicated learner screen.
             </h1>
             <p className="mb-5 max-w-[800px] text-[13.5px] leading-relaxed text-[#94a3b8]">
-              Review course performance, student health, parent contact status, and operational actions without leaving the student management workspace. The layout stays consistent with the institute dashboard while giving more room to learner operations.
+              Review course performance, student health, parent contact status, and operational actions without leaving the student management workspace.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -617,7 +1168,7 @@ export default function StudentManagement() {
           </div>
         </section>
 
-        {/* Stats Cards - matching instructor management style */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Total Users"
@@ -649,7 +1200,7 @@ export default function StudentManagement() {
           />
         </div>
 
-        {/* Student Directory - matching instructor directory style */}
+        {/* Student Directory */}
         <section className="rounded-[10px] border border-black/[0.08] bg-white p-6">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -878,7 +1429,7 @@ export default function StudentManagement() {
           </div>
         </section>
 
-        {/* Student Detail Modal */}
+        {/* Student Detail Modal with updated invoice buttons */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => setSelectedStudent(null)}>
             <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -1026,7 +1577,7 @@ export default function StudentManagement() {
                           <div key={bill.id} className="rounded-lg border border-gray-200 overflow-hidden">
                             <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
                               <div>
-                                <p className="font-semibold text-gray-900">{bill.invoiceNumber}</p>
+                                <p className="font-semibold text-gray-900">{getInvoiceNumber(bill)}</p>
                                 <p className="text-xs text-gray-500">{new Date(bill.date).toLocaleDateString()}</p>
                               </div>
                               <StatusBadge status={bill.status} type="payment" />
@@ -1044,13 +1595,27 @@ export default function StudentManagement() {
                               </div>
                               <div className="flex justify-end gap-2 mt-3">
                                 <button
-                                  onClick={() => handleDownloadInvoice(bill, selectedStudent)}
+                                  onClick={() => openInvoice(bill, selectedStudent)}
+                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+                                >
+                                  <Eye className="h-3 w-3 inline mr-1" />
+                                  View
+                                </button>
+                                <button
+                                  onClick={() => downloadInvoice(bill, selectedStudent)}
                                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
                                 >
                                   <Download className="h-3 w-3 inline mr-1" />
-                                  Invoice
+                                  Download
                                 </button>
-                                {bill.status === 'pending' && (
+                                <button
+                                  onClick={() => printInvoice(bill, selectedStudent)}
+                                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+                                >
+                                  <Printer className="h-3 w-3 inline mr-1" />
+                                  Print
+                                </button>
+                                {bill.status === 'pending' || bill.status === 'created' && (
                                   <button className="rounded-lg bg-[#5b3df6] px-3 py-1.5 text-sm text-white hover:bg-[#4a2ed8]">
                                     Pay Now
                                   </button>

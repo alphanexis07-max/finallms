@@ -56,27 +56,70 @@ function getInvoiceKindLabel(inv) {
   return 'Payment Receipt'
 }
 
+// Enhanced function to get course/item name from various possible fields
 function getItemName(inv) {
-  if (inv?.itemName) return inv.itemName
-  if (inv?.target_name) return inv.target_name
-  if (inv?.target_id) return `Order #${inv.target_id.slice(-6)}`
+  if (!inv) return 'LMS Service Payment'
+
+  const candidates = [
+    inv.target_title,
+    inv.course_name,
+    inv.courseName,
+    inv.course_title,
+    inv.courseTitle,
+    inv.itemName,
+    inv.item_name,
+    inv.product_name,
+    inv.productName,
+    inv.title,
+    inv.name,
+    inv.description,
+    inv.target_name,
+    inv.target?.name,
+    inv.target?.title,
+    inv.course?.name,
+    inv.course?.title,
+    inv.product?.title,
+    inv.items?.[0]?.name,
+    inv.items?.[0]?.title,
+    inv.cart?.items?.[0]?.name,
+    inv.cart?.items?.[0]?.title,
+    inv.meta?.course?.name,
+    inv.meta?.title,
+  ]
+
+  for (const c of candidates) {
+    if (c) return String(c).trim()
+  }
+
+  // Try nested order/item structures
+  if (inv.order && Array.isArray(inv.order.items) && inv.order.items.length > 0) {
+    const it = inv.order.items[0]
+    if (it?.name) return String(it.name).trim()
+    if (it?.title) return String(it.title).trim()
+  }
+
+  // If we have target_id or course_id, create a short fallback label
+  if (inv?.target_id) return `Course #${String(inv.target_id).slice(-6)}`
+  if (inv?.course_id) return `Course #${String(inv.course_id).slice(-6)}`
+
   return 'LMS Service Payment'
 }
 
+// Updated business information
 function getGSTNumber() {
-  return '29ABCDE1234F1Z5'
+  return '23AAHFK1234F1Z9'
 }
 
 function getBusinessAddress() {
-  return '123 Learning Hub, Tech Park, Bangalore - 560001, Karnataka, India'
+  return 'Scheme No 54, Vijay Nagar, Indore, Madhya Pradesh - 452010, India'
 }
 
 function getBusinessEmail() {
-  return 'finance@lmshub.com'
+  return 'karominfo@kacpl.in'
 }
 
 function getBusinessPhone() {
-  return '+91 80 1234 5678'
+  return '+91 78987 81533'
 }
 
 function buildInvoiceHtml(inv, customer) {
@@ -109,7 +152,7 @@ function buildInvoiceHtml(inv, customer) {
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>${invoiceNo} - LMS Invoice</title>
+      <title>${invoiceNo} - Tax Invoice</title>
       <style>
         * {
           margin: 0;
@@ -391,8 +434,8 @@ function buildInvoiceHtml(inv, customer) {
         <div class="invoice-header">
           <div class="header-top">
             <div class="logo-section">
-              <h1>LMS</h1>
-              <p>Learning Management System</p>
+              <h1>KACPL</h1>
+              <p>Knowledge Accelerator Corporate Private Limited</p>
             </div>
             <div class="invoice-title">
               <div class="invoice-badge">TAX INVOICE</div>
@@ -403,7 +446,7 @@ function buildInvoiceHtml(inv, customer) {
           <div class="header-bottom">
             <div class="company-info">
               <h3>From</h3>
-              <p>LMS Learning Hub Pvt Ltd</p>
+              <p>KACPL Learning Hub Pvt Ltd</p>
               <p>${getBusinessAddress()}</p>
               <p>GST: ${getGSTNumber()}</p>
               <p>Email: ${getBusinessEmail()}</p>
@@ -444,7 +487,7 @@ function buildInvoiceHtml(inv, customer) {
               <tr>
                 <th style="width: 50%">Description</th>
                 <th style="width: 25%">HSN/SAC</th>
-                <th style="width: 25%">Amount</th>
+                <th style="width: 25%">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
@@ -454,7 +497,7 @@ function buildInvoiceHtml(inv, customer) {
                   <div class="item-desc">${itemLabel}</div>
                 </td>
                 <td>998429</td>
-                <td>${formatMoney(amount)}</td>
+                <td style="text-align: right">${formatMoney(amount)}</td>
               </tr>
             </tbody>
           </table>
@@ -493,8 +536,8 @@ function buildInvoiceHtml(inv, customer) {
         
         <div class="footer">
           <p>This is a system generated invoice and does not require a physical signature.</p>
-          <p>For any queries, please contact <a href="mailto:${getBusinessEmail()}">${getBusinessEmail()}</a></p>
-          <p>Thank you for choosing LMS Learning Hub!</p>
+          <p>For any queries, please contact <a href="mailto:${getBusinessEmail()}">${getBusinessEmail()}</a> or call ${getBusinessPhone()}</p>
+          <p>Thank you for choosing KACPL Learning Hub!</p>
         </div>
       </div>
     </body>
@@ -537,11 +580,36 @@ export default function StudentInvoices() {
         if (!mounted) return
         if (meRes) setCustomer(meRes)
         if (paymentsRes?.error) throw paymentsRes.error
+        
         // Sort invoices by date (newest first)
-        const sortedInvoices = (paymentsRes?.items || []).sort((a, b) => 
+        const fetched = (paymentsRes?.items || []).sort((a, b) => 
           new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0)
         )
-        setInvoices(sortedInvoices)
+
+        // For older payments that don't have a title, try resolving from backend
+        const needResolve = fetched.filter((inv) => {
+          const name = getItemName(inv)
+          const hasTarget = Boolean((inv.target_id || inv.course_id || '').toString().trim())
+          return ( !name || name === 'LMS Service Payment' ) && hasTarget
+        })
+
+        if (needResolve.length === 0) {
+          setInvoices(fetched)
+          return
+        }
+
+        // Resolve titles in parallel (non-blocking)
+        Promise.all(
+          needResolve.map((inv) =>
+            api(`/lms/payments/resolve-title?target_id=${encodeURIComponent(inv.target_id || inv.course_id || '')}&enrollment_type=${encodeURIComponent(inv.enrollment_type || inv.billingType || inv.payment_for || '')}`).then((res) => ({ id: inv._id, title: res?.title || '' })).catch(() => ({ id: inv._id, title: '' }))
+          )
+        ).then((resolved) => {
+          const map = Object.fromEntries(resolved.map((r) => [r.id, r.title || '']))
+          const patched = fetched.map((inv) => ({ ...inv, target_title: inv.target_title || map[inv._id] || inv.target_title }))
+          setInvoices(patched)
+        }).catch(() => {
+          setInvoices(fetched)
+        })
       })
       .catch((err) => {
         if (!mounted) return
@@ -553,7 +621,7 @@ export default function StudentInvoices() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [navigate])
 
   const openInvoice = (inv) => {
     const win = window.open('', '_blank')
@@ -635,7 +703,7 @@ export default function StudentInvoices() {
                 <tr className="text-left text-[12px] font-semibold text-[#64748b]">
                   <th className="px-4 py-3">Invoice No.</th>
                   <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Description</th>
+                  <th className="px-4 py-3">Course Name</th>
                   <th className="px-4 py-3 text-right">Amount</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-center">Actions</th>
@@ -653,8 +721,8 @@ export default function StudentInvoices() {
                     <td className="px-4 py-3 text-[13px] text-[#475569]">{formatDate(inv.created_at || inv.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="text-[13px] font-medium text-[#0f172a]">{getInvoiceKindLabel(inv)}</p>
-                        <p className="text-[11px] text-[#94a3b8]">{getItemName(inv)}</p>
+                        <p className="text-[13px] font-medium text-[#0f172a]">{getItemName(inv)}</p>
+                        <p className="text-[11px] text-[#94a3b8]">{getInvoiceKindLabel(inv)}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">

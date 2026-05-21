@@ -122,6 +122,8 @@ class LibraryResourceIn(BaseModel):
     format: str
     file_url: str = ""
     image_url: str = ""
+    target_type: str | None = None
+    target_id: str | None = None
 
 
 class LibraryResourceUpdateIn(BaseModel):
@@ -130,6 +132,8 @@ class LibraryResourceUpdateIn(BaseModel):
     format: str | None = None
     file_url: str | None = None
     image_url: str | None = None
+    target_type: str | None = None
+    target_id: str | None = None
 
 
 class ReportGenerateIn(BaseModel):
@@ -160,6 +164,7 @@ class RazorpayOrderIn(BaseModel):
     target_id: str
     coupon_code: str | None = None
     coupon_discount: float | None = None
+    target_title: str | None = None
 
 
 class RazorpayVerifyIn(BaseModel):

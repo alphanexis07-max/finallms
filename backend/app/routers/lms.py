@@ -1447,6 +1447,8 @@ async def create_payment_order(payload: RazorpayOrderIn, tenant_id: str = Depend
         "tenant_id": tenant_id,
         "user_id": user["sub"],
         "target_id": payload.target_id,
+        "target_title": getattr(payload, "target_title", None),
+        "enrollment_type": getattr(payload, "enrollment_type", None),
         "amount": payload.amount,
         "amount_paise": amount_paise,
         "order_id": order_id,
@@ -1487,6 +1489,35 @@ async def list_my_payments(user=Depends(get_current_user), skip: int = 0, limit:
     """Return payments belonging to the current user (student or any authenticated user)."""
     query = {"user_id": user.get("sub")}
     return await paged(db.payments, query, "created_at", -1, skip, limit)
+
+
+@router.get("/payments/resolve-title")
+async def resolve_payment_title(target_id: str | None = None, enrollment_type: str | None = None, tenant_id: str = Depends(get_tenant_id)):
+    """Resolve a human-friendly title for a payment target (course or live_class)."""
+    if not target_id:
+        raise HTTPException(status_code=400, detail="target_id is required")
+
+    # Try ObjectId lookup first when valid
+    title = None
+    if enrollment_type and str(enrollment_type).lower() == 'live_class':
+        if ObjectId.is_valid(target_id):
+            qry = {"_id": ObjectId(target_id)}
+            if tenant_id:
+                qry["tenant_id"] = tenant_id
+            doc = await db.live_classes.find_one(qry)
+            if doc:
+                title = str(doc.get('title') or doc.get('class_name') or doc.get('subject') or '')
+    else:
+        # Default to course lookup
+        if ObjectId.is_valid(target_id):
+            qry = {"_id": ObjectId(target_id)}
+            if tenant_id:
+                qry["tenant_id"] = tenant_id
+            doc = await db.courses.find_one(qry)
+            if doc:
+                title = str(doc.get('title') or doc.get('name') or '')
+
+    return {"title": title or ""}
 
 
 @router.post("/payments/verify")
@@ -1787,6 +1818,14 @@ async def create_library_resource(
         "updated_at": now,
         "published": True,
     }
+    # If resource targets a live_class, ensure ID is stored as string
+    if data.get("target_id"):
+        data["target_id"] = str(data.get("target_id"))
+    # Basic validation: if targeting live_class, ensure it exists in tenant
+    if data.get("target_type") == "live_class" and data.get("target_id"):
+        lc = await db.live_classes.find_one({"_id": ObjectId(data["target_id"])}) if ObjectId.is_valid(data["target_id"]) else None
+        if not lc:
+            raise HTTPException(status_code=400, detail="Invalid live_class target_id")
     res = await db.library_resources.insert_one(data)
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "library_resource.created", "data": {"title": data["title"]}})
     return inserted_response(data, res.inserted_id)
@@ -1798,10 +1837,39 @@ async def list_library_resources(
     skip: int = 0,
     limit: int = 100,
     q: str | None = None,
+    user=Depends(get_current_user),
 ):
     query = {"tenant_id": tenant_id} if tenant_id else {}
     if q:
         query["title"] = {"$regex": q, "$options": "i"}
+
+    # Admins and instructors can view all resources
+    role = str((user or {}).get("role") or "").lower()
+    if role in [r.value for r in (Role.SUPER_ADMIN, Role.ADMIN, Role.INSTRUCTOR)]:
+        return await paged(db.library_resources, query, "created_at", -1, skip, limit)
+
+    # For students, only return generic resources (no target) or resources targeted
+    # to live classes the student is enrolled in / attending.
+    student_id = str(user.get("sub") or "").strip()
+    if not student_id:
+        return {"items": [], "total": 0}
+
+    # Fetch enrollments for this student (course_ids)
+    enrollments = await db.enrollments.find({"student_id": student_id}, {"course_id": 1}).to_list(500)
+    course_ids = [str(e.get("course_id")) for e in enrollments if e.get("course_id")]
+
+    # Find live_classes where student is attendee OR whose course_id is in student's enrollments
+    live_query = {"tenant_id": tenant_id, "$or": []}
+    live_query["$or"].append({"attendee_ids": student_id})
+    if course_ids:
+        live_query["$or"].append({"course_id": {"$in": course_ids}})
+    live_classes = await db.live_classes.find(live_query, {"_id": 1}).to_list(500)
+    allowed_live_ids = [str(lc.get("_id")) for lc in live_classes if lc.get("_id")]
+
+    # Build OR filter: resources without a target OR resources targeting allowed live_class ids
+    or_filters = [ {"target_type": {"$exists": False}}, {"target_type": None}, {"target_id": {"$in": allowed_live_ids}} ]
+    query["$or"] = or_filters
+
     return await paged(db.library_resources, query, "created_at", -1, skip, limit)
 
 
