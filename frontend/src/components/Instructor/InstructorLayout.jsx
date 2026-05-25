@@ -17,7 +17,6 @@ const nav = [
   { to: '/instructor/my-courses', label: 'My Courses', icon: BookOpen },
   { to: '/instructor/online-classes', label: 'Online Classes', icon: Video },
   { to: '/instructor/weekly-tests', label: 'Weekly Tests', icon: FileText },
-  { to: '/instructor/student-insights', label: 'Student Insights', icon: User },
 ]
 
 export default function InstructorLayout() {

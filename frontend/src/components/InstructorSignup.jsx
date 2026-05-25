@@ -314,7 +314,17 @@ export default function InstructorSignup() {
                   onChange={(e) => handleChange('agreeToTerms', e.target.checked)}
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
                 />
-                I agree to the Terms and Privacy Policy for instructor account access.
+                <span className="leading-snug">
+                  I agree to the{' '}
+                  <Link to="/terms-and-conditions" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
+                    Terms
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/privacy-policy" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
+                    Privacy Policy
+                  </Link>{' '}
+                  for instructor account access.
+                </span>
               </label>
 
               {submitted && !isFormValid && (

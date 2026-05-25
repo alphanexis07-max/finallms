@@ -17,10 +17,10 @@ import {
   Star,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { parseServerDate } from '../../lib/dates'
 
 const isClassCreationManagedByAdmin = true
 const FILTERS = ['All', 'Live Now', 'Upcoming', 'Completed']
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000
 
 const IST_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -48,43 +48,59 @@ const STATUS_CONFIG = {
   },
 }
 
-function toIstDate(value) {
-  const raw = value ? new Date(value) : null
-  if (!raw || Number.isNaN(raw.getTime())) return null
-  return new Date(raw.getTime() + IST_OFFSET_MS)
+function toUtcDate(value) {
+  const parsed = parseServerDate(value)
+  if (!parsed) return null
+  return parsed
 }
 
-function formatIstTime(istDate) {
-  if (!istDate) return '-'
-  let hour = istDate.getUTCHours()
-  const minute = String(istDate.getUTCMinutes()).padStart(2, '0')
-  const suffix = hour >= 12 ? 'pm' : 'am'
-  hour = hour % 12
-  if (hour === 0) hour = 12
-  return `${String(hour).padStart(2, '0')}:${minute} ${suffix}`
+function formatIstTime(dateValue) {
+  const parsed = toUtcDate(dateValue)
+  if (!parsed) return '-'
+  return new Intl.DateTimeFormat('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  }).format(parsed)
 }
 
 function formatDayLabel(dateValue) {
-  const targetIst = toIstDate(dateValue)
-  if (!targetIst) return 'Unscheduled'
+  const parsed = toUtcDate(dateValue)
+  if (!parsed) return 'Unscheduled'
 
-  const nowIst = new Date(Date.now() + IST_OFFSET_MS)
-  const todayUtcMidnight = Date.UTC(nowIst.getUTCFullYear(), nowIst.getUTCMonth(), nowIst.getUTCDate())
-  const targetUtcMidnight = Date.UTC(targetIst.getUTCFullYear(), targetIst.getUTCMonth(), targetIst.getUTCDate())
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const nowParts = formatter.formatToParts(new Date())
+  const targetParts = formatter.formatToParts(parsed)
+  const nowYear = Number(nowParts.find((p) => p.type === 'year')?.value || 0)
+  const nowMonth = Number(nowParts.find((p) => p.type === 'month')?.value || 1) - 1
+  const nowDay = Number(nowParts.find((p) => p.type === 'day')?.value || 1)
+  const targetYear = Number(targetParts.find((p) => p.type === 'year')?.value || 0)
+  const targetMonth = Number(targetParts.find((p) => p.type === 'month')?.value || 1) - 1
+  const targetDay = Number(targetParts.find((p) => p.type === 'day')?.value || 1)
+
+  const todayUtcMidnight = Date.UTC(nowYear, nowMonth, nowDay)
+  const targetUtcMidnight = Date.UTC(targetYear, targetMonth, targetDay)
   const diffDays = Math.round((targetUtcMidnight - todayUtcMidnight) / (24 * 60 * 60 * 1000))
 
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Tomorrow'
   if (diffDays === -1) return 'Yesterday'
 
-  return IST_WEEKDAYS[targetIst.getUTCDay()]
+  return IST_WEEKDAYS[new Date(parsed).getUTCDay()]
 }
 
 function formatClockRange(dateValue, durationMins) {
-  const startIst = toIstDate(dateValue)
-  if (!startIst) return '-'
-  const endIst = new Date(startIst.getTime() + (Number(durationMins || 60) * 60 * 1000))
-  return `${formatIstTime(startIst)} to ${formatIstTime(endIst)}`
+  const parsed = toUtcDate(dateValue)
+  if (!parsed) return '-'
+  const endDate = new Date(parsed.getTime() + (Number(durationMins || 60) * 60 * 1000))
+  return `${formatIstTime(parsed)} to ${formatIstTime(endDate)}`
 }
 
 function getDisplayStatus(rawStatus, startAt) {
@@ -359,6 +375,8 @@ export default function InstructorOnlineClasses() {
         me?._id,
         me?.id,
         me?.sub,
+        me?.user_id,
+        me?.uid,
       ]
         .map((x) => String(x || '').trim())
         .filter(Boolean)
@@ -366,7 +384,7 @@ export default function InstructorOnlineClasses() {
 
       // Show only classes assigned to this instructor. Never fall back to all classes.
       const assigned = items.filter((x) => {
-        const instructorId = String(x?.instructor_id || '').trim()
+        const instructorId = String(x?.instructor_id || x?.instructorId || x?.host_id || x?.instructor || '').trim()
         return instructorId && possibleInstructorIds.includes(instructorId)
       })
 

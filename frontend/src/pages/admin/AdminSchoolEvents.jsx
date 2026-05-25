@@ -22,12 +22,19 @@ function parseEventMeta(event) {
     const match = description.match(new RegExp(`${label}:\\s*(.+)`, 'i'))
     return match?.[1]?.split('\n')?.[0]?.trim() || ''
   }
+  const metadataPattern = /^(Category|Venue|Location|Coordinator|Expected attendees|Time|Publish to calendar):/i
+  const descriptionText = description
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !metadataPattern.test(line))
+    .join(' ')
 
   return {
     category: event?.category || pick('Category') || 'Academic',
     venue: event?.location || pick('Venue') || pick('Location') || 'TBA',
     coordinator: event?.coordinator || pick('Coordinator') || 'TBA',
     expectedAttendees: event?.expected_attendees || pick('Expected attendees') || '',
+    descriptionText,
     notes: description,
   }
 }
@@ -312,18 +319,14 @@ export default function AdminSchoolEvents() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-x-[16px] gap-y-[16px] xl:grid-cols-[repeat(2,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-[16px]">
           <div className="bg-white border border-black/[0.08] rounded-[8px] p-[21px]">
             <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Events overview</h3>
             <p className="text-[13px] text-[#94a3b8] mt-[4px] mb-[16px]">Monitor planned activities, approvals, and venue coordination.</p>
-            <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
               <div className="bg-[#f8fafc] rounded-[6px] p-[14px]">
                 <div className="text-[13px] font-medium text-[#94a3b8]">Scheduled events</div>
                 <div className="text-[30px] font-bold text-[#0f172a] mt-[6px]">{stats.scheduled}</div>
-              </div>
-              <div className="bg-[#f8fafc] rounded-[6px] p-[14px]">
-                <div className="text-[13px] font-medium text-[#94a3b8]">Pending approvals</div>
-                <div className="text-[30px] font-bold text-[#0f172a] mt-[6px]">{Math.max(stats.scheduled - stats.fullyReady, 0)}</div>
               </div>
               <div className="bg-[#f8fafc] rounded-[6px] p-[14px]">
                 <div className="text-[13px] font-medium text-[#94a3b8]">Confirmed venues</div>
@@ -331,22 +334,9 @@ export default function AdminSchoolEvents() {
               </div>
             </div>
           </div>
-
-          <div className="bg-white border border-black/[0.08] rounded-[8px] p-[21px]">
-            <h3 className="text-[18px] font-bold text-[#0f172a] m-0">This month</h3>
-            <p className="text-[13px] text-[#94a3b8] mt-[4px] mb-[16px]">Current readiness and event execution pace.</p>
-            <div className="text-[30px] font-bold text-[#0f172a] mb-[8px]">{stats.readiness}%</div>
-            <div className="h-2 rounded-full bg-[#edf2ff] mb-[16px]">
-              <div className="h-2 rounded-full bg-[#5b3df6]" style={{ width: `${stats.readiness}%` }} />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Pill>{stats.scheduled} planned</Pill>
-              <Pill variant="success">{stats.fullyReady} fully ready</Pill>
-            </div>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-x-[24px] gap-y-[24px] xl:grid-cols-[1.7fr_1fr]">
+        <div className="grid grid-cols-1 gap-x-[24px] gap-y-[24px]">
           <div className="bg-white border border-black/[0.08] rounded-[8px] flex flex-col">
             <div className="px-[21px] pt-[21px] pb-[16px] flex justify-between items-start gap-4">
               <div>
@@ -374,7 +364,7 @@ export default function AdminSchoolEvents() {
                         <div className="min-w-0 flex-1">
                           <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{event.title}</div>
                           <div className="text-[12px] text-[#94a3b8] mt-[4px] line-clamp-2">
-                            {event.description || 'No description'}
+                            {meta.descriptionText || 'No description'}
                           </div>
                           <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-[#94a3b8]">
                             <span className="inline-flex items-center gap-1">
@@ -419,37 +409,6 @@ export default function AdminSchoolEvents() {
               })}
               {!loading && upcoming.length === 0 && <p className="text-[12px] text-[#94a3b8]">No events found.</p>}
               {loading && <p className="text-[12px] text-[#94a3b8]">Loading events...</p>}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-[24px]">
-            <div className="bg-white border border-black/[0.08] rounded-[8px] flex flex-col">
-              <div className="px-[21px] pt-[21px] pb-[16px]">
-                <h3 className="text-[18px] font-bold text-[#0f172a] m-0">Notices</h3>
-                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Important reminders before the next event cycle.</p>
-              </div>
-              <div className="flex flex-col gap-[12px] px-[21px] pb-[21px]">
-                {normalizedEvents.slice(0, 3).map((event) => (
-                  <div key={event._id} className="p-[16px] border border-black/[0.08] rounded-[6px]">
-                    <div className="flex items-start gap-2">
-                      <Bell className="h-4 w-4 text-[#ffd966] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <div className="text-[14px] font-semibold text-[#0f172a]">{event.title}</div>
-                        <div className="text-[12px] text-[#94a3b8] mt-[4px]">
-                          {parseEventMeta(event).coordinator !== 'TBA'
-                            ? `Coordinator: ${parseEventMeta(event).coordinator}`
-                            : 'Review and confirm'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {normalizedEvents.length === 0 && (
-                  <div className="p-[16px] border border-black/[0.08] rounded-[6px] text-[12px] text-[#94a3b8]">
-                    No notices available yet.
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>

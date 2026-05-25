@@ -235,13 +235,22 @@ export default function SignUp() {
 
             {/* Footer Section - Static with Terms and Button */}
             <div className="p-5 sm:p-8 pt-0 flex-shrink-0">
-              <label className="flex items-center gap-2.5 text-slate-600 text-sm cursor-pointer mb-4">
+              <label className="flex items-start gap-2.5 text-slate-600 text-sm cursor-pointer mb-4">
                 <input 
                   type="checkbox" 
                   defaultChecked 
                   className="h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
                 />
-                I agree to the Terms &amp; Privacy Policy
+                <span className="leading-snug">
+                  I agree to the{' '}
+                  <Link to="/terms-and-conditions" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
+                    Terms
+                  </Link>{' '}
+                  &amp;{' '}
+                  <Link to="/privacy-policy" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
+                    Privacy Policy
+                  </Link>
+                </span>
               </label>
 
               <button 

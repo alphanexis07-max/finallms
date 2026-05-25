@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Video, Calendar, FileText, GraduationCap } from 'lucide-react'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
+import { formatDateTimeInIst } from '../../lib/dates'
 
 const pillVariants = {
   success: 'bg-[#2dd4bf] text-[#023b33]',
@@ -147,16 +148,24 @@ export default function InstructorDashboard() {
 
   const myCourses = useMemo(() => {
     const filtered = myInstructorId
-      ? courses.filter((c) => String(c?.created_by || '') === String(myInstructorId))
+      ? courses.filter((c) => {
+          const createdBy = String(
+            c?.created_by || c?.createdBy || c?.instructor_id || c?.instructorId || c?.owner_id || ''
+          ).trim()
+          return createdBy === String(myInstructorId)
+        })
       : courses
     return [...filtered]
-      .sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0))
+      .sort((a, b) => new Date(b?.created_at || b?.createdAt || 0) - new Date(a?.created_at || a?.createdAt || 0))
       .slice(0, 4)
   }, [courses, myInstructorId])
 
   const myClasses = useMemo(() => {
     const filtered = myInstructorId
-      ? liveClasses.filter((c) => String(c?.instructor_id || '') === String(myInstructorId))
+      ? liveClasses.filter((c) => {
+          const instructorId = String(c?.instructor_id || c?.instructorId || c?.host_id || c?.instructor || '').trim()
+          return instructorId === String(myInstructorId)
+        })
       : liveClasses
     return [...filtered]
       .sort((a, b) => new Date(a?.start_at || 0) - new Date(b?.start_at || 0))
@@ -248,7 +257,7 @@ export default function InstructorDashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{item.title || 'Untitled class'}</div>
                     <div className="text-[13px] text-[#94a3b8] mt-[4px] leading-relaxed">
-                      {item.start_at ? new Date(item.start_at).toLocaleString() : 'No schedule'}
+                      {item.start_at ? formatDateTimeInIst(item.start_at) : 'No schedule'}
                     </div>
                     <div className="mt-2"><Pill type="secondary">{item.status || 'upcoming'}</Pill></div>
                   </div>

@@ -499,15 +499,14 @@ export default function AdminPaymentsCupons() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard label="Total collected" value={`₹${totalCollected.toLocaleString('en-IN')}`} badge="Synced from payments" badgeClass="bg-[#2dd4bf] text-[#023b33]" />
-          <StatCard label="Pending payments" value={String(pendingPayments)} badge="Awaiting capture/verification" badgeClass="bg-[#f0f4f8] text-[#64748b]" />
           <StatCard label="Coupon redemptions" value={String(totalCouponUses)} badge={`${coupons.length} coupon records`} badgeClass="bg-[#ffd966] text-[#4b2e00]" />
           <StatCard label="Failed payments" value={String(failedPayments)} badge="Needs follow-up" badgeClass="bg-[#ffd966] text-[#4b2e00]" />
         </div>
 
         {/* Main content */}
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.65fr_1fr]">
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-3">
             {/* Transactions */}
             <section className="rounded-[8px] border border-black/[0.08] bg-white p-4">
@@ -515,26 +514,6 @@ export default function AdminPaymentsCupons() {
                 <div>
                   <h3 className="text-[22px] font-bold text-[#111827]">Transactions</h3>
                   <p className="text-[12px] text-[#94a3b8]">Recent payments across courses, batches, and renewals. Click on any transaction to view details.</p>
-                </div>
-                <div className="flex flex-wrap gap-1 text-[11px]">
-                  {[
-                    { key: 'all', label: 'All payments' },
-                    { key: 'captured', label: 'Succeeded' },
-                    { key: 'failed', label: 'Failed' },
-                    { key: 'month', label: 'This month' },
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setTxFilter(key)}
-                      className={`rounded-[7px] border px-2 py-1 transition-colors ${
-                        txFilter === key
-                          ? 'border-[#5b3df6] bg-[#5b3df6] text-white'
-                          : 'border-black/[0.08] bg-white text-[#334155] hover:bg-[#f1f5f9]'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -667,32 +646,6 @@ export default function AdminPaymentsCupons() {
           </div>
 
           {/* Right sidebar - Revenue insights only */}
-          <div className="space-y-3">
-            <section className="rounded-[8px] border border-black/[0.08] bg-white p-4">
-              <h3 className="text-[22px] font-bold text-[#111827]">Revenue insights</h3>
-              <p className="text-[12px] text-[#94a3b8]">Computed from real payment records.</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-[8px] bg-[#f1f5f9] p-2">
-                  <p className="text-[10px] text-[#94a3b8]">Avg order value</p>
-                  <p className="text-[18px] font-bold text-[#111827]">₹{avgOrderValue.toLocaleString('en-IN')}</p>
-                </div>
-                <div className="rounded-[8px] bg-[#f1f5f9] p-2">
-                  <p className="text-[10px] text-[#94a3b8]">Captured payments</p>
-                  <p className="text-[18px] font-bold text-[#111827]">{transactions.filter((t) => t.status === 'captured').length}</p>
-                </div>
-                <div className="rounded-[8px] bg-[#f1f5f9] p-2">
-                  <p className="text-[10px] text-[#94a3b8]">Collection success</p>
-                  <p className="text-[18px] font-bold text-[#111827]">
-                    {transactions.length ? `${Math.round((transactions.filter((t) => t.status === 'captured').length / transactions.length) * 100)}%` : '0%'}
-                  </p>
-                </div>
-                <div className="rounded-[8px] bg-[#f1f5f9] p-2">
-                  <p className="text-[10px] text-[#94a3b8]">Active coupons</p>
-                  <p className="text-[18px] font-bold text-[#111827]">{coupons.length}</p>
-                </div>
-              </div>
-            </section>
-          </div>
         </div>
       </div>
     </div>
