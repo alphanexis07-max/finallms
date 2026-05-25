@@ -373,6 +373,60 @@ function ReassignInstructorModal({
   )
 }
 
+// function CertificateIssueModal({
+//   session,
+//   certificateTitle,
+//   setCertificateTitle,
+//   onClose,
+//   onSubmit,
+//   isSubmitting,
+// }) {
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
+//       <div className="w-[calc(100%-1.5rem)] max-h-[90vh] overflow-y-auto rounded-[8px] bg-white shadow-xl sm:w-[520px]" onClick={(e) => e.stopPropagation()}>
+//         <div className="sticky top-0 flex items-center justify-between border-b border-black/[0.08] bg-white p-5">
+//           <h2 className="text-[20px] font-bold text-[#0f172a]">Upload Certificate</h2>
+//           <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+//             <X className="h-5 w-5" />
+//           </button>
+//         </div>
+
+//         <div className="space-y-4 p-5">
+//           <div className="rounded-[6px] border border-black/[0.08] bg-[#f8fafc] px-3 py-2 text-[12px] text-[#334155]">
+//             Class: <span className="font-semibold text-[#0f172a]">{session?.title || '-'}</span>
+//           </div>
+
+//           <div>
+//             <label className="mb-1 block text-[12px] font-semibold text-[#334155]">Certificate title</label>
+//             <input
+//               value={certificateTitle}
+//               onChange={(e) => setCertificateTitle(e.target.value)}
+//               placeholder="e.g. Completion Certificate"
+//               className="h-10 w-full rounded-[6px] border border-black/[0.08] px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
+//             />
+//           </div>
+//         </div>
+
+//         <div className="sticky bottom-0 flex justify-end gap-3 border-t border-black/[0.08] bg-white p-5">
+//           <button onClick={onClose} className="h-10 rounded-[6px] border border-black/[0.08] px-4 text-[13px] font-medium text-[#64748b] hover:bg-gray-50">
+//             Cancel
+//           </button>
+//           <button
+//             onClick={onSubmit}
+//             disabled={isSubmitting}
+//             className="inline-flex h-10 items-center gap-2 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-medium text-white hover:bg-[#4a2ed8] disabled:opacity-60"
+//           >
+//             <Upload className="h-4 w-4" />
+//             {isSubmitting ? 'Uploading...' : 'Upload Certificate'}
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+
+
 function CertificateIssueModal({
   session,
   certificateTitle,
@@ -381,17 +435,59 @@ function CertificateIssueModal({
   onSubmit,
   isSubmitting,
 }) {
+  const [recipientName, setRecipientName] = React.useState('')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
-      <div className="w-[calc(100%-1.5rem)] max-h-[90vh] overflow-y-auto rounded-[8px] bg-white shadow-xl sm:w-[520px]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[calc(100%-1.5rem)] max-h-[90vh] overflow-y-auto rounded-[8px] bg-white shadow-xl sm:w-[560px]" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 flex items-center justify-between border-b border-black/[0.08] bg-white p-5">
-          <h2 className="text-[20px] font-bold text-[#0f172a]">Upload Certificate</h2>
-          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+          <h2 className="text-[20px] font-bold text-[#0f172a]">Issue Certificate</h2>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a]">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="space-y-4 p-5">
+          {/* Certificate Preview */}
+          <div className="relative overflow-hidden rounded-[10px] border border-[#c7d9f5]" style={{background:'#f0f6ff', aspectRatio:'1.6/1'}}>
+            {/* Top-right shapes */}
+            <div className="absolute top-0 right-0 w-32 h-20 rounded-bl-full opacity-25" style={{background:'#1565c0'}}/>
+            <div className="absolute top-0 right-0 w-20 h-12 rounded-bl-full opacity-30" style={{background:'#1a5fb4'}}/>
+            {/* Bottom-left shapes */}
+            <div className="absolute bottom-0 left-0 w-28 h-18 rounded-tr-full opacity-25" style={{background:'#1565c0'}}/>
+
+            {/* White card */}
+            <div className="absolute inset-2 rounded-[6px] bg-white opacity-90"/>
+            <div className="absolute inset-2 rounded-[6px] flex flex-col items-center justify-center px-6">
+              {/* Blue top bar */}
+              <div className="absolute top-2 left-2 right-2 h-[3px] rounded-full" style={{background:'#1565c0'}}/>
+              <p className="text-[9px] tracking-[3px] text-[#64748b] mt-3">CERTIFICATE OF ACHIEVEMENT</p>
+              <p className="text-[8px] text-[#94a3b8] mt-1">THIS CERTIFICATE IS PRESENTED TO</p>
+              <p className="text-[18px] font-bold mt-1" style={{color:'#1565c0'}}>
+                {recipientName || 'Name Surname'}
+              </p>
+              <p className="text-[8px] text-[#475569] mt-1 text-center px-4">
+                {certificateTitle || 'For successfully completing the course'}
+              </p>
+              <div className="flex w-full justify-between px-4 mt-3 border-t border-[#e2eaf6] pt-2">
+                <div>
+                  <p className="text-[7px] font-bold text-[#1a1a2e]">JANUARY 2ND 2025</p>
+                  <p className="text-[6px] text-[#94a3b8] tracking-widest">DATE</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] italic text-[#334155]">✦ Signature</p>
+                  <p className="text-[6px] text-[#94a3b8] tracking-widest">SIGNATURE</p>
+                </div>
+              </div>
+            </div>
+            {/* Award badge */}
+            <div className="absolute top-4 right-6 w-10 h-10 rounded-full border-2 flex flex-col items-center justify-center bg-white" style={{borderColor:'#1565c0'}}>
+              <p className="text-[5px]" style={{color:'#1565c0'}}>★★★</p>
+              <p className="text-[7px] font-bold" style={{color:'#1565c0'}}>BEST</p>
+              <p className="text-[5px] text-[#475569]">AWARD</p>
+            </div>
+          </div>
+
           <div className="rounded-[6px] border border-black/[0.08] bg-[#f8fafc] px-3 py-2 text-[12px] text-[#334155]">
             Class: <span className="font-semibold text-[#0f172a]">{session?.title || '-'}</span>
           </div>
@@ -414,10 +510,10 @@ function CertificateIssueModal({
           <button
             onClick={onSubmit}
             disabled={isSubmitting}
-            className="inline-flex h-10 items-center gap-2 rounded-[6px] bg-[#5b3df6] px-4 text-[13px] font-medium text-white hover:bg-[#4a2ed8] disabled:opacity-60"
+            className="inline-flex h-10 items-center gap-2 rounded-[6px] bg-[#1565c0] px-4 text-[13px] font-medium text-white hover:bg-[#1248a0] disabled:opacity-60"
           >
-            <Upload className="h-4 w-4" />
-            {isSubmitting ? 'Uploading...' : 'Upload Certificate'}
+            <Award className="h-4 w-4" />
+            {isSubmitting ? 'Issuing...' : 'Issue Certificate'}
           </button>
         </div>
       </div>
