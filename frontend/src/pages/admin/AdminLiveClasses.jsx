@@ -667,6 +667,7 @@ export default function AdminLiveClasses() {
   const [courses, setCourses] = useState([])
   const [instructors, setInstructors] = useState([])
   const [students, setStudents] = useState([])
+  const [allUsers, setAllUsers] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
   const [activeFilter, setActiveFilter] = useState('All Classes')
   const [selectedSession, setSelectedSession] = useState(null)
@@ -741,6 +742,7 @@ export default function AdminLiveClasses() {
       setCourses(coursesRes.items || [])
       setInstructors(finalInstructors)
       setStudents(studentsRes.items || [])
+      setAllUsers(allUsersRes.items || [])
       setCurrentUser(me)
     } finally {
       setLoading(false)
@@ -762,8 +764,9 @@ export default function AdminLiveClasses() {
     const map = new Map()
     instructors.forEach((u) => map.set(u._id, u))
     students.forEach((u) => map.set(u._id, u))
+    allUsers.forEach((u) => map.set(u._id, u))
     return map
-  }, [instructors, students])
+  }, [instructors, students, allUsers])
 
   const sessions = useMemo(() => {
     return classes.map((c) => {
@@ -781,7 +784,13 @@ export default function AdminLiveClasses() {
         class_name: c.class_name || '',
         course: course?.title || c.course_id || 'Course',
         instructorId: c.instructor_id || '',
-        instructor: instructor?.full_name || instructor?.email || c.instructor_id || 'Instructor',
+        instructor:
+          instructor?.full_name ||
+          instructor?.name ||
+          instructor?.username ||
+          instructor?.email ||
+          c.instructor_id ||
+          'Instructor',
         date: hasValidStart ? formatDateInIst(c.start_at) : 'Not scheduled',
         time: hasValidStart ? formatTimeInIst(c.start_at) : '-',
         duration: `${c.duration_minutes || 60} mins`,

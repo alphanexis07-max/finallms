@@ -419,13 +419,6 @@ export default function AdminPaymentsCupons() {
                 </div>
               </div>
               <div className="mt-3">
-                <label className="mb-1 block text-[12px] font-medium text-[#334155]">Applicable courses</label>
-                <input 
-                  className="h-10 w-full rounded-[7px] border border-black/[0.08] px-3 text-[13px]" 
-                  placeholder="Coding + STEM courses" 
-                />
-              </div>
-              <div className="mt-3">
                 <label className="mb-1 block text-[12px] font-medium text-[#334155]">Description</label>
                 <textarea 
                   className="h-24 w-full resize-none rounded-[7px] border border-black/[0.08] px-3 py-2 text-[13px]" 
