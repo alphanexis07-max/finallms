@@ -12,6 +12,7 @@ export default function StudentCertificates() {
   const [courses, setCourses] = useState([])
   const [certificates, setCertificates] = useState([])
   const [certificateImages, setCertificateImages] = useState({})
+  const [logoImage, setLogoImage] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -23,6 +24,16 @@ export default function StudentCertificates() {
       setCourses(crs.items || [])
       setCertificates(certRes.items || [])
     })
+  }, [])
+
+  useEffect(() => {
+    const image = new Image()
+    image.src = '/logo.png'
+    image.onload = () => setLogoImage(image)
+    image.onerror = () => {
+      console.warn('Certificate logo failed to load: /logo.png')
+      setLogoImage(null)
+    }
   }, [])
 
   const list = useMemo(() => {
@@ -235,27 +246,49 @@ export default function StudentCertificates() {
   ctx.fillStyle = '#1565c0'
   ctx.fillRect(cardX + r, cardY, cardW - r * 2, 10)
 
-  // ── Company logo diamond ──
+  // ── Company logo ──
+  const logoSize = 110
+  const logoX = cardX + 80
+  const logoY = cardY + 44
+
   ctx.save()
-  ctx.fillStyle = '#1565c0'
-  ctx.translate(160, 160)
-  ctx.rotate(Math.PI / 4)
-  ctx.fillRect(-22, -22, 44, 44)
+  ctx.fillStyle = '#ffffff'
+  ctx.strokeStyle = '#1565c0'
+  ctx.lineWidth = 4
+  ctx.fillRect(logoX, logoY, logoSize, logoSize)
+  ctx.strokeRect(logoX, logoY, logoSize, logoSize)
   ctx.restore()
+
+  if (logoImage?.complete && logoImage.naturalWidth) {
+    const scale = Math.min(logoSize / logoImage.width, logoSize / logoImage.height, 1)
+    const drawW = logoImage.width * scale
+    const drawH = logoImage.height * scale
+    const drawX = logoX + (logoSize - drawW) / 2
+    const drawY = logoY + (logoSize - drawH) / 2
+    ctx.drawImage(logoImage, drawX, drawY, drawW, drawH)
+  } else {
+    ctx.save()
+    ctx.fillStyle = '#1565c0'
+    ctx.translate(logoX + logoSize / 2, logoY + logoSize / 2)
+    ctx.rotate(Math.PI / 4)
+    ctx.fillRect(-22, -22, 44, 44)
+    ctx.restore()
+  }
+
   ctx.fillStyle = '#1a1a2e'
   ctx.font = 'bold 36px Arial'
   ctx.textAlign = 'left'
-  ctx.fillText('COMPANY NAME', 210, 172)
+  ctx.fillText('Learning Management System', logoX + logoSize + 20, logoY + 40)
 
   // ── "Certificate" heading ──
   ctx.fillStyle = '#1565c0'
-  ctx.font = 'bold 140px Arial'
+  ctx.font = 'bold 100px Arial'
   ctx.textAlign = 'left'
   ctx.fillText('Certificate', cardX + 100, 420)
 
   // ── OF ACHIEVEMENT ──
   ctx.fillStyle = '#334155'
-  ctx.font = '500 46px Arial'
+  ctx.font = '500 36px Arial'
   ctx.textAlign = 'left'
   ctx.letterSpacing = '8px'
   ctx.fillText('OF ACHIEVEMENT', cardX + 108, 490)
@@ -270,28 +303,28 @@ export default function StudentCertificates() {
 
   // ── "THIS CERTIFICATE IS PRESENTED TO" ──
   ctx.fillStyle = '#94a3b8'
-  ctx.font = '400 34px Arial'
+  ctx.font = '400 30px Arial'
   ctx.textAlign = 'left'
   ctx.fillText('THIS CERTIFICATE IS PRESENTED TO', cardX + 108, 590)
 
   // ── Recipient name ──
   const studentName = me?.full_name || me?.email || 'Name Surname'
   ctx.fillStyle = '#1565c0'
-  ctx.font = 'bold 110px Arial'
+  ctx.font = 'bold 90px Arial'
   ctx.textAlign = 'left'
   ctx.fillText(studentName, cardX + 100, 730)
 
   // ── Description bold line ──
   const descTitle = certificate.title || `Successfully completed ${certificate.course_title || 'the course'}`
   ctx.fillStyle = '#334155'
-  ctx.font = 'bold 36px Arial, sans-serif'
+  ctx.font = 'bold 26px Arial, sans-serif'
   ctx.textAlign = 'left'
   ctx.fillText(descTitle, cardX + 108, 810)
 
   // ── Description body (wrapped) ──
   const descBody = `has successfully completed all requirements of the course "${certificate.course_title || 'Course Name'}" through our learning platform. This certificate acknowledges the dedication and commitment shown throughout the program.`
   ctx.fillStyle = '#64748b'
-  ctx.font = '400 32px Arial, sans-serif'
+  ctx.font = '400 22px Arial, sans-serif'
   const words = descBody.split(' ')
   let line = '', lineY = 858
   for (const word of words) {
@@ -314,7 +347,7 @@ export default function StudentCertificates() {
   // ── Date section ──
   const dateStr = issueDate(certificate.created_at).toUpperCase()
   ctx.fillStyle = '#1a1a2e'
-  ctx.font = 'bold 34px Arial'
+  ctx.font = 'bold 25px Arial'
   ctx.textAlign = 'left'
   ctx.fillText(dateStr, cardX + 108, EXPORT_HEIGHT - 160)
   ctx.strokeStyle = '#94a3b8'
@@ -329,9 +362,9 @@ export default function StudentCertificates() {
 
   // ── Signature section ──
   ctx.fillStyle = '#334155'
-  ctx.font = 'italic bold 48px Georgia, serif'
+  ctx.font = 'italic bold 25px Georgia, serif'
   ctx.textAlign = 'right'
-  ctx.fillText('✦ Director', cardX + cardW - 108, EXPORT_HEIGHT - 160)
+  ctx.fillText('Learning Management System', cardX + cardW - 108, EXPORT_HEIGHT - 160)
   ctx.strokeStyle = '#94a3b8'
   ctx.lineWidth = 1.5
   ctx.beginPath()
@@ -425,7 +458,7 @@ export default function StudentCertificates() {
     return () => {
       cancelled = true
     }
-  }, [list, me?.email, me?.full_name])
+  }, [list, me?.email, me?.full_name, logoImage])
 
   return (
     <div className="min-h-full bg-[linear-gradient(180deg,#f7f9ff_0%,#f8fbff_100%)] p-4 sm:p-6">
