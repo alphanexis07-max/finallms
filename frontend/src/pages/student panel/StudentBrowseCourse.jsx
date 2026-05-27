@@ -126,14 +126,15 @@ function parseUserMetaFromToken() {
 
 function toDisplayCourse(course) {
   const isPaid = course?.course_type === 'paid' && Number(course?.price || 0) > 0
+  const priceLabel = isPaid ? formatCurrency(course?.price || 0) : 'Free'
   return {
     ...course,
     image: getCourseImage(course),
     tags: [course?.course_type || 'course', isPaid ? 'Paid' : 'Free'].filter(Boolean),
     mentor: course?.instructor_name || 'Instructor',
-    role: course?.created_by ? `ID: ${course.created_by}` : 'Course owner',
+    role: 'Course owner',
     rating: Number(course?.rating || 0) > 0 ? Number(course.rating).toFixed(1) : null,
-    priceLabel: formatCurrency(course?.price || 0),
+    priceLabel,
     note: course?.youtube_url ? 'Video content available' : 'No video preview',
     createdAtLabel: formatDate(course?.created_at),
   }

@@ -1,6 +1,6 @@
 import { createElement, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, BookOpen, FileText, History, KeyRound, Video, Award, Target } from 'lucide-react'
+import { BookOpen, FileText, KeyRound, Video, Award, Target } from 'lucide-react'
 import { api } from '../../lib/api'
 
 const Badge = ({ children, color = 'blue' }) => {
@@ -88,23 +88,6 @@ function getUserIds(profile) {
   ].filter(Boolean))
 }
 
-function NotificationItem({ item }) {
-  return (
-    <div className="flex gap-3 py-4 first:pt-0 last:pb-0">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#e8f5ff] text-[#5b3df6]">
-        <Bell className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-[#0f172a]">{item?.title || 'Notification'}</p>
-        <p className="mt-1 text-[12px] text-[#94a3b8]">{item?.message || '-'}</p>
-      </div>
-      <span className="shrink-0 self-start rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[11px] font-medium text-[#64748b]">
-        {item?.created_at ? formatDate(item.created_at) : 'Recent'}
-      </span>
-    </div>
-  )
-}
-
 export default function InstructorProfile() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -118,7 +101,6 @@ export default function InstructorProfile() {
   const [dashboard, setDashboard] = useState(null)
   const [courses, setCourses] = useState([])
   const [liveClasses, setLiveClasses] = useState([])
-  const [notifications, setNotifications] = useState([])
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -139,13 +121,12 @@ export default function InstructorProfile() {
       setError('')
 
       try {
-        const [profile, dashboardData, instructorCourseData, tenantCourseData, classData, noteData] = await Promise.all([
+        const [profile, dashboardData, instructorCourseData, tenantCourseData, classData] = await Promise.all([
           api('/auth/me'),
           api('/lms/dashboard/instructor').catch(() => ({})),
           api('/instructor/courses').catch(() => []),
           api('/lms/courses?limit=200').catch(() => ({ items: [] })),
           api('/lms/live-classes?limit=100').catch(() => ({ items: [] })),
-          api('/lms/notifications?limit=20').catch(() => ({ items: [] })),
         ])
 
         if (cancelled) return
@@ -188,9 +169,6 @@ export default function InstructorProfile() {
           return (instructorId && userIds.has(instructorId)) || (createdBy && userIds.has(createdBy))
         })
         setLiveClasses(assignedClasses)
-
-        const notificationItems = toItems(noteData)
-        setNotifications(notificationItems.slice(0, 6))
       } catch (err) {
         if (!cancelled) {
           setError(err?.message || 'Unable to load profile data.')
@@ -198,7 +176,6 @@ export default function InstructorProfile() {
           setDashboard(null)
           setCourses([])
           setLiveClasses([])
-          setNotifications([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -221,9 +198,6 @@ export default function InstructorProfile() {
   const memberSince = formatDate(me?.created_at)
   const bankAccountNumber = me?.bank_account_number || ''
   const maskedBankAccount = bankAccountNumber ? `XXXXXX${bankAccountNumber.slice(-4)}` : '-'
-  const unreadCount = useMemo(() => notifications.filter((item) => !item?.read).length, [notifications])
-  const recentActivity = useMemo(() => notifications.slice(0, 3), [notifications])
-
   const classStats = useMemo(() => {
     const now = Date.now()
     let live = 0
@@ -443,33 +417,6 @@ export default function InstructorProfile() {
                 />
               </div>
             </section>
-
-            <section className="rounded-[12px] bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#0f172a]">Recent activity</h3>
-                  <p className="mt-1 text-[13px] text-[#94a3b8]">Latest notifications from backend.</p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <History className="h-4 w-4" />
-                    Open history
-                  </span>
-                </button>
-              </div>
-
-              <div className="divide-y divide-black/[0.06]">
-                {recentActivity.length > 0 ? (
-                  recentActivity.map((item) => <NotificationItem key={item._id || item.id || item.title} item={item} />)
-                ) : (
-                  <div className="py-4 text-[13px] text-[#64748b]">No recent activity yet.</div>
-                )}
-              </div>
-            </section>
-
             <section className="rounded-[12px] bg-white p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -492,41 +439,6 @@ export default function InstructorProfile() {
                 <DetailField label="IFSC code" value={me?.bank_ifsc} />
                 <DetailField label="UPI ID" value={me?.bank_upi_id} />
                 <DetailField label="Payout status" value={me?.bank_account_number ? 'Ready for payout' : 'Pending bank details'} />
-              </div>
-            </section>
-
-            <section className="rounded-[12px] bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#0f172a]">Membership & account</h3>
-                  <p className="mt-1 text-[13px] text-[#94a3b8]">Subscription and access details from your profile data.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/forgetpassword')}
-                    className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <KeyRound className="h-4 w-4" />
-                      Change password
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/instructor/my-courses')}
-                    className="rounded-[8px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8]"
-                  >
-                    Manage courses
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <DetailField label="Current plan" value={me?.plan || me?.subscription_plan || 'Instructor access'} />
-                <DetailField label="Billing cycle" value={me?.billing_cycle} />
-                <DetailField label="Courses managed" value={String(courses.length ?? 0)} />
-                <DetailField label="Unread alerts" value={String(unreadCount)} />
               </div>
             </section>
           </div>

@@ -1,6 +1,6 @@
 import { createElement, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Building2, Users, BookOpen, Wallet, KeyRound, History, Shield } from 'lucide-react'
+import { Building2, Users, BookOpen, Wallet, KeyRound } from 'lucide-react'
 import { api } from '../../lib/api'
 
 function InfoBox({ label, value }) {
@@ -83,23 +83,6 @@ function toTotal(payload) {
   return toItems(payload).length
 }
 
-function NotificationItem({ item }) {
-  return (
-    <div className="flex gap-3 py-4 first:pt-0 last:pb-0">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#e8f5ff] text-[#5b3df6]">
-        <Bell className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-[#0f172a]">{item?.title || 'Notification'}</p>
-        <p className="mt-1 text-[12px] text-[#94a3b8]">{item?.message || '-'}</p>
-      </div>
-      <span className="shrink-0 self-start rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[11px] font-medium text-[#64748b]">
-        {item?.created_at ? formatDate(item.created_at) : 'Recent'}
-      </span>
-    </div>
-  )
-}
-
 export default function SuperAdminProfile() {
   const navigate = useNavigate()
   const [me, setMe] = useState(null)
@@ -111,7 +94,6 @@ export default function SuperAdminProfile() {
     total_revenue: 0,
     unread_notifications: 0,
   })
-  const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -133,10 +115,9 @@ export default function SuperAdminProfile() {
       setError('')
 
       try {
-        const [profile, dashboard, notes, tenantsData, adminUsers] = await Promise.all([
+        const [profile, dashboard, tenantsData, adminUsers] = await Promise.all([
           api('/auth/me'),
           api('/lms/dashboard/super-admin').catch(() => ({})),
-          api('/lms/notifications?limit=20').catch(() => ({ items: [] })),
           api('/lms/tenants?limit=1').catch(() => null),
           api('/lms/users?role=admin&limit=500').catch(() => null),
         ])
@@ -152,7 +133,6 @@ export default function SuperAdminProfile() {
         })
         setUploadedImageUrl('')
 
-        const noteItems = toItems(notes)
         const tenantsTotal = toTotal(tenantsData)
         const adminItems = toItems(adminUsers)
         const tenantIdsFromAdmins = new Set(adminItems.map((item) => String(item?.tenant_id || '').trim()).filter(Boolean))
@@ -164,14 +144,12 @@ export default function SuperAdminProfile() {
           total_courses: dashboard?.total_courses ?? dashboard?.active_courses ?? 0,
           active_subscriptions: dashboard?.active_subscriptions ?? 0,
           total_revenue: dashboard?.total_revenue ?? dashboard?.revenue ?? 0,
-          unread_notifications: noteItems.filter((item) => !item?.read).length,
+          unread_notifications: dashboard?.unread_notifications ?? 0,
         })
-        setNotifications(noteItems.slice(0, 6))
       } catch (err) {
         if (!cancelled) {
           setError(err?.message || 'Unable to load profile data.')
           setMe(null)
-          setNotifications([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -370,69 +348,6 @@ export default function SuperAdminProfile() {
                   desc="Captured platform revenue from all tenants."
                   iconBg="bg-amber-100 text-amber-600"
                 />
-              </div>
-            </section>
-
-            <section className="rounded-[12px] bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#0f172a]">Recent activity</h3>
-                  <p className="mt-1 text-[13px] text-[#94a3b8]">Latest notifications from backend.</p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <History className="h-4 w-4" />
-                    Open history
-                  </span>
-                </button>
-              </div>
-
-              <div className="divide-y divide-black/[0.06]">
-                {notifications.length > 0 ? (
-                  notifications.map((item) => <NotificationItem key={item._id || item.id || item.title} item={item} />)
-                ) : (
-                  <div className="py-4 text-[13px] text-[#64748b]">No recent activity yet.</div>
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-[12px] bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#0f172a]">Membership & account</h3>
-                  <p className="mt-1 text-[13px] text-[#94a3b8]">Subscription and access details from your profile data.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/forgetpassword')}
-                    className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc]"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <KeyRound className="h-4 w-4" />
-                      Change password
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-[8px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8]"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <Shield className="h-4 w-4" />
-                      Review permissions
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <DetailField label="Current plan" value={me?.plan || me?.subscription_plan || 'Platform owner access'} />
-                <DetailField label="Billing cycle" value={me?.billing_cycle} />
-                <DetailField label="Active subscriptions" value={String(stats.active_subscriptions ?? 0)} />
-                <DetailField label="Unread alerts" value={String(stats.unread_notifications ?? 0)} />
               </div>
             </section>
           </div>

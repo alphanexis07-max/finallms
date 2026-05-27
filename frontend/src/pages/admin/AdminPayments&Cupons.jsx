@@ -88,9 +88,9 @@ function TransactionModal({ transaction, onClose }) {
 
         <div className="space-y-3">
           {[
-            { label: 'Transaction ID', value: transaction.target_id || transaction._id || '-' },
-            { label: 'Order ID', value: transaction.order_id || '-' },
-            { label: 'User ID', value: transaction.user_id || '-' },
+            { label: 'Transaction For', value: transaction.target_title || transaction.course_name || transaction.description || 'Payment transaction' },
+            { label: 'Order Ref', value: transaction.order_id || '-' },
+            { label: 'Customer', value: transaction.user_name || transaction.user_email || 'Learner' },
             { label: 'Currency', value: transaction.currency || 'INR' },
             { label: 'Payment Method', value: transaction.method || '-' },
             { label: 'Created At', value: transaction.created_at ? new Date(transaction.created_at).toLocaleString() : '-' },

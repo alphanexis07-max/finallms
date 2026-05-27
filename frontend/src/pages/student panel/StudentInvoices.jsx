@@ -98,9 +98,8 @@ function getItemName(inv) {
     if (it?.title) return String(it.title).trim()
   }
 
-  // If we have target_id or course_id, create a short fallback label
-  if (inv?.target_id) return `Course #${String(inv.target_id).slice(-6)}`
-  if (inv?.course_id) return `Course #${String(inv.course_id).slice(-6)}`
+  // If we only have ids and no title metadata, keep UI label readable.
+  if (inv?.target_id || inv?.course_id) return 'Course enrollment'
 
   return 'LMS Service Payment'
 }
@@ -138,7 +137,6 @@ function buildInvoiceHtml(inv, customer) {
   const customerName = String(customer?.full_name || customer?.name || 'Student').trim()
   const customerEmail = String(customer?.email || '-').trim()
   const customerPhone = String(customer?.phone || '-').trim()
-  const customerId = String(customer?._id || customer?.sub || '-').trim()
   const paymentMethod = inv?.payment_method || 'Razorpay'
   const paymentId = inv?.payment_id || '-'
   const orderId = inv?.order_id || '-'
@@ -457,7 +455,7 @@ function buildInvoiceHtml(inv, customer) {
               <p>${customerName}</p>
               <p>Email: ${customerEmail}</p>
               <p>Phone: ${customerPhone}</p>
-              <p>Student ID: ${customerId}</p>
+              <p>Student: ${customerName}</p>
             </div>
           </div>
         </div>
@@ -526,8 +524,8 @@ function buildInvoiceHtml(inv, customer) {
           <div class="payment-info">
             <h4>Payment Information</h4>
             <div class="payment-details">
-              <div class="payment-detail"><strong>Transaction ID:</strong> ${paymentId}</div>
-              <div class="payment-detail"><strong>Order ID:</strong> ${orderId}</div>
+              <div class="payment-detail"><strong>Transaction Ref:</strong> ${paymentId}</div>
+              <div class="payment-detail"><strong>Order Ref:</strong> ${orderId}</div>
               <div class="payment-detail"><strong>Payment Date:</strong> ${formatDateTime(inv.created_at || inv.createdAt || inv.created)}</div>
               <div class="payment-detail"><strong>Payment Gateway:</strong> ${paymentMethod}</div>
             </div>

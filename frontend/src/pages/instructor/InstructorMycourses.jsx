@@ -84,7 +84,19 @@ function SimpleCreateCourseForm({ onBack, onCreate, loading: parentLoading }) {
   })
   const [error, setError] = useState('')
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    if (name === 'course_type') {
+      const nextType = value
+      setForm((prev) => ({
+        ...prev,
+        course_type: nextType,
+        price: nextType === 'free' ? '0' : prev.price === '0' ? '' : prev.price,
+      }))
+      return
+    }
+    setForm({ ...form, [name]: value })
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -104,7 +116,6 @@ function SimpleCreateCourseForm({ onBack, onCreate, loading: parentLoading }) {
       setError('Please enter a valid YouTube URL.')
       return
     }
-
     if (form.course_type === 'paid' && Number(form.price || 0) <= 0) {
       setError('Please enter a valid paid course price.')
       return
@@ -112,7 +123,10 @@ function SimpleCreateCourseForm({ onBack, onCreate, loading: parentLoading }) {
 
     setError('')
     try {
-      await onCreate(form)
+      await onCreate({
+        ...form,
+        price: form.course_type === 'free' ? 0 : Number(form.price || 0),
+      })
       onBack()
     } catch {
       // Keep user on form when API fails.
@@ -221,7 +235,9 @@ function SimpleCreateCourseForm({ onBack, onCreate, loading: parentLoading }) {
                       value={form.price}
                       onChange={handleChange}
                       placeholder={form.course_type === 'paid' ? 'Enter price' : '0'}
-                      className="w-full pl-7 pr-3 py-2 rounded-[8px] border border-black/[0.08] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]"
+                      disabled={form.course_type === 'free'}
+                      readOnly={form.course_type === 'free'}
+                      className="w-full pl-7 pr-3 py-2 rounded-[8px] border border-black/[0.08] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6] disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -287,7 +303,19 @@ function EditCourseModal({ course, onClose, onSave }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    if (name === 'course_type') {
+      const nextType = value
+      setForm((prev) => ({
+        ...prev,
+        course_type: nextType,
+        price: nextType === 'free' ? '0' : prev.price === '0' ? '' : prev.price,
+      }))
+      return
+    }
+    setForm({ ...form, [name]: value })
+  }
 
   const handleSubmit = async () => {
     if (!form.title.trim()) {
@@ -298,9 +326,16 @@ function EditCourseModal({ course, onClose, onSave }) {
       setError('YouTube URL is required.')
       return
     }
+    if (form.course_type === 'paid' && Number(form.price || 0) <= 0) {
+      setError('Please enter a valid paid course price.')
+      return
+    }
     setError('')
     setLoading(true)
-    await onSave(form)
+    await onSave({
+      ...form,
+      price: form.course_type === 'free' ? 0 : Number(form.price || 0),
+    })
     setLoading(false)
   }
 
@@ -394,7 +429,9 @@ function ViewCourseModal({ course, onClose }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-[8px] border border-black/[0.08] p-3">
               <p className="text-[11px] text-[#94a3b8]">Price</p>
-              <p className="text-[14px] font-semibold text-[#0f172a]">₹{Number(course?.price || 0)}</p>
+              <p className="text-[14px] font-semibold text-[#0f172a]">
+                {course?.course_type === 'free' ? 'Free' : `₹${Number(course?.price || 0)}`}
+              </p>
             </div>
             <div className="rounded-[8px] border border-black/[0.08] p-3">
               <p className="text-[11px] text-[#94a3b8]">Students</p>

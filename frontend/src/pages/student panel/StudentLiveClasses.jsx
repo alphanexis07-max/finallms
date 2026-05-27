@@ -884,11 +884,12 @@ export default function StudentLiveClasses() {
 
   const loadLiveClasses = async () => {
     try {
-      const [classesRes, coursesRes, plansRes, ratingsRes] = await Promise.all([
+      const [classesRes, coursesRes, plansRes, ratingsRes, usersRes] = await Promise.all([
         api('/lms/live-classes?limit=300').catch(() => ({ items: [] })),
         api('/lms/courses?limit=500').catch(() => ({ items: [] })),
         api('/lms/plans?limit=300&active_only=true').catch(() => ({ items: [] })),
         api('/lms/ratings?mine=true&target_type=live_class&limit=500').catch(() => ({ items: [] })),
+        api('/lms/users?limit=500').catch(() => ({ items: [] })),
       ])
 
       const activePlans = (plansRes.items || []).filter((p) => Boolean(p?.active ?? true)).map((p) => ({
@@ -906,6 +907,7 @@ export default function StudentLiveClasses() {
       setLiveClassRatings(ratingMap)
 
       const courseMap = new Map((coursesRes.items || []).map((c) => [c._id, c]))
+      const userMap = new Map((usersRes.items || []).map((u) => [String(u?._id || ''), u]))
       const currentStudentId = resolveUserId(me)
       const enrolledSet = new Set()
       // --- Frontend fix: Also consider enrollments for enrolledSessionIds ---
@@ -950,8 +952,12 @@ export default function StudentLiveClasses() {
           courseId: r.course_id,
           image: r.image_url || course.image_url || course.thumbnail_url || course.cover_image || '',
           title: r.title || 'Live Class',
-          course: course.title || r.course_id || 'Course',
-          instructor: r.instructor_id || 'Instructor',
+          course: course.title || r.course_title || r.course_name || 'Course',
+          instructor:
+            userMap.get(String(r.instructor_id || ''))?.full_name ||
+            userMap.get(String(r.instructor_id || ''))?.name ||
+            r.instructor_name ||
+            'Instructor',
           instructorAvatar: AVATARS[idx % AVATARS.length],
           instructorRole: 'Instructor',
           date: hasValidStart ? formatDateInIst(r.start_at) : 'Not scheduled',

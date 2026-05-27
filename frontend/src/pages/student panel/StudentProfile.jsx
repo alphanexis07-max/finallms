@@ -1,16 +1,14 @@
 import { createElement, useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell,
-  Shield,
   Flame,
   Award,
   Target,
   KeyRound,
-  History,
   Loader2,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import ChangePasswordModal from '../../components/ChangePasswordModal'
 
 function InfoBox({ label, value }) {
   return (
@@ -136,6 +134,7 @@ export default function StudentProfile() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploadedImageUrl, setUploadedImageUrl] = useState('')
   const [form, setForm] = useState({
@@ -487,7 +486,7 @@ export default function StudentProfile() {
             <div className="mt-6 space-y-2">
               <button
                 type="button"
-                onClick={() => navigate('/forgetpassword')}
+                onClick={() => setShowChangePassword(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-black/[0.1] bg-white py-2.5 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
               >
                 <KeyRound className="h-4 w-4 text-[#64748b]" />
@@ -571,82 +570,6 @@ export default function StudentProfile() {
                     <p className="mt-2 text-[12px] leading-relaxed text-[#64748b]">{desc}</p>
                   </div>
                 ))}
-              </div>
-            </section>
-
-            {/* Recent Activity Section */}
-            <section className="rounded-[12px] bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#0f172a]">Recent activity</h3>
-                  <p className="mt-1 text-[13px] text-[#94a3b8]">Latest notifications from backend.</p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <History className="h-4 w-4" />
-                    Open history
-                  </span>
-                </button>
-              </div>
-
-              <div className="divide-y divide-black/[0.06]">
-                {notifications.length > 0 ? (
-                  notifications.map((item) => (
-                    <div key={item._id || item.title} className="flex gap-3 py-4 first:pt-0 last:pb-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#e8f5ff] text-[#5b3df6]">
-                        <Bell className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-semibold text-[#0f172a]">{item.title || 'Notification'}</p>
-                        <p className="mt-1 text-[12px] text-[#94a3b8]">{item.message || '-'}</p>
-                      </div>
-                      <span className="shrink-0 self-start rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[11px] font-medium text-[#64748b]">
-                        {item.created_at ? formatDate(item.created_at) : 'Recent'}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-4 text-[13px] text-[#64748b]">No recent activity yet.</div>
-                )}
-              </div>
-            </section>
-
-            {/* Membership Section */}
-            <section className="rounded-[12px] bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#0f172a]">Membership & account</h3>
-                  <p className="mt-1 text-[13px] text-[#94a3b8]">Subscription and access details from your profile data.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/forgetpassword')}
-                    className="rounded-[8px] border border-black/[0.1] bg-white px-4 py-2 text-[13px] font-semibold text-[#0f172a] shadow-sm hover:bg-[#f8fafc] transition-colors"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <KeyRound className="h-4 w-4" />
-                      Change password
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/student-panel/my-courses')}
-                    className="rounded-[8px] bg-[#5b3df6] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:bg-[#4a2ed8] transition-colors"
-                  >
-                    Manage plan
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <DetailField label="Current plan" value={me?.plan || me?.subscription_plan || 'Learner access'} />
-                <DetailField label="Billing cycle" value={me?.billing_cycle} />
-                <DetailField label="Courses in progress" value={String(stats.courses_in_progress ?? 0)} />
-                <DetailField label="Unread alerts" value={String(stats.unread_notifications ?? 0)} />
               </div>
             </section>
           </div>
@@ -779,6 +702,12 @@ export default function StudentProfile() {
           </div>
         </div>
       )}
+
+      <ChangePasswordModal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+        onSuccess={(message) => setSuccess(message)}
+      />
     </div>
   )
 }

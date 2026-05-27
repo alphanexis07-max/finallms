@@ -79,7 +79,7 @@ export default function InstructorStudentInsights() {
         const flag = normalizeFlag(item?.flag)
         return {
           student_id: item?.student_id || '',
-          name: maskStudentName(item?.student_id),
+          name: item?.student_name || item?.full_name || item?.name || maskStudentName(item?.student_id),
           performance,
           flag,
         }
@@ -271,7 +271,7 @@ export default function InstructorStudentInsights() {
                 <input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search student id..."
+                  placeholder="Search student name..."
                   className="h-[36px] w-full rounded-[6px] border border-black/[0.08] pl-9 pr-3 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
                 />
               </div>
@@ -297,7 +297,7 @@ export default function InstructorStudentInsights() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">{student.name}</div>
-                            <div className="text-[11px] text-[#94a3b8] mt-[2px]">ID: {student.student_id}</div>
+                            <div className="text-[11px] text-[#94a3b8] mt-[2px]">Learner</div>
                           </div>
                         </div>
                         <div className="grid grid-cols-1 gap-2 text-[11px] text-[#64748b] sm:grid-cols-2 lg:mx-4 lg:grid-cols-3">

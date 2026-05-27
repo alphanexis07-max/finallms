@@ -39,16 +39,23 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
 
   const isEmailValid = EMAIL_REGEX.test(email)
   const isPhoneValid = PHONE_REGEX.test(phone)
-  const canSubmit = isEmailValid && isPhoneValid && fullName.trim() && password && password === confirmPassword
+  const fieldsValid =
+    isEmailValid && isPhoneValid && fullName.trim() && password && password === confirmPassword
+  const canSubmit = fieldsValid
 
   async function onSubmit(event) {
     event.preventDefault()
     setSubmitted(true)
     setError('')
-    if (!canSubmit) return
+    if (!fieldsValid) return
+    if (!agreeToTerms) {
+      setError('You must agree to the Terms & Privacy Policy to continue.')
+      return
+    }
     try {
       setLoading(true)
       const data = await api('/auth/register', {
@@ -228,40 +235,39 @@ export default function SignUp() {
                   )}
                 </label>
 
-                {/* Add bottom padding for better scroll experience */}
-                <div className="h-4"></div>
+                <label className="flex items-start gap-2.5 text-slate-600 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreeToTerms}
+                    onChange={(event) => setAgreeToTerms(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
+                  />
+                  <span className="leading-snug">
+                    I agree to the{' '}
+                    <Link to="/terms-and-conditions" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
+                      Terms
+                    </Link>{' '}
+                    &amp;{' '}
+                    <Link to="/privacy-policy" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
+                      Privacy Policy
+                    </Link>
+                  </span>
+                </label>
+                {submitted && !agreeToTerms && (
+                  <span className="text-xs font-medium text-red-500">
+                    You must agree to the Terms &amp; Privacy Policy to continue.
+                  </span>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!canSubmit || loading}
+                  className="w-full border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer transition-all hover:bg-[#e57a23] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? 'Creating account...' : 'Create account'}
+                </button>
+                {error && <p className="text-xs font-medium text-red-500 text-center">{error}</p>}
               </form>
-            </div>
-
-            {/* Footer Section - Static with Terms and Button */}
-            <div className="p-5 sm:p-8 pt-0 flex-shrink-0">
-              <label className="flex items-start gap-2.5 text-slate-600 text-sm cursor-pointer mb-4">
-                <input 
-                  type="checkbox" 
-                  defaultChecked 
-                  className="h-4 w-4 rounded border-gray-300 text-[#0b8276] focus:ring-[#0b8276]/20"
-                />
-                <span className="leading-snug">
-                  I agree to the{' '}
-                  <Link to="/terms-and-conditions" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
-                    Terms
-                  </Link>{' '}
-                  &amp;{' '}
-                  <Link to="/privacy-policy" className="text-[#0b8276] underline hover:text-[#0d6f5a]">
-                    Privacy Policy
-                  </Link>
-                </span>
-              </label>
-
-              <button 
-                type="submit" 
-                onClick={onSubmit}
-                disabled={!canSubmit || loading} 
-                className="w-full border-0 rounded-md bg-[#ff8a33] text-white text-base font-bold p-3.5 cursor-pointer transition-all hover:bg-[#e57a23] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? 'Creating account...' : 'Create account'}
-              </button>
-              {error && <p className="text-xs font-medium text-red-500 text-center mt-3">{error}</p>}
             </div>
           </div>
         </section>

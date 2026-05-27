@@ -126,7 +126,7 @@ function toSession(item) {
   return {
     id: item._id,
     title: item.title || 'Untitled live class',
-    course: item.course_id ? `Course ID: ${item.course_id}` : 'Course not assigned',
+    course: item.course_title || item.course_name || item.course || 'Course not assigned',
     time: formatDayLabel(item.start_at),
     clock: formatClockRange(item.start_at, item.duration_minutes),
     duration: `${item.duration_minutes || 60} mins`,

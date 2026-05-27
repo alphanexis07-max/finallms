@@ -9,7 +9,7 @@ from app.db import mongo
 from app.deps.auth import get_current_user
 from app.schemas.auth import (
     LoginRequest, RegisterRequest, TokenResponse,
-    ForgotPasswordRequest, ResetPasswordRequest, ForgotPasswordResponse
+    ForgotPasswordRequest, ResetPasswordRequest, ForgotPasswordResponse, ChangePasswordRequest
 )
 from app.utils.security import create_access_token, hash_password, verify_and_update_password
 from app.services.email import send_transactional_email
@@ -347,6 +347,54 @@ async def update_me(payload: ProfileUpdateIn, current_user=Depends(get_current_u
     user["_id"] = str(user["_id"])
     user.pop("password_hash", None)
     return user
+
+
+@router.post("/change-password")
+async def change_password(payload: ChangePasswordRequest, current_user=Depends(get_current_user)):
+    if mongo.db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="New password and confirm password do not match")
+
+    if payload.current_password == payload.new_password:
+        raise HTTPException(status_code=400, detail="New password must be different from current password")
+
+    user_id = ObjectId(current_user["sub"])
+    user = await mongo.db.users.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    stored_hash = user.get("password_hash")
+    legacy_password = user.get("password")
+    current_ok = False
+
+    if isinstance(stored_hash, str) and stored_hash:
+        try:
+            current_ok, _ = verify_and_update_password(payload.current_password, stored_hash)
+        except Exception:
+            current_ok = False
+        if not current_ok and stored_hash == payload.current_password:
+            current_ok = True
+    elif isinstance(legacy_password, str) and legacy_password:
+        if legacy_password == payload.current_password:
+            current_ok = True
+        else:
+            try:
+                current_ok, _ = verify_and_update_password(payload.current_password, legacy_password)
+            except Exception:
+                current_ok = False
+
+    if not current_ok:
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    updates = {
+        "password_hash": hash_password(payload.new_password),
+        "password": None,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    await mongo.db.users.update_one({"_id": user_id}, {"$set": updates})
+    return {"message": "Password changed successfully"}
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
