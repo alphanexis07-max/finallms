@@ -336,6 +336,19 @@ function EnrollmentModal({ session, plans, me, resolvedUserId, onClose, onSucces
             target_title: session.title,
             coupon_code: appliedCoupon?.code || '',
             coupon_discount: Number(couponQuote.discount || 0),
+            discount_amount: Number(couponQuote.discount || 0),
+            coupon_type: appliedCoupon?.discount_type || '',
+            coupon_value: Number(appliedCoupon?.value || 0),
+            original_price: Number(baseAmount || 0),
+            items: [
+              {
+                description: `Live Class: ${session.title}`,
+                hsn_sac: '998429',
+                amount: Number(baseAmount || 0),
+                target_id: String(session.id),
+                type: 'live_class',
+              },
+            ],
           }),
         })
         await new Promise((resolve, reject) => {

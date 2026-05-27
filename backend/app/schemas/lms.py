@@ -164,7 +164,12 @@ class RazorpayOrderIn(BaseModel):
     target_id: str
     coupon_code: str | None = None
     coupon_discount: float | None = None
+    coupon_type: str | None = None
+    coupon_value: float | None = None
+    original_price: float | None = None
+    discount_amount: float | None = None
     target_title: str | None = None
+    items: list[dict] = Field(default_factory=list)
 
 
 class RazorpayVerifyIn(BaseModel):

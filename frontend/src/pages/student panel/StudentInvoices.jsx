@@ -10,7 +10,8 @@ function formatDate(value) {
     return d.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
     })
   } catch {
     return String(value)
@@ -26,7 +27,8 @@ function formatDateTime(value) {
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Asia/Kolkata',
     })
   } catch {
     return String(value)
@@ -34,10 +36,19 @@ function formatDateTime(value) {
 }
 
 function formatMoney(value) {
-  return `₹${Number(value || 0).toLocaleString('en-IN', {
+  return `\u20b9${Number(value || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 function getInvoiceNumber(inv) {
@@ -53,12 +64,12 @@ function getInvoiceKindLabel(inv) {
   if (kind.includes('live')) return 'Live Class Enrollment'
   if (kind.includes('subscription')) return 'Subscription Payment'
   if (kind.includes('course')) return 'Course Enrollment'
-  return 'Payment Receipt'
+  return 'Payment'
 }
 
 // Enhanced function to get course/item name from various possible fields
 function getItemName(inv) {
-  if (!inv) return 'LMS Service Payment'
+  if (!inv) return 'LMS Service'
 
   const candidates = [
     inv.target_title,
@@ -98,10 +109,86 @@ function getItemName(inv) {
     if (it?.title) return String(it.title).trim()
   }
 
-  // If we only have ids and no title metadata, keep UI label readable.
-  if (inv?.target_id || inv?.course_id) return 'Course enrollment'
+  // Let the backend resolver fill legacy rows that only have ids.
+  if (inv?.target_id || inv?.course_id) return ''
 
-  return 'LMS Service Payment'
+  return 'LMS Service'
+}
+
+function getInvoiceItems(inv) {
+  const rawItems = Array.isArray(inv?.items) ? inv.items : []
+  const items = rawItems
+    .map((item) => {
+      const description = String(item?.description || item?.title || item?.name || '').trim()
+      const amount = Number(item?.amount ?? item?.price ?? 0)
+      return {
+        description,
+        hsnSac: String(item?.hsn_sac || item?.hsnSac || '998429'),
+        amount: Number.isFinite(amount) ? Math.max(0, amount) : 0,
+      }
+    })
+    .filter((item) => item.description)
+
+  if (items.length > 0) return items
+
+  const fallbackAmount = Number(inv?.original_price ?? inv?.amount ?? 0)
+  return [
+    {
+      description: getItemName(inv),
+      hsnSac: '998429',
+      amount: Number.isFinite(fallbackAmount) ? Math.max(0, fallbackAmount) : 0,
+    },
+  ]
+}
+
+function getInvoiceTotals(inv) {
+  const items = getInvoiceItems(inv)
+  const subtotal = Number(items.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2))
+  const explicitDiscount = Number(inv?.discount_amount ?? inv?.coupon_discount ?? 0)
+  const paidAmount = Number(inv?.amount || 0)
+  const inferredDiscount = subtotal > paidAmount ? subtotal - paidAmount : 0
+  const discount = Number(Math.max(0, explicitDiscount || inferredDiscount).toFixed(2))
+  const taxable = Number(Math.max(0, subtotal - discount).toFixed(2))
+  const cgst = Number((taxable * 0.09).toFixed(2))
+  const sgst = Number((taxable * 0.09).toFixed(2))
+  const total = Number((taxable + cgst + sgst).toFixed(2))
+
+  return { items, subtotal, discount, taxable, cgst, sgst, total }
+}
+
+function getCouponText(inv) {
+  const code = String(inv?.coupon_code || '').trim()
+  if (!code) return ''
+
+  const type = String(inv?.coupon_type || inv?.discount_type || '').toLowerCase()
+  const value = Number(inv?.coupon_value ?? inv?.coupon_percent ?? inv?.coupon_amount ?? 0)
+  if (type === 'percent' || type === 'percentage') return `${code} - ${Number(value || 0)}% off`
+  if (type === 'flat') return `${code} - Flat ${formatMoney(value)} off`
+  return code
+}
+
+function getCustomerFullName(customer) {
+  const fullName = String(customer?.full_name || '').trim()
+  if (fullName) return fullName
+
+  const firstLast = [customer?.first_name, customer?.last_name].map((part) => String(part || '').trim()).filter(Boolean).join(' ')
+  if (firstLast) return firstLast
+
+  return 'Student'
+}
+
+function getPaymentDateValue(inv) {
+  return (
+    inv?.captured_at ||
+    inv?.paid_at ||
+    inv?.payment_date ||
+    inv?.paymentDate ||
+    inv?.capturedAt ||
+    inv?.paidAt ||
+    inv?.created_at ||
+    inv?.createdAt ||
+    inv?.created
+  )
 }
 
 // Updated business information
@@ -123,23 +210,31 @@ function getBusinessPhone() {
 
 function buildInvoiceHtml(inv, customer) {
   const invoiceNo = getInvoiceNumber(inv)
-  const issuedAt = formatDateTime(inv.created_at || inv.createdAt || inv.created)
   const invoiceDate = formatDate(inv.created_at || inv.createdAt || inv.created)
   const dueDate = formatDate(new Date(new Date(inv.created_at || inv.createdAt || inv.created).getTime() + 15 * 24 * 60 * 60 * 1000))
   const paymentStatus = String(inv.status || 'captured').toUpperCase()
-  const amount = Number(inv.amount || 0)
-  const gst = amount * 0.18 // 18% GST
-  const cgst = gst / 2
-  const sgst = gst / 2
-  const total = amount + gst
-  const kind = getInvoiceKindLabel(inv)
-  const itemLabel = getItemName(inv)
-  const customerName = String(customer?.full_name || customer?.name || 'Student').trim()
+  const totals = getInvoiceTotals(inv)
+  const couponText = getCouponText(inv)
+  const customerName = getCustomerFullName(customer)
   const customerEmail = String(customer?.email || '-').trim()
   const customerPhone = String(customer?.phone || '-').trim()
   const paymentMethod = inv?.payment_method || 'Razorpay'
   const paymentId = inv?.payment_id || '-'
   const orderId = inv?.order_id || '-'
+  const itemRows = totals.items.map((item) => `
+              <tr>
+                <td>
+                  <div class="item-title">${escapeHtml(item.description)}</div>
+                </td>
+                <td>${escapeHtml(item.hsnSac)}</td>
+                <td style="text-align: right">${formatMoney(item.amount)}</td>
+              </tr>`).join('')
+  const discountRows = totals.discount > 0 ? `
+              <div class="totals-row discount">
+                <span>Discount Applied</span>
+                <span>-${formatMoney(totals.discount)}</span>
+              </div>
+              ${couponText ? `<div class="coupon-row">Coupon: ${escapeHtml(couponText)}</div>` : ''}` : ''
 
   const statusColor = paymentStatus === 'CAPTURED' ? '#166534' : paymentStatus === 'FAILED' ? '#991b1b' : '#92400e'
   const statusBg = paymentStatus === 'CAPTURED' ? '#dcfce7' : paymentStatus === 'FAILED' ? '#fee2e2' : '#fef3c7'
@@ -353,6 +448,16 @@ function buildInvoiceHtml(inv, customer) {
           padding: 10px 0;
           font-size: 14px;
         }
+
+        .totals-row.discount {
+          color: #b91c1c;
+        }
+
+        .coupon-row {
+          padding: 0 0 10px;
+          font-size: 12px;
+          color: #64748b;
+        }
         
         .totals-row.total {
           border-top: 2px solid #e2e8f0;
@@ -452,10 +557,9 @@ function buildInvoiceHtml(inv, customer) {
             </div>
             <div class="customer-info">
               <h3>Bill To</h3>
-              <p>${customerName}</p>
-              <p>Email: ${customerEmail}</p>
-              <p>Phone: ${customerPhone}</p>
-              <p>Student: ${customerName}</p>
+              <p>${escapeHtml(customerName)}</p>
+              <p>Email: ${escapeHtml(customerEmail)}</p>
+              <p>Phone: ${escapeHtml(customerPhone)}</p>
             </div>
           </div>
         </div>
@@ -485,38 +589,36 @@ function buildInvoiceHtml(inv, customer) {
               <tr>
                 <th style="width: 50%">Description</th>
                 <th style="width: 25%">HSN/SAC</th>
-                <th style="width: 25%">Amount (₹)</th>
+                <th style="width: 25%">Amount (${formatMoney(0).slice(0, 1)})</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <div class="item-title">${kind}</div>
-                  <div class="item-desc">${itemLabel}</div>
-                </td>
-                <td>998429</td>
-                <td style="text-align: right">${formatMoney(amount)}</td>
-              </tr>
+${itemRows}
             </tbody>
           </table>
           
           <div class="totals-section">
             <div class="totals-box">
               <div class="totals-row">
-                <span>Subtotal</span>
-                <span>${formatMoney(amount)}</span>
+                <span>Subtotal (Before GST)</span>
+                <span>${formatMoney(totals.subtotal)}</span>
+              </div>
+${discountRows}
+              <div class="totals-row">
+                <span>Taxable Amount</span>
+                <span>${formatMoney(totals.taxable)}</span>
               </div>
               <div class="totals-row">
                 <span>CGST (9%)</span>
-                <span>${formatMoney(cgst)}</span>
+                <span>${formatMoney(totals.cgst)}</span>
               </div>
               <div class="totals-row">
                 <span>SGST (9%)</span>
-                <span>${formatMoney(sgst)}</span>
+                <span>${formatMoney(totals.sgst)}</span>
               </div>
               <div class="totals-row total">
-                <span>Total Amount</span>
-                <span>${formatMoney(total)}</span>
+                <span>Total Amount Paid</span>
+                <span>${formatMoney(totals.total)}</span>
               </div>
             </div>
           </div>
@@ -524,9 +626,9 @@ function buildInvoiceHtml(inv, customer) {
           <div class="payment-info">
             <h4>Payment Information</h4>
             <div class="payment-details">
-              <div class="payment-detail"><strong>Transaction Ref:</strong> ${paymentId}</div>
-              <div class="payment-detail"><strong>Order Ref:</strong> ${orderId}</div>
-              <div class="payment-detail"><strong>Payment Date:</strong> ${formatDateTime(inv.created_at || inv.createdAt || inv.created)}</div>
+              <div class="payment-detail"><strong>Transaction Ref:</strong> ${escapeHtml(paymentId)}</div>
+              <div class="payment-detail"><strong>Order Ref:</strong> ${escapeHtml(orderId)}</div>
+              <div class="payment-detail"><strong>Payment Date:</strong> ${formatDateTime(getPaymentDateValue(inv))}</div>
               <div class="payment-detail"><strong>Payment Gateway:</strong> ${paymentMethod}</div>
             </div>
           </div>
@@ -558,15 +660,18 @@ export default function StudentInvoices() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
 
     const token = getToken()
     if (!token) {
-      setError('You must be logged in to view invoices')
-      setLoading(false)
-      setTimeout(() => navigate('/login'), 600)
+      const redirectTimer = setTimeout(() => {
+        if (!mounted) return
+        setError('You must be logged in to view invoices')
+        setLoading(false)
+        navigate('/login')
+      }, 600)
       return () => {
         mounted = false
+        clearTimeout(redirectTimer)
       }
     }
 
@@ -588,7 +693,7 @@ export default function StudentInvoices() {
         const needResolve = fetched.filter((inv) => {
           const name = getItemName(inv)
           const hasTarget = Boolean((inv.target_id || inv.course_id || '').toString().trim())
-          return ( !name || name === 'LMS Service Payment' ) && hasTarget
+          return (!name || name === 'LMS Service') && hasTarget
         })
 
         if (needResolve.length === 0) {
@@ -701,14 +806,16 @@ export default function StudentInvoices() {
                 <tr className="text-left text-[12px] font-semibold text-[#64748b]">
                   <th className="px-4 py-3">Invoice No.</th>
                   <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Course Name</th>
+                  <th className="px-4 py-3">Description</th>
                   <th className="px-4 py-3 text-right">Amount</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
+                {invoices.map((inv) => {
+                  const totals = getInvoiceTotals(inv)
+                  return (
                   <tr key={inv._id} className="border-b border-black/[0.05] hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       <div>
@@ -724,7 +831,7 @@ export default function StudentInvoices() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <p className="font-bold text-[#0f172a]">{formatMoney(inv.amount)}</p>
+                      <p className="font-bold text-[#0f172a]">{formatMoney(totals.total)}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${getStatusColor(inv.status)}`}>
@@ -758,7 +865,8 @@ export default function StudentInvoices() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

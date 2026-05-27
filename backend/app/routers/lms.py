@@ -184,6 +184,132 @@ async def paged(collection, query: dict, sort_field: str, sort_dir: int, skip: i
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
+def _money(value) -> float:
+    try:
+        return round(max(0, float(value or 0)), 2)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _razorpay_timestamp(value):
+    try:
+        timestamp = int(value)
+    except (TypeError, ValueError):
+        return None
+    if timestamp <= 0:
+        return None
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
+def _payment_item_title(doc: dict | None, enrollment_type: str | None = None) -> str:
+    if not doc:
+        return ""
+    title = str(doc.get("title") or doc.get("name") or doc.get("class_name") or doc.get("subject") or "").strip()
+    if title and str(enrollment_type or "").lower() == "live_class" and not title.lower().startswith("live class:"):
+        return f"Live Class: {title}"
+    return title
+
+
+async def _resolve_payment_target(payment: dict, tenant_id: str | None = None) -> dict | None:
+    target_id = str(payment.get("target_id") or payment.get("course_id") or "").strip()
+    if not target_id or not ObjectId.is_valid(target_id):
+        return None
+
+    enrollment_type = str(payment.get("enrollment_type") or payment.get("billingType") or payment.get("payment_for") or "").lower()
+    collection = db.live_classes if "live" in enrollment_type else db.courses
+    query = {"_id": ObjectId(target_id)}
+    if tenant_id:
+        query["tenant_id"] = tenant_id
+    return await collection.find_one(query)
+
+
+async def _invoice_payment_doc(payment: dict, tenant_id: str | None = None) -> dict:
+    payment = as_dict(payment)
+    enrollment_type = str(payment.get("enrollment_type") or payment.get("billingType") or payment.get("payment_for") or "course")
+    target_doc = await _resolve_payment_target(payment, tenant_id or payment.get("tenant_id"))
+
+    target_title = str(payment.get("target_title") or "").strip() or _payment_item_title(target_doc, enrollment_type)
+    if target_title:
+        payment["target_title"] = target_title
+
+    paid_amount = _money(payment.get("amount"))
+    original_price = _money(
+        payment.get("original_price")
+        if payment.get("original_price") is not None
+        else (target_doc or {}).get("amount")
+        if "live" in enrollment_type.lower()
+        else (target_doc or {}).get("price")
+    )
+    if original_price <= 0:
+        original_price = _money(payment.get("amount") or payment.get("amount_paise", 0) / 100)
+
+    discount_amount = _money(
+        payment.get("discount_amount")
+        if payment.get("discount_amount") is not None
+        else payment.get("coupon_discount")
+    )
+    if discount_amount <= 0 and original_price > paid_amount:
+        discount_amount = _money(original_price - paid_amount)
+
+    coupon_code = str(payment.get("coupon_code") or "").strip()
+    coupon_type = str(payment.get("coupon_type") or payment.get("discount_type") or "").strip()
+    coupon_value = payment.get("coupon_value")
+    if coupon_code and (not coupon_type or coupon_value in (None, "")):
+        coupon = await db.coupons.find_one({"code": coupon_code, "tenant_id": payment.get("tenant_id")})
+        if not coupon:
+            coupon = await db.coupons.find_one({"code": coupon_code})
+        if coupon:
+            coupon_type = coupon_type or str(coupon.get("discount_type") or "")
+            coupon_value = coupon_value if coupon_value not in (None, "") else coupon.get("value")
+
+    items = payment.get("items") if isinstance(payment.get("items"), list) else []
+    if not items:
+        items = [
+            {
+                "description": target_title or "LMS Service",
+                "hsn_sac": "998429",
+                "amount": original_price,
+                "target_id": payment.get("target_id") or payment.get("course_id"),
+                "type": enrollment_type,
+            }
+        ]
+
+    normalized_items = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        description = str(item.get("description") or item.get("title") or item.get("name") or target_title or "LMS Service").strip()
+        normalized_items.append(
+            {
+                **item,
+                "description": description,
+                "hsn_sac": str(item.get("hsn_sac") or "998429"),
+                "amount": _money(item.get("amount") if item.get("amount") is not None else original_price),
+            }
+        )
+    if not normalized_items:
+        normalized_items = [{"description": target_title or "LMS Service", "hsn_sac": "998429", "amount": original_price}]
+
+    payment["items"] = normalized_items
+    payment["original_price"] = original_price
+    payment["discount_amount"] = discount_amount
+    payment["coupon_code"] = coupon_code
+    payment["coupon_type"] = coupon_type or None
+    payment["coupon_value"] = _money(coupon_value) if coupon_value not in (None, "") else None
+    payment["taxable_amount"] = _money(original_price - discount_amount)
+    payment["cgst_amount"] = _money(payment["taxable_amount"] * 0.09)
+    payment["sgst_amount"] = _money(payment["taxable_amount"] * 0.09)
+    payment["total_amount"] = _money(payment["taxable_amount"] + payment["cgst_amount"] + payment["sgst_amount"])
+    return payment
+
+
+async def _paged_payments(query: dict, sort_field: str, sort_dir: int, skip: int, limit: int, tenant_id: str | None = None):
+    total = await db.payments.count_documents(query)
+    raw_items = [x async for x in db.payments.find(query).sort(sort_field, sort_dir).skip(skip).limit(limit)]
+    items = [await _invoice_payment_doc(x, tenant_id) for x in raw_items]
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
+
+
 async def _rating_map(target_type: str, target_ids: list[str], tenant_id: str | None = None) -> dict[str, dict]:
     ids = [str(x) for x in target_ids if x]
     if not ids:
@@ -1445,12 +1571,52 @@ async def create_payment_order(payload: RazorpayOrderIn, tenant_id: str = Depend
         except Exception:  # noqa: BLE001
             pass
 
+    target_doc = await _resolve_payment_target(
+        {"target_id": payload.target_id, "enrollment_type": payload.enrollment_type, "tenant_id": tenant_id},
+        tenant_id,
+    )
+    target_title = str(payload.target_title or "").strip() or _payment_item_title(target_doc, payload.enrollment_type)
+    original_price = _money(
+        payload.original_price
+        if payload.original_price is not None
+        else (target_doc or {}).get("amount")
+        if str(payload.enrollment_type or "").lower() == "live_class"
+        else (target_doc or {}).get("price")
+    )
+    if original_price <= 0:
+        original_price = _money(payload.amount + _money(payload.discount_amount or payload.coupon_discount))
+    discount_amount = _money(payload.discount_amount if payload.discount_amount is not None else payload.coupon_discount)
+    coupon_code = str(payload.coupon_code or "").strip()
+    coupon_type = str(payload.coupon_type or "").strip() or None
+    coupon_value = payload.coupon_value
+    if coupon_code and (not coupon_type or coupon_value in (None, "")):
+        coupon = await db.coupons.find_one({"code": coupon_code, "tenant_id": tenant_id}) or await db.coupons.find_one({"code": coupon_code})
+        if coupon:
+            coupon_type = coupon_type or coupon.get("discount_type")
+            coupon_value = coupon_value if coupon_value not in (None, "") else coupon.get("value")
+
+    items = payload.items or [
+        {
+            "description": target_title or "LMS Service",
+            "hsn_sac": "998429",
+            "amount": original_price,
+            "target_id": payload.target_id,
+            "type": payload.enrollment_type,
+        }
+    ]
+
     data = {
         "tenant_id": tenant_id,
         "user_id": user["sub"],
         "target_id": payload.target_id,
-        "target_title": getattr(payload, "target_title", None),
+        "target_title": target_title,
         "enrollment_type": getattr(payload, "enrollment_type", None),
+        "items": items,
+        "original_price": original_price,
+        "discount_amount": discount_amount,
+        "coupon_code": coupon_code,
+        "coupon_type": coupon_type,
+        "coupon_value": _money(coupon_value) if coupon_value not in (None, "") else None,
         "amount": payload.amount,
         "amount_paise": amount_paise,
         "order_id": order_id,
@@ -1483,14 +1649,14 @@ async def list_payments(
         query = {}
     if status:
         query["status"] = status
-    return await paged(db.payments, query, "created_at", -1, skip, limit)
+    return await _paged_payments(query, "created_at", -1, skip, limit, tenant_id)
 
 
 @router.get("/payments/mine")
 async def list_my_payments(user=Depends(get_current_user), skip: int = 0, limit: int = 100):
     """Return payments belonging to the current user (student or any authenticated user)."""
     query = {"user_id": user.get("sub")}
-    return await paged(db.payments, query, "created_at", -1, skip, limit)
+    return await _paged_payments(query, "created_at", -1, skip, limit, user.get("tenant_id"))
 
 
 @router.get("/payments/resolve-title")
@@ -1574,6 +1740,28 @@ async def razorpay_webhook(
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
     event = await request.json()
     await db.webhooks.insert_one({"event": event, "received_at": datetime.now(timezone.utc)})
+    event_type = str(event.get("event") or "")
+    payment_entity = (((event.get("payload") or {}).get("payment") or {}).get("entity") or {})
+    order_id = payment_entity.get("order_id")
+    payment_id = payment_entity.get("id")
+    captured_at = _razorpay_timestamp(payment_entity.get("created_at")) or datetime.now(timezone.utc)
+    if event_type == "payment.captured" and order_id:
+        payment = await db.payments.find_one({"order_id": order_id})
+        if payment:
+            commission = round(float(payment.get("amount") or 0) * settings.platform_commission_percent / 100, 2)
+            await db.payments.update_one(
+                {"_id": payment["_id"]},
+                {
+                    "$set": {
+                        "status": "captured",
+                        "payment_id": payment_id,
+                        "platform_commission": commission,
+                        "instructor_amount": round(float(payment.get("amount") or 0) - commission, 2),
+                        "captured_at": captured_at,
+                        "razorpay_webhook_event": event_type,
+                    }
+                },
+            )
     return {"ok": True}
 
 

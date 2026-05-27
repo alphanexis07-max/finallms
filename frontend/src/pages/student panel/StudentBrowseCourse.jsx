@@ -567,6 +567,19 @@ export default function StudentBrowseCourse() {
             target_title: course.title,
             coupon_code: appliedCoupon?.code || '',
             coupon_discount: Number(payableQuote.discount || 0),
+            discount_amount: Number(payableQuote.discount || 0),
+            coupon_type: appliedCoupon?.discount_type || '',
+            coupon_value: Number(appliedCoupon?.value || 0),
+            original_price: Number(course.price || 0),
+            items: [
+              {
+                description: course.title,
+                hsn_sac: '998429',
+                amount: Number(course.price || 0),
+                target_id: course._id,
+                type: 'course',
+              },
+            ],
           }),
         })
 
