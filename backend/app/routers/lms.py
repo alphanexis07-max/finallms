@@ -378,6 +378,11 @@ async def _create_user_notifications(
     user_ids: list[str],
     title: str,
     message: str,
+    type: str = "course",
+    entity_type: str | None = None,
+    course_id: str | None = None,
+    live_class_id: str | None = None,
+    redirect_url: str | None = None,
     meta: dict | None = None,
 ):
     unique_user_ids = [uid for uid in dict.fromkeys([str(x) for x in user_ids if x])]
@@ -385,13 +390,25 @@ async def _create_user_notifications(
         return
 
     now = datetime.now(timezone.utc)
+    notification_meta = {
+        **(meta or {}),
+        **({"course_id": course_id} if course_id else {}),
+        **({"live_class_id": live_class_id} if live_class_id else {}),
+        **({"redirect_url": redirect_url} if redirect_url else {}),
+        **({"entity_type": entity_type} if entity_type else {}),
+    }
     docs = [
         {
             "tenant_id": tenant_id,
             "user_id": uid,
             "title": title,
             "message": message,
-            "meta": meta or {},
+            "type": type,
+            "entity_type": entity_type,
+            "course_id": course_id,
+            "live_class_id": live_class_id,
+            "redirect_url": redirect_url,
+            "meta": notification_meta,
             "read": False,
             "created_at": now,
             "updated_at": now,
@@ -402,12 +419,12 @@ async def _create_user_notifications(
 
     await ws_manager.broadcast(
         f"tenant:{tenant_id}",
-        {"type": "notification.created", "data": {"title": title, "message": message, "meta": meta or {}}},
+        {"type": "notification.created", "data": {"title": title, "message": message, "meta": notification_meta}},
     )
     for uid in unique_user_ids:
         await ws_manager.broadcast(
             f"user:{uid}",
-            {"type": "notification.created", "data": {"title": title, "message": message, "meta": meta or {}}},
+            {"type": "notification.created", "data": {"title": title, "message": message, "meta": notification_meta}},
         )
 
     object_ids = [ObjectId(uid) for uid in unique_user_ids if ObjectId.is_valid(uid)]
@@ -653,8 +670,12 @@ async def create_course(payload: CourseIn, tenant_id: str = Depends(get_tenant_i
     await _create_user_notifications(
         tenant_id=tenant_id,
         user_ids=recipient_ids,
-        title="New course published",
-        message=f"{data['title']} is now available in your LMS.",
+        title="New Course Published",
+        message=f"{data['title']} is now available in your course catalog.",
+        type="course",
+        entity_type="course",
+        course_id=str(res.inserted_id),
+        redirect_url="/admin/course-management",
         meta={"course_title": data["title"]},
     )
     return inserted_response(data, res.inserted_id)
@@ -773,9 +794,14 @@ async def create_live_class(
         await _create_user_notifications(
             tenant_id=tenant_id,
             user_ids=list(recipients),
-            title="New live class scheduled",
-            message=f"{payload.title} at {payload.start_at.isoformat()}",
-            meta={"live_class_id": class_id, "course_id": payload.course_id, "join_url": data.get("join_url", "")},
+            title="New Live Class Scheduled",
+            message=f"{payload.title} is scheduled for {payload.start_at.strftime('%d %b %Y, %I:%M %p')}.",
+            type="class",
+            entity_type="live_class",
+            course_id=payload.course_id,
+            live_class_id=class_id,
+            redirect_url="/student-panel/live-classes",
+            meta={"live_class_title": payload.title, "join_url": data.get("join_url", "")},
         )
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.created", "data": {"title": data["title"]}})
     response = inserted_response(data, res.inserted_id)
@@ -839,9 +865,14 @@ async def update_live_class(
             await _create_user_notifications(
                 tenant_id=tenant_id,
                 user_ids=recipients,
-                title="Live class updated",
-                message=f"{item.get('title', 'Live class')} schedule/details were updated.",
-                meta={"live_class_id": live_class_id, "join_url": item.get("join_url", "")},
+                title="Live Class Schedule Updated",
+                message=f"{item.get('title', 'Live class')} schedule was updated.",
+                type="class",
+                entity_type="live_class",
+                course_id=str(item.get("course_id") or ""),
+                live_class_id=live_class_id,
+                redirect_url="/student-panel/live-classes",
+                meta={"live_class_title": item.get("title", "Live class"), "join_url": item.get("join_url", "")},
             )
     return as_dict(item)
 
@@ -926,9 +957,14 @@ async def delete_live_class(
         await _create_user_notifications(
             tenant_id=tenant_id,
             user_ids=recipients,
-            title="Live class deleted",
+            title="Live Class Cancelled",
             message=f"{item.get('title', 'A live class')} has been removed.",
-            meta={"live_class_id": live_class_id},
+            type="class",
+            entity_type="live_class",
+            course_id=str(item.get("course_id") or ""),
+            live_class_id=live_class_id,
+            redirect_url="/student-panel/live-classes",
+            meta={"live_class_title": item.get("title", "Live class")},
         )
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "live_class.deleted", "data": {"id": live_class_id}})
     return {"message": "Live class deleted"}
@@ -939,6 +975,14 @@ async def create_enrollment(payload: EnrollmentIn, tenant_id: str = Depends(get_
     now = datetime.now(timezone.utc)
     data = payload.model_dump() | {"tenant_id": tenant_id, "created_at": now, "updated_at": now}
     res = await db.enrollments.insert_one(data)
+    course = None
+    if ObjectId.is_valid(payload.course_id):
+        course = await db.courses.find_one({"_id": ObjectId(payload.course_id)})
+    course_title = str((course or {}).get("title") or "your course")
+    student = None
+    if ObjectId.is_valid(payload.student_id):
+        student = await db.users.find_one({"_id": ObjectId(payload.student_id)})
+    student_name = str((student or {}).get("full_name") or (student or {}).get("name") or "A student")
     # --- Backend fix: Also add student_id to attendee_ids of the corresponding live class ---
     # Try to update all live classes with this course_id to add the student to attendee_ids
     await db.live_classes.update_many(
@@ -952,10 +996,25 @@ async def create_enrollment(payload: EnrollmentIn, tenant_id: str = Depends(get_
     )
     await _create_user_notifications(
         tenant_id=tenant_id,
-        user_ids=[payload.student_id, *admin_ids],
-        title="Enrollment update",
-        message="A new enrollment has been completed successfully.",
-        meta={"course_id": payload.course_id, "student_id": payload.student_id},
+        user_ids=[payload.student_id],
+        title="Enrollment Successful",
+        message=f"You enrolled in: {course_title}",
+        type="course",
+        entity_type="course",
+        course_id=payload.course_id,
+        redirect_url="/student-panel/my-courses",
+        meta={"course_title": course_title, "student_id": payload.student_id},
+    )
+    await _create_user_notifications(
+        tenant_id=tenant_id,
+        user_ids=admin_ids,
+        title="New Student Enrollment",
+        message=f"{student_name} enrolled in {course_title}.",
+        type="course",
+        entity_type="course",
+        course_id=payload.course_id,
+        redirect_url="/admin/student-management",
+        meta={"course_title": course_title, "student_id": payload.student_id, "student_name": student_name},
     )
     return inserted_response(data, res.inserted_id)
 
@@ -1415,9 +1474,12 @@ async def create_event(
     await _create_user_notifications(
         tenant_id=tenant_id,
         user_ids=recipient_ids,
-        title="New school event",
+        title="New School Event",
         message=f"{data['title']} has been announced.",
-        meta={"event_id": str(res.inserted_id), "starts_at": data["starts_at"].isoformat()},
+        type="event",
+        entity_type="event",
+        redirect_url="/student-panel/school-events",
+        meta={"event_id": str(res.inserted_id), "event_title": data["title"], "starts_at": data["starts_at"].isoformat()},
     )
     return inserted_response(data, res.inserted_id)
 
@@ -1499,6 +1561,13 @@ async def delete_event(
 async def create_notification(payload: NotificationIn, tenant_id: str = Depends(get_tenant_id)):
     now = datetime.now(timezone.utc)
     data = payload.model_dump() | {"tenant_id": tenant_id, "read": False, "created_at": now, "updated_at": now}
+    data["meta"] = {
+        **(data.get("meta") or {}),
+        **({"course_id": data.get("course_id")} if data.get("course_id") else {}),
+        **({"live_class_id": data.get("live_class_id")} if data.get("live_class_id") else {}),
+        **({"redirect_url": data.get("redirect_url")} if data.get("redirect_url") else {}),
+        **({"entity_type": data.get("entity_type")} if data.get("entity_type") else {}),
+    }
     res = await db.notifications.insert_one(data)
     await ws_manager.broadcast(f"user:{payload.user_id}", {"type": "notification", "data": data})
     await ws_manager.broadcast(f"tenant:{tenant_id}", {"type": "notification.created", "data": data})
@@ -1720,12 +1789,30 @@ async def verify_payment(payload: RazorpayVerifyIn, tenant_id: str = Depends(get
         {"type": "payment.captured", "data": {"amount": payment["amount"], "user_id": user["sub"]}},
     )
     admin_ids = await _tenant_user_ids(tenant_id, roles=[Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value])
+    item_title = str(payment.get("target_title") or "LMS purchase")
     await _create_user_notifications(
         tenant_id=tenant_id,
-        user_ids=[payment.get("user_id", ""), *admin_ids],
-        title="Payment successful",
-        message=f"Payment of INR {payment['amount']} was captured successfully.",
-        meta={"order_id": payload.razorpay_order_id, "payment_id": payload.razorpay_payment_id},
+        user_ids=[payment.get("user_id", "")],
+        title="Payment Completed",
+        message=f"Payment for {item_title} was completed. Amount paid: INR {payment['amount']}.",
+        type="payment",
+        entity_type="payment",
+        course_id=str(payment.get("target_id") or "") if str(payment.get("enrollment_type") or "").lower() == "course" else None,
+        live_class_id=str(payment.get("target_id") or "") if str(payment.get("enrollment_type") or "").lower() == "live_class" else None,
+        redirect_url="/student-panel/invoices",
+        meta={"order_id": payload.razorpay_order_id, "payment_id": payload.razorpay_payment_id, "item_title": item_title},
+    )
+    await _create_user_notifications(
+        tenant_id=tenant_id,
+        user_ids=admin_ids,
+        title="Payment Completed",
+        message=f"Payment received for {item_title}. Amount: INR {payment['amount']}.",
+        type="payment",
+        entity_type="payment",
+        course_id=str(payment.get("target_id") or "") if str(payment.get("enrollment_type") or "").lower() == "course" else None,
+        live_class_id=str(payment.get("target_id") or "") if str(payment.get("enrollment_type") or "").lower() == "live_class" else None,
+        redirect_url="/admin/payments-coupons",
+        meta={"order_id": payload.razorpay_order_id, "payment_id": payload.razorpay_payment_id, "item_title": item_title},
     )
     return {"message": "Payment verified"}
 

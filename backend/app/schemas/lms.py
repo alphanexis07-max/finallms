@@ -156,6 +156,12 @@ class NotificationIn(BaseModel):
     user_id: str
     title: str
     message: str
+    type: str | None = None
+    entity_type: str | None = None
+    course_id: str | None = None
+    live_class_id: str | None = None
+    redirect_url: str | None = None
+    meta: dict = Field(default_factory=dict)
 
 
 class RazorpayOrderIn(BaseModel):

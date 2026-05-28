@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Clock, ExternalLink, PlayCircle } from 'lucide-react'
+import { BookOpen, ExternalLink, PlayCircle } from 'lucide-react'
 import { api } from '../../lib/api'
 
 const FALLBACK_IMAGE =
@@ -218,13 +218,6 @@ export default function StudentContinueLearning() {
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 ) : null}
-              </div>
-
-              <div className="mt-5 rounded-[10px] border border-dashed border-black/[0.12] bg-[#fafcff] p-4 text-[12px] text-[#64748b]">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[#5b3df6]" />
-                  Progress tracking, notes, and discussion sections will show automatically when corresponding backend APIs are available.
-                </div>
               </div>
             </>
           ) : (
