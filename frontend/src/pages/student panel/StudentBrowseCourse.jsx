@@ -129,10 +129,12 @@ function toDisplayCourse(course) {
   const isPaid = course?.course_type === 'paid' && Number(course?.price || 0) > 0
   const active = course?.is_active !== false
   const priceLabel = isPaid ? formatCurrency(course?.price || 0) : 'Free'
+  const accessLabel = isPaid ? 'Paid' : 'Free'
   return {
     ...course,
     image: getCourseImage(course),
-    tags: [course?.course_type || 'course', isPaid ? 'Paid' : 'Free', active ? '' : 'Inactive'].filter(Boolean),
+    accessLabel,
+    tags: [accessLabel, active ? '' : 'Inactive'].filter(Boolean),
     mentor: course?.instructor_name || 'Instructor',
     role: 'Course owner',
     rating: Number(course?.rating || 0) > 0 ? Number(course.rating).toFixed(1) : null,
@@ -782,7 +784,7 @@ export default function StudentBrowseCourse() {
                       <p className="text-[13px] text-[#94a3b8] line-clamp-2">{course.description || 'No description provided.'}</p>
                       <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3">
                         <div className="bg-[#f8fafc] rounded-[6px] p-[8px] text-[11px] font-medium text-[#475569] text-center">
-                          {course.course_type || 'course'}
+                          {course.accessLabel}
                         </div>
                         <div className="bg-[#f8fafc] rounded-[6px] p-[8px] text-[11px] font-medium text-[#475569] text-center">
                           {course.youtube_url ? 'Video available' : 'No video'}

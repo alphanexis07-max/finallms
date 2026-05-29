@@ -1382,7 +1382,7 @@ async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(req
             query.update(extra)
         return query
 
-    def payment_query(extra: dict | None = None) -> dict:
+    def tenant_or_global_query(extra: dict | None = None) -> dict:
         if tenant_id:
             query: dict = {
                 "$or": [
@@ -1398,6 +1398,9 @@ async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(req
                 return {"$and": [query, extra]}
             query.update(extra)
         return query
+
+    def payment_query(extra: dict | None = None) -> dict:
+        return tenant_or_global_query(extra)
 
     async def sum_payment_amount(match: dict) -> float:
         docs = [
@@ -1452,7 +1455,8 @@ async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(req
         }
     )
 
-    students = await db.users.count_documents(scoped_query({"role": "student", "is_active": {"$ne": False}}))
+    student_role_query = {"role": {"$in": ["student", "Student", "STUDENT", "learner", "Learner", "LEARNER"]}}
+    students = await db.users.count_documents(tenant_or_global_query(student_role_query))
     instructors = await db.users.count_documents(scoped_query({"role": "instructor", "is_active": {"$ne": False}}))
     courses = await db.courses.count_documents(scoped_query())
     draft_courses = await db.courses.count_documents(
@@ -1486,19 +1490,18 @@ async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(req
     )
 
     current_month_students = await db.users.count_documents(
-        scoped_query({"role": "student", "is_active": {"$ne": False}, "created_at": {"$gte": month_start}})
+        tenant_or_global_query({**student_role_query, "created_at": {"$gte": month_start}})
     )
     previous_month_students = await db.users.count_documents(
-        scoped_query(
+        tenant_or_global_query(
             {
-                "role": "student",
-                "is_active": {"$ne": False},
+                **student_role_query,
                 "created_at": {"$gte": prev_month_start, "$lt": month_start},
             }
         )
     )
 
-    active_enrollment_match = scoped_query(
+    active_enrollment_match = tenant_or_global_query(
         {
             "status": {"$nin": ["cancelled", "canceled", "expired", "failed", "pending", "inactive"]},
             "$or": [
