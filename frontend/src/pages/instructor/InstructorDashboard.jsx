@@ -100,6 +100,11 @@ function EmptyState({ text }) {
   )
 }
 
+function toNumber(value) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
 export default function InstructorDashboard() {
   const navigate = useNavigate()
   const tenantId = localStorage.getItem('lms_tenant_id')
@@ -176,7 +181,7 @@ export default function InstructorDashboard() {
     {
       id: 'sessions',
       title: 'Live Sessions This Week',
-      value: String(dashboard.live_sessions_week ?? 0),
+      value: String(toNumber(dashboard.live_sessions_week)),
       icon: <Video className="h-[18px] w-[18px] text-[#5b3df6]" />,
       meta: 'From backend',
       variant: 'success',
@@ -184,7 +189,7 @@ export default function InstructorDashboard() {
     {
       id: 'labs',
       title: 'Practical Lab Modules',
-      value: String(dashboard.lab_modules ?? 0),
+      value: String(toNumber(dashboard.lab_modules)),
       icon: <GraduationCap className="h-[18px] w-[18px] text-[#5b3df6]" />,
       meta: 'From backend',
       variant: 'secondary',
@@ -192,10 +197,18 @@ export default function InstructorDashboard() {
     {
       id: 'tests',
       title: 'Weekly MCQ Tests',
-      value: String(dashboard.weekly_tests ?? 0),
+      value: String(toNumber(dashboard.weekly_tests)),
       icon: <FileText className="h-[18px] w-[18px] text-[#5b3df6]" />,
       meta: 'From backend',
       variant: 'warning',
+    },
+    {
+      id: 'students',
+      title: 'Tracked Students',
+      value: String(toNumber(dashboard.total_students)),
+      icon: <Calendar className="h-[18px] w-[18px] text-[#5b3df6]" />,
+      meta: 'Active enrollments',
+      variant: 'success',
     },
   ]
 
@@ -274,7 +287,7 @@ export default function InstructorDashboard() {
           >
             <div className="flex flex-col gap-[12px] rounded-[6px] border border-black/[0.08] p-[16px]">
               <div className="text-[14px] font-semibold text-[#0f172a] leading-snug">Total weekly tests created</div>
-              <div className="text-[30px] font-bold text-[#0f172a] leading-tight">{dashboard.weekly_tests ?? 0}</div>
+              <div className="text-[30px] font-bold text-[#0f172a] leading-tight">{toNumber(dashboard.weekly_tests)}</div>
               <div><Pill type="warning">From backend</Pill></div>
             </div>
           </SectionCard>

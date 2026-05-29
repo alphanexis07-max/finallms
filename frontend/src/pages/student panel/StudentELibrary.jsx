@@ -2,13 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Search, BookOpen, Bookmark, Download, Calendar, FileText, User } from 'lucide-react'
 import { api } from '../../lib/api'
 
-function formatDateTime(value) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleString()
-}
-
 function estimateSize(fileUrl) {
   if (!fileUrl || typeof fileUrl !== 'string') return '-'
   const marker = ';base64,'
@@ -70,6 +63,7 @@ export default function StudentELibrary() {
 
   const filterChips = useMemo(() => {
     const formats = [...new Set(items.map((item) => String(item?.format || '').trim()).filter(Boolean))]
+      .filter((format) => format.toLowerCase() !== 'png')
     return ['All resources', ...formats]
   }, [items])
 
@@ -229,9 +223,6 @@ export default function StudentELibrary() {
                       </div>
 
                       <h3 className="font-bold text-[16px] text-[#0f172a] leading-snug">{resource.title || 'Untitled resource'}</h3>
-                      <p className="text-[13px] text-[#94a3b8] line-clamp-2">
-                        Uploaded resource available for reading or download.
-                      </p>
 
                       <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3">
                         <div className="bg-[#f8fafc] rounded-[6px] p-[8px]">

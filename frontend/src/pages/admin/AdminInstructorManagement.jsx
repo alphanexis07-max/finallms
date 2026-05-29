@@ -1229,7 +1229,7 @@ export default function AdminInstructorManagement() {
                 </span>
               </div>
               <p className="mt-1.5 max-w-[760px] text-[13px] leading-relaxed text-[#94a3b8]">
-                Review teaching load, course mapping, onboarding stage, and follow-up actions in a single operational card.
+                Review course mapping, onboarding stage, and follow-up actions in a single operational card.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1282,9 +1282,9 @@ export default function AdminInstructorManagement() {
             </div>
           ) : (
             <div className="mt-5 overflow-x-auto">
-              <div className="min-w-[840px]">
-                <div className="grid grid-cols-[1.7fr_1.55fr_1fr_0.95fr_1.15fr] gap-4 border-b border-black/[0.06] px-3 pb-3">
-                  {['Instructor', 'Course & focus', 'Load', 'Status', 'Actions'].map((h) => (
+              <div className="min-w-[720px]">
+                <div className="grid grid-cols-[1.7fr_1.55fr_0.95fr_1.15fr] gap-4 border-b border-black/[0.06] px-3 pb-3">
+                  {['Instructor', 'Course & focus', 'Status', 'Actions'].map((h) => (
                     <p key={h} className="text-[12px] font-medium uppercase tracking-[0.04em] text-[#94a3b8]">
                       {h}
                     </p>
@@ -1293,13 +1293,10 @@ export default function AdminInstructorManagement() {
 
                 <div className="divide-y divide-black/[0.05]">
                   {filteredInstructors.map((inst) => {
-                    const loadValue = parseInt(inst.load, 10) || 0
-                    const loadBar = Math.min(loadValue, 24) / 24
-
                     return (
                       <div
                         key={inst.id}
-                        className="grid grid-cols-[1.7fr_1.55fr_1fr_0.95fr_1.15fr] items-center gap-4 px-3 py-4 transition-colors hover:bg-gray-50/60"
+                        className="grid grid-cols-[1.7fr_1.55fr_0.95fr_1.15fr] items-center gap-4 px-3 py-4 transition-colors hover:bg-gray-50/60"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <Avatar src={inst.avatar} alt={inst.full_name || inst.email} className="h-11 w-11 shrink-0 rounded-full" />
@@ -1317,19 +1314,6 @@ export default function AdminInstructorManagement() {
                             <span className="inline-flex items-center rounded-full bg-[#e8f5ff] px-2.5 py-1 text-[#2563eb]">
                               {inst.course === 'Not assigned' ? 'Needs mapping' : 'Mapped'}
                             </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-[13px] font-semibold text-[#0f172a]">{inst.load}</p>
-                            <p className="text-[11px] text-[#94a3b8]">{loadValue >= 19 ? 'Busy' : 'Balanced'}</p>
-                          </div>
-                          <div className="mt-2 h-2 rounded-full bg-[#e2e8f0] overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${loadValue >= 19 ? 'bg-[#f97316]' : 'bg-[#5b3df6]'}`}
-                              style={{ width: `${Math.max(18, loadBar * 100)}%` }}
-                            />
                           </div>
                         </div>
 

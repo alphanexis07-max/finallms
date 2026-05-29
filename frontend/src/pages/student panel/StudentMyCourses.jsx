@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { BookOpen, Clock, PlayCircle, Star } from 'lucide-react'
+import { AlertCircle, BookOpen, Clock, PlayCircle, Star } from 'lucide-react'
 import { api } from '../../lib/api'
+import useRealtime from '../../hooks/useRealtime'
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1400&q=80'
 
@@ -57,12 +58,17 @@ function formatDate(value) {
 	})
 }
 
+function isCourseActive(course) {
+	return course?.is_active !== false
+}
+
 export default function StudentMyCourses() {
 	const [courses, setCourses] = useState([])
 	const [courseRatings, setCourseRatings] = useState({})
 	const [ratingSavingFor, setRatingSavingFor] = useState('')
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
+	const tenantId = localStorage.getItem('lms_tenant_id') || ''
 
 	const handleRateCourse = async (courseId, ratingValue) => {
 		setRatingSavingFor(courseId)
@@ -83,12 +89,12 @@ export default function StudentMyCourses() {
 		}
 	}
 
-	useEffect(() => {
+	const loadCourses = () => {
 		setLoading(true)
 		setError('')
 		Promise.all([
-			api('/lms/enrollments?limit=200').catch(() => ({ items: [] })),
-			api('/lms/courses?limit=500').catch(() => ({ items: [] })),
+			api(`/lms/enrollments?limit=200&_=${Date.now()}`).catch(() => ({ items: [] })),
+			api(`/lms/courses?limit=500&_=${Date.now()}`).catch(() => ({ items: [] })),
 			api('/lms/ratings?mine=true&target_type=course&limit=500').catch(() => ({ items: [] })),
 		])
 			.then(([enr, crs, ratingsRes]) => {
@@ -108,7 +114,15 @@ export default function StudentMyCourses() {
 				setError(err?.message || 'Unable to load courses.')
 			})
 			.finally(() => setLoading(false))
+	}
+
+	useEffect(() => {
+		loadCourses()
 	}, [])
+
+	useRealtime(tenantId ? `tenant:${tenantId}` : '', (payload) => {
+		if (String(payload?.type || '').startsWith('course.')) loadCourses()
+	})
 
 	return (
 		<div className="min-h-full bg-[#F7FAFD]">
@@ -130,7 +144,7 @@ export default function StudentMyCourses() {
 					<div className="mb-4 flex items-center justify-between gap-3">
 						<h2 className="text-[20px] font-bold text-[#0f172a]">Enrolled Courses</h2>
 						<span className="inline-flex items-center rounded-[10px] bg-[#e8f5ff] px-3 py-1 text-[11px] font-medium text-[#2563eb]">
-							{courses.length} active
+							{courses.filter(isCourseActive).length} active
 						</span>
 					</div>
 
@@ -143,7 +157,7 @@ export default function StudentMyCourses() {
 					) : courses.length > 0 ? (
 						<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{courses.map((course, index) => (
-								<article key={`${course?.title || 'course'}-${index}`} className="overflow-hidden rounded-[16px] border border-black/[0.08] bg-[#fafcff]">
+								<article key={`${course?.title || 'course'}-${index}`} className={`overflow-hidden rounded-[16px] border bg-[#fafcff] ${isCourseActive(course) ? 'border-black/[0.08]' : 'border-red-200'}`}>
 									<img
 										src={getCourseImage(course)}
 										alt={course?.title || 'Course'}
@@ -154,6 +168,9 @@ export default function StudentMyCourses() {
 										<div className="flex flex-wrap gap-2">
 												<span className="inline-flex h-[26px] items-center rounded-[10px] bg-[#f1f5f9] px-[10px] text-[11px] font-medium text-[#0f172a]">
 													{course?.course_type || 'Course'}
+												</span>
+												<span className={`inline-flex h-[26px] items-center rounded-[10px] px-[10px] text-[11px] font-medium ${isCourseActive(course) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+													{isCourseActive(course) ? 'Active' : 'Inactive'}
 												</span>
 										</div>
 
@@ -179,6 +196,13 @@ export default function StudentMyCourses() {
 													<span>{course?.course_type === 'paid' ? 'Paid access' : 'Self-paced'}</span>
 											</div>
 										</div>
+
+										{!isCourseActive(course) ? (
+											<div className="flex items-start gap-2 rounded-[10px] border border-red-200 bg-red-50 p-3 text-[12px] font-medium text-red-700">
+												<AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+												<span>This course is currently inactive.</span>
+											</div>
+										) : null}
 
 										<div className="rounded-[10px] border border-black/[0.08] bg-[#f8fafc] p-2.5 text-[11px] font-medium text-[#475569]">
 											<div className="inline-flex items-center gap-1.5">
@@ -215,13 +239,13 @@ export default function StudentMyCourses() {
 										<button
 											type="button"
 												onClick={() => {
-													if (course?.youtube_url) window.open(course.youtube_url, '_blank')
+													if (isCourseActive(course) && course?.youtube_url) window.open(course.youtube_url, '_blank')
 												}}
-												disabled={!course?.youtube_url}
-											className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4a2ed8]"
+												disabled={!isCourseActive(course) || !course?.youtube_url}
+											className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4a2ed8] disabled:cursor-not-allowed disabled:opacity-60"
 										>
 											<PlayCircle className="h-4 w-4" />
-												{course?.youtube_url ? 'Start Learning' : 'Content Not Available'}
+												{!isCourseActive(course) ? 'Course Inactive' : course?.youtube_url ? 'Start Learning' : 'Content Not Available'}
 										</button>
 									</div>
 								</article>

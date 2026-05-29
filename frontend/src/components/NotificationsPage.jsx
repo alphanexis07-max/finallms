@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Award, BookOpen, Calendar, CheckCheck, CreditCard, FileCheck2, Sparkles, Trash2, UserRound } from 'lucide-react'
 import { api } from '../lib/api'
 import useRealtime from '../hooks/useRealtime'
+import { parseServerDate } from '../lib/dates'
 
 const roleConfig = {
   student: {
@@ -78,19 +79,18 @@ function iconFor(item) {
   return BookOpen
 }
 
-function timeAgo(value) {
+function formatNotificationTime(value) {
   if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const seconds = Math.max(1, Math.floor((Date.now() - date.getTime()) / 1000))
-  if (seconds < 60) return 'Just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  const date = parseServerDate(value)
+  if (!date) return ''
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
 }
 
 function normalizeNotification(n) {
@@ -99,12 +99,17 @@ function normalizeNotification(n) {
   const courseTitle = meta.course_title || n?.course_title || ''
   const liveClassTitle = meta.live_class_title || n?.live_class_title || ''
   const itemTitle = meta.item_title || meta.title || ''
+  const type = n?.type || entityType || 'course'
+  let message = n?.message || ''
+  if (courseTitle && `${entityType} ${type}`.toLowerCase().includes('course') && /new enrollment has been completed successfully/i.test(message)) {
+    message = `You have successfully enrolled in ${courseTitle}`
+  }
 
   return {
     id: normalizeNotificationId(n?._id || n?.id),
     title: n?.title || 'Notification',
-    message: n?.message || '',
-    type: n?.type || entityType || 'course',
+    message,
+    type,
     entityType,
     courseId: n?.course_id || meta.course_id || '',
     liveClassId: n?.live_class_id || meta.live_class_id || '',
@@ -126,9 +131,13 @@ function getFallbackKey(item) {
 }
 
 function resolveRedirect(item, config) {
+  const fallbackKey = getFallbackKey(item)
+  if (config.allowedPrefix === '/student-panel' && ['course', 'payment', 'live_class'].includes(fallbackKey)) {
+    return config.fallback[fallbackKey]
+  }
   const redirect = String(item.redirectUrl || '').trim()
   if (redirect && redirect.startsWith(config.allowedPrefix)) return redirect
-  return config.fallback[getFallbackKey(item)] || config.allowedPrefix
+  return config.fallback[fallbackKey] || config.allowedPrefix
 }
 
 export default function NotificationsPage({ role = 'student' }) {
@@ -171,6 +180,20 @@ export default function NotificationsPage({ role = 'student' }) {
       }
     }
     setItems((prev) => prev.filter((x) => x.id !== item.id))
+    window.dispatchEvent(new Event('lms:notifications-updated'))
+  }
+
+  const openNotification = async (item, target) => {
+    if (item.unread) {
+      setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, unread: false } : x)))
+      window.dispatchEvent(new Event('lms:notifications-updated'))
+      try {
+        await api(`/lms/notifications/${encodeURIComponent(item.id)}/read`, { method: 'PATCH' })
+      } catch {
+        load()
+      }
+    }
+    navigate(target)
   }
 
   return (
@@ -223,7 +246,11 @@ export default function NotificationsPage({ role = 'student' }) {
               ))}
             </div>
             <button
-              onClick={() => api('/lms/notifications/read-all', { method: 'PATCH' }).then(load).catch(() => {})}
+              onClick={() => {
+                setItems((prev) => prev.map((item) => ({ ...item, unread: false })))
+                window.dispatchEvent(new Event('lms:notifications-updated'))
+                api('/lms/notifications/read-all', { method: 'PATCH' }).then(load).catch(() => load())
+              }}
               className="inline-flex items-center gap-1.5 self-start rounded-[10px] border border-black/[0.08] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#0f172a] transition-colors hover:bg-[#f8fafc]"
             >
               <CheckCheck className="h-4 w-4" />
@@ -244,11 +271,11 @@ export default function NotificationsPage({ role = 'student' }) {
                   key={item.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate(target)}
+                  onClick={() => openNotification(item, target)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
-                      navigate(target)
+                      openNotification(item, target)
                     }
                   }}
                   className={`group flex cursor-pointer items-start justify-between rounded-[16px] border p-4 transition-all duration-200 ${
@@ -268,7 +295,7 @@ export default function NotificationsPage({ role = 'student' }) {
                       </div>
                       {item.entityLabel ? <p className="mt-1 text-[12px] font-semibold text-[#334155]">{item.entityLabel}</p> : null}
                       <p className="mt-1 max-w-[820px] text-[13px] leading-6 text-[#64748b]">{item.message}</p>
-                      <p className="mt-2 text-[11px] font-medium text-[#94a3b8]">{timeAgo(item.createdAt)}</p>
+                      <p className="mt-2 text-[11px] font-medium text-[#94a3b8]">{formatNotificationTime(item.createdAt)}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">

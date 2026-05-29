@@ -54,6 +54,11 @@ function StatusPill({ children, variant = 'neutral' }) {
   return <span className={`inline-flex h-[28px] items-center rounded-[12px] px-[10px] text-[12px] font-medium ${style}`}>{children}</span>
 }
 
+function toNumber(value) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const tenantId = localStorage.getItem('lms_tenant_id')
@@ -65,6 +70,20 @@ export default function AdminDashboard() {
     total_courses: 0,
     total_live_classes: 0,
     total_revenue: 0,
+    active_enrollments: 0,
+    draft_courses: 0,
+    current_month_students: 0,
+    coupon_usage: 0,
+    avg_order_value: 0,
+    refund_rate: 0,
+    transactions_24h: 0,
+    admin_revenue_share: 0,
+    instructor_revenue_share: 0,
+    admin_revenue_percent: 0,
+    instructor_revenue_percent: 0,
+    latest_captured_payment_amount: 0,
+    latest_admin_share: 0,
+    latest_instructor_share: 0,
   })
   const [courses, setCourses] = useState([])
   const [liveClasses, setLiveClasses] = useState([])
@@ -79,7 +98,7 @@ export default function AdminDashboard() {
       setLoading(true)
       setError('')
       const [dash, c, lc, i, s, p, cp, e] = await Promise.all([
-        api('/lms/dashboard/admin').catch(() => ({})),
+        api('/lms/dashboard/admin'),
         api('/lms/courses?limit=20').catch(() => ({ items: [] })),
         api('/lms/live-classes?limit=20').catch(() => ({ items: [] })),
         api('/lms/users?role=instructor&limit=20').catch(() => ({ items: [] })),
@@ -91,11 +110,39 @@ export default function AdminDashboard() {
 
       // Normalize dashboard response: backend may return `total_students` or `students`.
       const normalizedDash = {
-        total_students: (dash && (dash.total_students ?? dash.students)) || (s && (s.total || (Array.isArray(s) ? s.length : undefined))) || 0,
-        total_instructors: (dash && (dash.total_instructors ?? dash.instructors)) || 0,
-        total_courses: (dash && (dash.total_courses ?? dash.courses)) || (c && (c.total || 0)) || 0,
-        total_live_classes: (dash && (dash.total_live_classes ?? dash.live_classes)) || 0,
-        total_revenue: (dash && (dash.total_revenue ?? dash.revenue)) || 0,
+        total_students: toNumber(dash?.total_students ?? dash?.students),
+        total_instructors: toNumber(dash?.total_instructors ?? dash?.instructors),
+        total_courses: toNumber(dash?.total_courses ?? dash?.courses),
+        total_live_classes: toNumber(dash?.total_live_classes ?? dash?.live_classes),
+        total_school_events: toNumber(dash?.total_school_events),
+        total_revenue: toNumber(dash?.total_revenue ?? dash?.revenue),
+        subscription_revenue: toNumber(dash?.subscription_revenue),
+        active_enrollments: toNumber(dash?.active_enrollments),
+        draft_courses: toNumber(dash?.draft_courses),
+        current_month_students: toNumber(dash?.current_month_students),
+        previous_month_students: toNumber(dash?.previous_month_students),
+        student_growth_percent: toNumber(dash?.student_growth_percent),
+        current_month_revenue: toNumber(dash?.current_month_revenue),
+        previous_month_revenue: toNumber(dash?.previous_month_revenue),
+        revenue_growth_percent: toNumber(dash?.revenue_growth_percent),
+        current_month_enrollments: toNumber(dash?.current_month_enrollments),
+        previous_month_enrollments: toNumber(dash?.previous_month_enrollments),
+        enrollment_growth_percent: toNumber(dash?.enrollment_growth_percent),
+        total_payments: toNumber(dash?.total_payments),
+        captured_payments: toNumber(dash?.captured_payments),
+        failed_payments: toNumber(dash?.failed_payments),
+        refunded_payments: toNumber(dash?.refunded_payments),
+        avg_order_value: toNumber(dash?.avg_order_value),
+        refund_rate: toNumber(dash?.refund_rate),
+        transactions_24h: toNumber(dash?.transactions_24h),
+        coupon_usage: toNumber(dash?.coupon_usage),
+        admin_revenue_share: toNumber(dash?.admin_revenue_share),
+        instructor_revenue_share: toNumber(dash?.instructor_revenue_share),
+        admin_revenue_percent: toNumber(dash?.admin_revenue_percent),
+        instructor_revenue_percent: toNumber(dash?.instructor_revenue_percent),
+        latest_captured_payment_amount: toNumber(dash?.latest_captured_payment_amount),
+        latest_admin_share: toNumber(dash?.latest_admin_share),
+        latest_instructor_share: toNumber(dash?.latest_instructor_share),
       }
       setStats(normalizedDash)
       setCourses(c.items || [])
@@ -119,45 +166,28 @@ export default function AdminDashboard() {
   useRealtime(tenantId ? `tenant:${tenantId}` : '', () => loadAll())
 
   const capturedPayments = useMemo(() => payments.filter((x) => x.status === 'captured'), [payments])
-  const totalRevenue = useMemo(
-    () => capturedPayments.reduce((sum, x) => sum + Number(x.amount || 0), 0),
-    [capturedPayments],
-  )
-
-  const lastMonthStudents = useMemo(() => {
-    const now = new Date()
-    const month = now.getMonth()
-    const year = now.getFullYear()
-    return students.filter((s) => {
-      if (!s.created_at) return false
-      const d = new Date(s.created_at)
-      return d.getMonth() === month && d.getFullYear() === year
-    }).length
-  }, [students])
-
-  const draftCourses = useMemo(() => courses.filter((c) => !c.published).length, [courses])
-
-  const activeEnrollments = useMemo(() => enrollments.length, [enrollments])
+  const totalRevenue = toNumber(stats.total_revenue)
+  const lastMonthStudents = toNumber(stats.current_month_students)
+  const draftCourses = toNumber(stats.draft_courses)
+  const activeEnrollments = toNumber(stats.active_enrollments)
   const enrollmentRate = useMemo(() => {
     const base = Number(stats.total_students || 0)
     return base ? Math.round((activeEnrollments / base) * 100) : 0
   }, [activeEnrollments, stats.total_students])
 
   const splitSummary = useMemo(() => {
-    const withSplit = capturedPayments.filter((p) => p.platform_commission != null && p.instructor_amount != null)
-    const admin = withSplit.reduce((sum, p) => sum + Number(p.platform_commission || 0), 0)
-    const instructor = withSplit.reduce((sum, p) => sum + Number(p.instructor_amount || 0), 0)
-    const total = admin + instructor
-    const sample = withSplit[0]?.amount || capturedPayments[0]?.amount || 0
+    const admin = toNumber(stats.admin_revenue_share)
+    const instructor = toNumber(stats.instructor_revenue_share)
+    const sample = toNumber(stats.latest_captured_payment_amount)
     return {
-      adminPercent: total ? Math.round((admin / total) * 100) : 0,
-      instructorPercent: total ? Math.round((instructor / total) * 100) : 0,
-      samplePrice: Number(sample || 0),
-      adminAmount: total && sample ? Math.round((Number(sample) * admin) / total) : 0,
-      instructorAmount: total && sample ? Math.round((Number(sample) * instructor) / total) : 0,
-      available: total > 0,
+      adminPercent: toNumber(stats.admin_revenue_percent),
+      instructorPercent: toNumber(stats.instructor_revenue_percent),
+      samplePrice: sample,
+      adminAmount: toNumber(stats.latest_admin_share),
+      instructorAmount: toNumber(stats.latest_instructor_share),
+      available: admin + instructor > 0,
     }
-  }, [capturedPayments])
+  }, [stats])
 
   const courseRows = useMemo(() => courses.slice(0, 3), [courses])
   const liveRows = useMemo(() => liveClasses.slice(0, 3), [liveClasses])
@@ -165,24 +195,10 @@ export default function AdminDashboard() {
   const studentRows = useMemo(() => students.slice(0, 3), [students])
   const couponRows = useMemo(() => coupons.slice(0, 2), [coupons])
 
-  const couponUse = useMemo(() => coupons.reduce((sum, c) => sum + Number(c.uses || 0), 0), [coupons])
-  const avgOrder = useMemo(() => {
-    if (!capturedPayments.length) return 0
-    return Math.round(totalRevenue / capturedPayments.length)
-  }, [capturedPayments, totalRevenue])
-  const refundRate = useMemo(() => {
-    if (!payments.length) return 0
-    const failed = payments.filter((p) => p.status === 'failed').length
-    return Number(((failed / payments.length) * 100).toFixed(1))
-  }, [payments])
-
-  const transactions24h = useMemo(() => {
-    const now = Date.now()
-    return capturedPayments.filter((p) => {
-      if (!p.created_at) return false
-      return now - new Date(p.created_at).getTime() <= 24 * 60 * 60 * 1000
-    }).length
-  }, [capturedPayments])
+  const couponUse = toNumber(stats.coupon_usage)
+  const avgOrder = toNumber(stats.avg_order_value)
+  const refundRate = toNumber(stats.refund_rate)
+  const transactions24h = toNumber(stats.transactions_24h)
 
   const weekdayChart = useMemo(() => {
     const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
@@ -239,6 +255,12 @@ export default function AdminDashboard() {
             </div>
           </div>
         </section>
+
+        {error ? (
+          <div className="rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
+            {error}
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-x-[16px] gap-y-[16px] sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))]">
           <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[16px] p-[19px] rounded-[8px]">

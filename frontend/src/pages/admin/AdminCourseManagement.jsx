@@ -15,8 +15,10 @@ import {
   Video,
   Star,
   Link as LinkIcon,
+  Power,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import useRealtime from '../../hooks/useRealtime'
 
 function getYoutubeVideoId(url) {
   if (!url) return ''
@@ -77,6 +79,10 @@ function StatCard({ label, value, icon }) {
       <p className="text-[28px] font-bold text-[#0f172a]">{value}</p>
     </div>
   )
+}
+
+function isCourseActive(course) {
+  return course?.is_active !== false
 }
 
 // ─────────────────────────────────────────────
@@ -503,13 +509,14 @@ export default function AdminCourseManagement() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const tenantId = localStorage.getItem('lms_tenant_id') || ''
 
   // Load courses from API
   const loadCourses = async () => {
     try {
       setLoading(true)
       setError('')
-      const response = await api('/lms/courses?limit=300')
+      const response = await api(`/lms/courses?limit=300&_=${Date.now()}`)
       setCourses(response.items || [])
     } catch (err) {
       setError(err?.message || 'Unable to load courses.')
@@ -522,6 +529,10 @@ export default function AdminCourseManagement() {
   useEffect(() => {
     loadCourses()
   }, [])
+
+  useRealtime(tenantId ? `tenant:${tenantId}` : '', (payload) => {
+    if (String(payload?.type || '').startsWith('course.')) loadCourses()
+  })
 
   // Create course via API
   const handleCreate = async (formData) => {
@@ -586,10 +597,31 @@ export default function AdminCourseManagement() {
     }
   }
 
+  const handleToggleActive = async (course) => {
+    if (!course?._id) return
+    const nextActive = !isCourseActive(course)
+    setCourses((prev) => prev.map((item) => item._id === course._id ? { ...item, is_active: nextActive } : item))
+    try {
+      setError('')
+      await api(`/lms/courses/${course._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: nextActive }),
+      })
+      await loadCourses()
+    } catch (err) {
+      setError(err?.message || 'Unable to update course status.')
+      await loadCourses()
+    }
+  }
+
   const filtered = courses.filter(c => {
     const matchSearch = c.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                        c.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchFilter = filterStatus === 'all' || c.course_type === filterStatus
+    const matchFilter =
+      filterStatus === 'all' ||
+      c.course_type === filterStatus ||
+      (filterStatus === 'active' && isCourseActive(c)) ||
+      (filterStatus === 'inactive' && !isCourseActive(c))
     return matchSearch && matchFilter
   })
 
@@ -600,9 +632,10 @@ export default function AdminCourseManagement() {
 
   const stats = {
     total: courses.length,
+    active: courses.filter(isCourseActive).length,
+    inactive: courses.filter(c => !isCourseActive(c)).length,
     paid: courses.filter(c => c.course_type === 'paid').length,
     free: courses.filter(c => c.course_type === 'free').length,
-    totalStudents: courses.reduce((s, c) => s + (c.students_count || 0), 0),
   }
 
   // If create-page is open, render simple form
@@ -654,9 +687,10 @@ export default function AdminCourseManagement() {
         {/* Stats */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="Total Courses" value={stats.total} icon={BookOpen} />
+          <StatCard label="Active Courses" value={stats.active} icon={CheckCircle} />
+          <StatCard label="Inactive Courses" value={stats.inactive} icon={Power} />
           <StatCard label="Paid Courses" value={stats.paid} icon={CheckCircle} />
           <StatCard label="Free Courses" value={stats.free} icon={Users} />
-          <StatCard label="Total Students" value={stats.totalStudents} icon={Users} />
         </div>
 
         {/* Search */}
@@ -668,7 +702,7 @@ export default function AdminCourseManagement() {
                 className="w-full pl-9 pr-3 py-2 border border-black/[0.08] rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]" />
             </div>
             <div className="flex gap-2">
-              {['all', 'free', 'paid'].map(s => (
+              {['all', 'active', 'inactive', 'free', 'paid'].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)}
                   className={`px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors ${filterStatus === s ? 'bg-[#5b3df6] text-white' : 'bg-gray-100 text-[#64748b] hover:bg-gray-200'}`}>
                   {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -681,7 +715,7 @@ export default function AdminCourseManagement() {
         {/* Course Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((course) => (
-            <div key={course._id} className="bg-white border border-black/[0.08] rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+            <div key={course._id} className={`bg-white border rounded-lg overflow-hidden hover:shadow-md transition-shadow ${isCourseActive(course) ? 'border-black/[0.08]' : 'border-red-200'}`}>
               <div className="relative h-40 bg-gradient-to-br from-[#5b3df6]/20 to-[#ede9ff] flex items-center justify-center">
                 {course.youtube_url ? (
                   <img 
@@ -697,6 +731,11 @@ export default function AdminCourseManagement() {
                   <Pill variant={course.course_type === 'paid' ? 'published' : course.course_type === 'free' ? 'draft' : 'review'}>
                     {course.course_type}
                   </Pill>
+                </div>
+                <div className="absolute left-3 top-3">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${isCourseActive(course) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    {isCourseActive(course) ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
               </div>
               <div className="p-4">
@@ -723,9 +762,21 @@ export default function AdminCourseManagement() {
                     </a>
                   )}
                 </div>
+                {!isCourseActive(course) ? (
+                  <div className="mb-3 rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-medium text-red-700">
+                    This course is currently inactive.
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between pt-3 border-t border-black/[0.08]">
                   <span className="text-[12px] font-semibold text-[#0f172a]">{course.course_type === 'free' ? 'Free' : `₹${Number(course.price || 0)}`}</span>
                   <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleToggleActive(course)}
+                      className={`p-1.5 rounded-md transition-colors ${isCourseActive(course) ? 'text-emerald-700 hover:bg-emerald-50' : 'text-red-600 hover:bg-red-50'}`}
+                      title={isCourseActive(course) ? 'Deactivate course' : 'Reactivate course'}
+                    >
+                      <Power className="h-4 w-4" />
+                    </button>
                     <button onClick={() => setEditCourse(course)} className="p-1.5 text-[#64748b] hover:text-[#5b3df6] hover:bg-[#ede7ff] rounded-md transition-colors" title="Edit"><Edit className="h-4 w-4" /></button>
                     <button onClick={() => setDeleteId(course._id)} className="p-1.5 text-[#64748b] hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>
                     <button onClick={() => setViewCourse(course)} className="p-1.5 text-[#64748b] hover:text-[#5b3df6] hover:bg-[#ede7ff] rounded-md transition-colors" title="View"><Eye className="h-4 w-4" /></button>

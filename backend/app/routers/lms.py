@@ -1,7 +1,7 @@
 # Delete a notification by ID
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -118,7 +118,7 @@ async def student_tests(
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from app.core.config import settings
@@ -361,6 +361,28 @@ async def _attach_ratings(items: list[dict], *, target_type: str, tenant_id: str
     return enriched
 
 
+def _course_is_active(course: dict | None) -> bool:
+    return not course or course.get("is_active") is not False
+
+
+def _course_inactive_message() -> str:
+    return "This course is currently inactive."
+
+
+def _id_variants(value: str | None) -> list:
+    val = str(value or "").strip()
+    if not val:
+        return []
+    variants: list = [val]
+    if ObjectId.is_valid(val):
+        variants.append(ObjectId(val))
+    return variants
+
+
+def _is_ended_live_class_status(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"ended", "course_ended", "completed", "complete"}
+
+
 async def _tenant_user_ids(tenant_id: str, roles: list[str] | None = None, exclude_ids: set[str] | None = None) -> list[str]:
     query = {"tenant_id": tenant_id}
     if roles:
@@ -446,6 +468,48 @@ async def _create_user_notifications(
         tasks.append(send_transactional_email(email, subject, message))
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def _enrich_notification_docs(items: list[dict], tenant_id: str | None = None) -> list[dict]:
+    for item in items:
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        if not isinstance(meta, dict):
+            meta = {}
+
+        course_id = str(item.get("course_id") or meta.get("course_id") or "").strip()
+        if course_id and not (meta.get("course_title") or item.get("course_title")):
+            course = None
+            query: dict = {"_id": ObjectId(course_id)} if ObjectId.is_valid(course_id) else {"_id": course_id}
+            if tenant_id:
+                query["tenant_id"] = tenant_id
+            course = await db.courses.find_one(query, {"title": 1, "name": 1})
+            if not course and ObjectId.is_valid(course_id):
+                course = await db.courses.find_one({"_id": ObjectId(course_id)}, {"title": 1, "name": 1})
+            course_title = str((course or {}).get("title") or (course or {}).get("name") or "").strip()
+            if course_title:
+                meta["course_title"] = course_title
+                item["course_title"] = course_title
+                current_message = str(item.get("message") or "")
+                if "new enrollment has been completed successfully" in current_message.lower():
+                    item["message"] = f"You have successfully enrolled in {course_title}"
+
+        live_class_id = str(item.get("live_class_id") or meta.get("live_class_id") or "").strip()
+        if live_class_id and not (meta.get("live_class_title") or item.get("live_class_title")):
+            query = {"_id": ObjectId(live_class_id)} if ObjectId.is_valid(live_class_id) else {"_id": live_class_id}
+            if tenant_id:
+                query["tenant_id"] = tenant_id
+            live_class = await db.live_classes.find_one(query, {"title": 1, "class_name": 1, "subject": 1})
+            if not live_class and ObjectId.is_valid(live_class_id):
+                live_class = await db.live_classes.find_one({"_id": ObjectId(live_class_id)}, {"title": 1, "class_name": 1, "subject": 1})
+            live_title = str((live_class or {}).get("title") or (live_class or {}).get("class_name") or (live_class or {}).get("subject") or "").strip()
+            if live_title:
+                meta["live_class_title"] = live_title
+                item["live_class_title"] = live_title
+
+        if meta:
+            item["meta"] = meta
+
+    return items
 
 
 @router.post("/tenants")
@@ -684,11 +748,42 @@ async def create_course(payload: CourseIn, tenant_id: str = Depends(get_tenant_i
 @router.get("/courses")
 async def list_courses(
     tenant_id: str = Depends(get_tenant_id),
+    user=Depends(get_current_user),
     skip: int = 0,
     limit: int = 100,
     q: str | None = None,
 ):
     query = {"tenant_id": tenant_id} if tenant_id else {}
+    role = user.get("role")
+    if role == Role.INSTRUCTOR.value:
+        instructor_id = str(user.get("sub") or "").strip()
+        instructor_variants: list = [instructor_id] if instructor_id else []
+        if ObjectId.is_valid(instructor_id):
+            instructor_variants.append(ObjectId(instructor_id))
+        query["$or"] = [
+            {"created_by": {"$in": instructor_variants}},
+            {"instructor_id": {"$in": instructor_variants}},
+            {"instructorId": {"$in": instructor_variants}},
+            {"owner_id": {"$in": instructor_variants}},
+        ]
+    elif role == Role.STUDENT.value:
+        student_id = str(user.get("sub") or "").strip()
+        enroll_query = {"student_id": student_id}
+        if tenant_id:
+            enroll_query["tenant_id"] = tenant_id
+        enrollments = [x async for x in db.enrollments.find(enroll_query, {"course_id": 1})]
+        enrolled_course_ids = []
+        for enrollment in enrollments:
+            course_id = str(enrollment.get("course_id") or "").strip()
+            if not course_id:
+                continue
+            enrolled_course_ids.append(course_id)
+            if ObjectId.is_valid(course_id):
+                enrolled_course_ids.append(ObjectId(course_id))
+        query["$or"] = [
+            {"is_active": {"$ne": False}},
+            {"_id": {"$in": enrolled_course_ids}},
+        ]
     if q:
         query["title"] = {"$regex": q, "$options": "i"}
     total = await db.courses.count_documents(query)
@@ -703,7 +798,7 @@ async def list_public_courses(
     limit: int = 100,
     q: str | None = None,
 ):
-    query: dict = {}
+    query: dict = {"is_active": {"$ne": False}}
     if q:
         query["title"] = {"$regex": q, "$options": "i"}
     total = await db.courses.count_documents(query)
@@ -727,6 +822,17 @@ async def update_course(
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Course not found")
     updated = await db.courses.find_one({"_id": ObjectId(course_id)})
+    await ws_manager.broadcast(
+        f"tenant:{tenant_id}",
+        {
+            "type": "course.updated",
+            "data": {
+                "id": course_id,
+                "is_active": updated.get("is_active", True) if updated else True,
+                "inactive_message": _course_inactive_message(),
+            },
+        },
+    )
     return as_dict(updated)
 
 
@@ -813,6 +919,7 @@ async def create_live_class(
 @router.get("/live-classes")
 async def list_live_classes(
     tenant_id: str = Depends(get_tenant_id),
+    user=Depends(get_current_user),
     skip: int = 0,
     limit: int = 100,
     status: str | None = None,
@@ -820,8 +927,119 @@ async def list_live_classes(
     query = {"tenant_id": tenant_id} if tenant_id else {}
     if status:
         query["status"] = status
+    if user.get("role") == Role.STUDENT.value:
+        student_id = str(user.get("sub") or "").strip()
+        student_variants = _id_variants(student_id)
+
+        course_variants: list = []
+        seen_course_variants: set[str] = set()
+        enrollment_query: dict = {"student_id": {"$in": student_variants}}
+        if tenant_id:
+            enrollment_query["tenant_id"] = tenant_id
+        async for enrollment in db.enrollments.find(enrollment_query, {"course_id": 1}):
+            course_id = str(enrollment.get("course_id") or "").strip()
+            if not course_id:
+                continue
+            variants = [course_id]
+            if ObjectId.is_valid(course_id):
+                variants.append(ObjectId(course_id))
+            for variant in variants:
+                key = str(variant)
+                if key in seen_course_variants:
+                    continue
+                seen_course_variants.add(key)
+                course_variants.append(variant)
+
+        student_filters: list[dict] = [{"attendee_ids": {"$in": student_variants}}]
+        if course_variants:
+            student_filters.append({"course_id": {"$in": course_variants}})
+        if status and _is_ended_live_class_status(status):
+            query["$or"] = student_filters
+        else:
+            query["$or"] = [
+                {"status": {"$nin": ["ended", "course_ended", "completed", "complete"]}},
+                {"status": {"$exists": False}},
+                *student_filters,
+            ]
+    elif user.get("role") == Role.INSTRUCTOR.value:
+        instructor_id = str(user.get("sub") or "").strip()
+        instructor_variants: list = [instructor_id] if instructor_id else []
+        if ObjectId.is_valid(instructor_id):
+            instructor_variants.append(ObjectId(instructor_id))
+
+        course_variants: list = []
+        seen_course_variants: set[str] = set()
+        course_query: dict = {"tenant_id": tenant_id} if tenant_id else {}
+        course_query["$or"] = [
+            {"created_by": {"$in": instructor_variants}},
+            {"instructor_id": {"$in": instructor_variants}},
+            {"instructorId": {"$in": instructor_variants}},
+            {"owner_id": {"$in": instructor_variants}},
+        ]
+        async for course in db.courses.find(course_query, {"_id": 1}):
+            course_id = str(course.get("_id") or "").strip()
+            if not course_id:
+                continue
+            variants = [course_id]
+            if ObjectId.is_valid(course_id):
+                variants.append(ObjectId(course_id))
+            for variant in variants:
+                key = str(variant)
+                if key in seen_course_variants:
+                    continue
+                seen_course_variants.add(key)
+                course_variants.append(variant)
+
+        instructor_filters: list[dict] = [
+            {"instructor_id": {"$in": instructor_variants}},
+            {"instructorId": {"$in": instructor_variants}},
+            {"host_id": {"$in": instructor_variants}},
+            {"instructor": {"$in": instructor_variants}},
+        ]
+        if course_variants:
+            instructor_filters.append({"course_id": {"$in": course_variants}})
+        query["$or"] = instructor_filters
     total = await db.live_classes.count_documents(query)
-    items = [as_dict(x) async for x in db.live_classes.find(query).sort("start_at", 1).skip(skip).limit(limit)]
+    raw_items = [x async for x in db.live_classes.find(query).sort("start_at", 1).skip(skip).limit(limit)]
+    if user.get("role") == Role.STUDENT.value:
+        student_id = str(user.get("sub") or "").strip()
+        student_variants = _id_variants(student_id)
+
+        async def student_has_live_class_certificate(item: dict) -> bool:
+            cert_or: list[dict] = []
+            for variant in _id_variants(str(item.get("_id") or "")):
+                cert_or.append({"live_class_id": variant})
+                cert_or.append({"target_id": variant})
+            for variant in _id_variants(str(item.get("course_id") or "")):
+                cert_or.append({"course_id": variant})
+            if not cert_or:
+                return False
+
+            cert_query: dict = {"student_id": {"$in": student_variants}, "$or": cert_or}
+            if tenant_id:
+                cert_query["tenant_id"] = tenant_id
+            return await db.certificates.find_one(cert_query, {"_id": 1}) is not None
+
+        visible_items = []
+        for item in raw_items:
+            attendee_ids = [str(x) for x in (item.get("attendee_ids") or [])]
+            class_id = str(item.get("_id") or "")
+            course_id = str(item.get("course_id") or "")
+            enrolled = (
+                (student_id and student_id in attendee_ids)
+                or any(str(variant) == course_id for variant in course_variants)
+            )
+            if not _is_ended_live_class_status(item.get("status")):
+                visible_items.append(item)
+                continue
+            if enrolled and await student_has_live_class_certificate(item):
+                item["has_certificate"] = True
+                item["status"] = "completed"
+                visible_items.append(item)
+        raw_items = visible_items
+        total = len(raw_items)
+
+    items = [as_dict(x) for x in raw_items]
     items = await _attach_ratings(items, target_type="live_class", tenant_id=tenant_id)
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
@@ -832,8 +1050,10 @@ async def list_public_live_classes(
     limit: int = 100,
     status: str | None = None,
 ):
-    query: dict = {}
+    query: dict = {"status": {"$nin": ["ended", "course_ended", "completed", "complete"]}}
     if status:
+        if _is_ended_live_class_status(status):
+            return {"items": [], "total": 0, "skip": skip, "limit": limit}
         query["status"] = status
     total = await db.live_classes.count_documents(query)
     items = [as_dict(x) async for x in db.live_classes.find(query).sort("start_at", 1).skip(skip).limit(limit)]
@@ -850,6 +1070,15 @@ async def update_live_class(
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not updates:
         return {"message": "No updates provided"}
+    existing = await db.live_classes.find_one({"_id": ObjectId(live_class_id), "tenant_id": tenant_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Live class not found")
+    next_status = str(updates.get("status") or "").strip().lower()
+    if _is_ended_live_class_status(existing.get("status")) and next_status and not _is_ended_live_class_status(next_status):
+        raise HTTPException(status_code=400, detail="Completed live classes cannot be restarted. Create a new live class instead.")
+    if next_status and _is_ended_live_class_status(next_status):
+        updates["status"] = "ended"
+        updates["ended_at"] = datetime.now(timezone.utc)
     updates["updated_at"] = datetime.now(timezone.utc)
     result = await db.live_classes.update_one(
         {"_id": ObjectId(live_class_id), "tenant_id": tenant_id}, {"$set": updates}
@@ -973,11 +1202,13 @@ async def delete_live_class(
 @router.post("/enrollments")
 async def create_enrollment(payload: EnrollmentIn, tenant_id: str = Depends(get_tenant_id)):
     now = datetime.now(timezone.utc)
-    data = payload.model_dump() | {"tenant_id": tenant_id, "created_at": now, "updated_at": now}
-    res = await db.enrollments.insert_one(data)
     course = None
     if ObjectId.is_valid(payload.course_id):
         course = await db.courses.find_one({"_id": ObjectId(payload.course_id)})
+    if course and not _course_is_active(course):
+        raise HTTPException(status_code=400, detail=_course_inactive_message())
+    data = payload.model_dump() | {"tenant_id": tenant_id, "created_at": now, "updated_at": now}
+    res = await db.enrollments.insert_one(data)
     course_title = str((course or {}).get("title") or "your course")
     student = None
     if ObjectId.is_valid(payload.student_id):
@@ -998,7 +1229,7 @@ async def create_enrollment(payload: EnrollmentIn, tenant_id: str = Depends(get_
         tenant_id=tenant_id,
         user_ids=[payload.student_id],
         title="Enrollment Successful",
-        message=f"You enrolled in: {course_title}",
+        message=f"You have successfully enrolled in {course_title}",
         type="course",
         entity_type="course",
         course_id=payload.course_id,
@@ -1136,17 +1367,246 @@ async def list_ratings(
 
 @router.get("/dashboard/admin")
 async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(require_roles(Role.ADMIN, Role.SUPER_ADMIN, Role.SUB_ADMIN))):
-    # If tenant_id is provided, return tenant-scoped counts. Otherwise fall back to global counts
-    students = await db.users.count_documents({"tenant_id": tenant_id, "role": "student"}) if tenant_id else await db.users.count_documents({"role": "student"})
-    instructors = await db.users.count_documents({"tenant_id": tenant_id, "role": "instructor"}) if tenant_id else await db.users.count_documents({"role": "instructor"})
-    courses = await db.courses.count_documents({"tenant_id": tenant_id}) if tenant_id else await db.courses.count_documents({})
-    revenue_pipeline = [
-        {"$match": {"tenant_id": tenant_id, "status": "captured"}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
+    now = datetime.now(timezone.utc)
+    month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    prev_month_start = (
+        datetime(now.year - 1, 12, 1, tzinfo=timezone.utc)
+        if now.month == 1
+        else datetime(now.year, now.month - 1, 1, tzinfo=timezone.utc)
+    )
+    day_start = now - timedelta(hours=24)
+
+    def scoped_query(extra: dict | None = None) -> dict:
+        query = {"tenant_id": tenant_id} if tenant_id else {}
+        if extra:
+            query.update(extra)
+        return query
+
+    def payment_query(extra: dict | None = None) -> dict:
+        if tenant_id:
+            query: dict = {
+                "$or": [
+                    {"tenant_id": tenant_id},
+                    {"tenant_id": None},
+                    {"tenant_id": {"$exists": False}},
+                ]
+            }
+        else:
+            query = {}
+        if extra:
+            if "$or" in query and "$or" in extra:
+                return {"$and": [query, extra]}
+            query.update(extra)
+        return query
+
+    async def sum_payment_amount(match: dict) -> float:
+        docs = [
+            x
+            async for x in db.payments.aggregate(
+                [
+                    {"$match": match},
+                    {
+                        "$group": {
+                            "_id": None,
+                            "total": {
+                                "$sum": {
+                                    "$subtract": [
+                                        {"$ifNull": ["$amount", 0]},
+                                        {"$ifNull": ["$refund_amount", 0]},
+                                    ]
+                                }
+                            },
+                        }
+                    },
+                ]
+            )
+        ]
+        return round(float(docs[0]["total"]), 2) if docs else 0
+
+    captured_match = payment_query({"status": "captured"})
+    captured_month_match = payment_query(
+        {
+            "status": "captured",
+            "$or": [
+                {"captured_at": {"$gte": month_start}},
+                {"captured_at": {"$exists": False}, "created_at": {"$gte": month_start}},
+            ],
+        }
+    )
+    captured_prev_month_match = payment_query(
+        {
+            "status": "captured",
+            "$or": [
+                {"captured_at": {"$gte": prev_month_start, "$lt": month_start}},
+                {"captured_at": {"$exists": False}, "created_at": {"$gte": prev_month_start, "$lt": month_start}},
+            ],
+        }
+    )
+    captured_today_match = payment_query(
+        {
+            "status": "captured",
+            "$or": [
+                {"captured_at": {"$gte": day_start}},
+                {"captured_at": {"$exists": False}, "created_at": {"$gte": day_start}},
+            ],
+        }
+    )
+
+    students = await db.users.count_documents(scoped_query({"role": "student", "is_active": {"$ne": False}}))
+    instructors = await db.users.count_documents(scoped_query({"role": "instructor", "is_active": {"$ne": False}}))
+    courses = await db.courses.count_documents(scoped_query())
+    draft_courses = await db.courses.count_documents(
+        scoped_query(
+            {
+                "$or": [
+                    {"status": "draft"},
+                    {"published": False},
+                    {"is_published": False},
+                ]
+            }
+        )
+    )
+    live_classes = await db.live_classes.count_documents(scoped_query())
+    school_events = await db.events.count_documents(scoped_query())
+
+    revenue = await sum_payment_amount(captured_match)
+    month_revenue = await sum_payment_amount(captured_month_match)
+    prev_month_revenue = await sum_payment_amount(captured_prev_month_match)
+    subscription_revenue = await sum_payment_amount(
+        payment_query(
+            {
+                "status": "captured",
+                "$or": [
+                    {"enrollment_type": "subscription"},
+                    {"target_type": "subscription"},
+                    {"type": "subscription"},
+                ],
+            }
+        )
+    )
+
+    current_month_students = await db.users.count_documents(
+        scoped_query({"role": "student", "is_active": {"$ne": False}, "created_at": {"$gte": month_start}})
+    )
+    previous_month_students = await db.users.count_documents(
+        scoped_query(
+            {
+                "role": "student",
+                "is_active": {"$ne": False},
+                "created_at": {"$gte": prev_month_start, "$lt": month_start},
+            }
+        )
+    )
+
+    active_enrollment_match = scoped_query(
+        {
+            "status": {"$nin": ["cancelled", "canceled", "expired", "failed", "pending", "inactive"]},
+            "$or": [
+                {"expires_at": {"$exists": False}},
+                {"expires_at": None},
+                {"expires_at": {"$gt": now}},
+            ],
+        }
+    )
+    active_enrollment_docs = [
+        x
+        async for x in db.enrollments.aggregate(
+            [
+                {"$match": active_enrollment_match},
+                {
+                    "$group": {
+                        "_id": {
+                            "student_id": "$student_id",
+                            "course_id": "$course_id",
+                            "enrollment_type": {"$ifNull": ["$enrollment_type", "course"]},
+                        }
+                    }
+                },
+                {"$count": "total"},
+            ]
+        )
     ]
-    revenue_docs = [x async for x in db.payments.aggregate(revenue_pipeline)]
-    revenue = revenue_docs[0]["total"] if revenue_docs else 0
-    live_classes = await db.live_classes.count_documents({"tenant_id": tenant_id}) if tenant_id else await db.live_classes.count_documents({})
+    active_enrollments = int(active_enrollment_docs[0]["total"]) if active_enrollment_docs else 0
+    current_month_enrollment_docs = [
+        x
+        async for x in db.enrollments.aggregate(
+            [
+                {"$match": {**active_enrollment_match, "created_at": {"$gte": month_start}}},
+                {
+                    "$group": {
+                        "_id": {
+                            "student_id": "$student_id",
+                            "course_id": "$course_id",
+                            "enrollment_type": {"$ifNull": ["$enrollment_type", "course"]},
+                        }
+                    }
+                },
+                {"$count": "total"},
+            ]
+        )
+    ]
+    previous_month_enrollment_docs = [
+        x
+        async for x in db.enrollments.aggregate(
+            [
+                {"$match": {**active_enrollment_match, "created_at": {"$gte": prev_month_start, "$lt": month_start}}},
+                {
+                    "$group": {
+                        "_id": {
+                            "student_id": "$student_id",
+                            "course_id": "$course_id",
+                            "enrollment_type": {"$ifNull": ["$enrollment_type", "course"]},
+                        }
+                    }
+                },
+                {"$count": "total"},
+            ]
+        )
+    ]
+    current_month_enrollments = int(current_month_enrollment_docs[0]["total"]) if current_month_enrollment_docs else 0
+    previous_month_enrollments = int(previous_month_enrollment_docs[0]["total"]) if previous_month_enrollment_docs else 0
+
+    captured_payment_count = await db.payments.count_documents(captured_match)
+    total_payment_count = await db.payments.count_documents(payment_query())
+    failed_payment_count = await db.payments.count_documents(payment_query({"status": "failed"}))
+    refunded_payment_count = await db.payments.count_documents(payment_query({"status": {"$in": ["refunded", "refund", "partially_refunded"]}}))
+    transactions_24h = await db.payments.count_documents(captured_today_match)
+
+    split_docs = [
+        x
+        async for x in db.payments.aggregate(
+            [
+                {"$match": captured_match},
+                {
+                    "$group": {
+                        "_id": None,
+                        "admin": {"$sum": {"$ifNull": ["$platform_commission", 0]}},
+                        "instructor": {"$sum": {"$ifNull": ["$instructor_amount", 0]}},
+                    }
+                },
+            ]
+        )
+    ]
+    admin_share = round(float(split_docs[0]["admin"]), 2) if split_docs else 0
+    instructor_share = round(float(split_docs[0]["instructor"]), 2) if split_docs else 0
+    split_total = admin_share + instructor_share
+
+    latest_payment = await db.payments.find_one(captured_match, sort=[("captured_at", -1), ("created_at", -1)])
+    coupon_docs = [
+        x
+        async for x in db.coupons.aggregate(
+            [
+                {"$match": scoped_query()},
+                {"$group": {"_id": None, "uses": {"$sum": {"$ifNull": ["$uses", 0]}}}},
+            ]
+        )
+    ]
+
+    def growth_percent(current: float, previous: float) -> float:
+        if previous <= 0:
+            return 100 if current > 0 else 0
+        return round(((current - previous) / previous) * 100, 1)
+
     return {
         "students": students,
         "instructors": instructors,
@@ -1156,7 +1616,35 @@ async def admin_dashboard(tenant_id: str = Depends(get_tenant_id), _=Depends(req
         "total_instructors": instructors,
         "total_courses": courses,
         "total_live_classes": live_classes,
+        "total_school_events": school_events,
         "total_revenue": revenue,
+        "subscription_revenue": subscription_revenue,
+        "active_enrollments": active_enrollments,
+        "draft_courses": draft_courses,
+        "current_month_students": current_month_students,
+        "previous_month_students": previous_month_students,
+        "student_growth_percent": growth_percent(current_month_students, previous_month_students),
+        "current_month_revenue": month_revenue,
+        "previous_month_revenue": prev_month_revenue,
+        "revenue_growth_percent": growth_percent(month_revenue, prev_month_revenue),
+        "current_month_enrollments": current_month_enrollments,
+        "previous_month_enrollments": previous_month_enrollments,
+        "enrollment_growth_percent": growth_percent(current_month_enrollments, previous_month_enrollments),
+        "total_payments": total_payment_count,
+        "captured_payments": captured_payment_count,
+        "failed_payments": failed_payment_count,
+        "refunded_payments": refunded_payment_count,
+        "avg_order_value": round(revenue / captured_payment_count, 2) if captured_payment_count else 0,
+        "refund_rate": round((refunded_payment_count / total_payment_count) * 100, 1) if total_payment_count else 0,
+        "transactions_24h": transactions_24h,
+        "coupon_usage": int(coupon_docs[0]["uses"]) if coupon_docs else 0,
+        "admin_revenue_share": admin_share,
+        "instructor_revenue_share": instructor_share,
+        "admin_revenue_percent": round((admin_share / split_total) * 100) if split_total else 0,
+        "instructor_revenue_percent": round((instructor_share / split_total) * 100) if split_total else 0,
+        "latest_captured_payment_amount": float(latest_payment.get("amount") or 0) if latest_payment else 0,
+        "latest_admin_share": float(latest_payment.get("platform_commission") or 0) if latest_payment else 0,
+        "latest_instructor_share": float(latest_payment.get("instructor_amount") or 0) if latest_payment else 0,
     }
 
 
@@ -1371,15 +1859,205 @@ async def super_admin_dashboard(_=Depends(require_roles(Role.SUPER_ADMIN))):
 async def instructor_dashboard(user=Depends(require_roles(Role.INSTRUCTOR))):
     tenant_id = user.get("tenant_id")
     instructor_id = user.get("sub")
-    live_sessions = await db.live_classes.count_documents({"tenant_id": tenant_id, "instructor_id": instructor_id})
-    tests_count = await db.tests.count_documents({"tenant_id": tenant_id, "instructor_id": instructor_id})
-    event_count = await db.events.count_documents({"tenant_id": tenant_id})
-    modules_count = await db.courses.count_documents({"tenant_id": tenant_id, "created_by": instructor_id})
+    now = datetime.now(timezone.utc)
+    week_end = now + timedelta(days=7)
+
+    def _id_variants(value: str | None) -> list:
+        raw = str(value or "").strip()
+        if not raw:
+            return []
+        variants: list = [raw]
+        if ObjectId.is_valid(raw):
+            variants.append(ObjectId(raw))
+        return variants
+
+    instructor_variants = _id_variants(instructor_id)
+    if not instructor_variants:
+        raise HTTPException(status_code=401, detail="Invalid instructor identity")
+
+    def tenant_or_legacy_query(extra: dict | None = None) -> dict:
+        query: dict = {}
+        if tenant_id:
+            query = {
+                "$or": [
+                    {"tenant_id": tenant_id},
+                    {"tenant_id": None},
+                    {"tenant_id": {"$exists": False}},
+                ]
+            }
+        if extra:
+            if "$or" in query and "$or" in extra:
+                return {"$and": [query, extra]}
+            query.update(extra)
+        return query
+
+    instructor_course_filter = {
+        "$or": [
+            {"created_by": {"$in": instructor_variants}},
+            {"instructor_id": {"$in": instructor_variants}},
+            {"instructorId": {"$in": instructor_variants}},
+            {"owner_id": {"$in": instructor_variants}},
+        ]
+    }
+    course_query = tenant_or_legacy_query(instructor_course_filter)
+    modules_count = await db.courses.count_documents(course_query)
+
+    course_variants: list = []
+    seen_course_variants: set[str] = set()
+    async for course in db.courses.find(course_query, {"_id": 1}):
+        course_id = str(course.get("_id") or "").strip()
+        if not course_id:
+            continue
+        for variant in _id_variants(course_id):
+            key = str(variant)
+            if key in seen_course_variants:
+                continue
+            seen_course_variants.add(key)
+            course_variants.append(variant)
+
+    instructor_class_filter: dict = {
+        "$or": [
+            {"instructor_id": {"$in": instructor_variants}},
+            {"instructorId": {"$in": instructor_variants}},
+            {"host_id": {"$in": instructor_variants}},
+            {"instructor": {"$in": instructor_variants}},
+        ]
+    }
+    if course_variants:
+        instructor_class_filter["$or"].append({"course_id": {"$in": course_variants}})
+
+    live_sessions = await db.live_classes.count_documents(
+        tenant_or_legacy_query(
+            {
+                **instructor_class_filter,
+                "start_at": {"$gte": now, "$lt": week_end},
+                "status": {"$in": ["upcoming", "active", "ongoing", "scheduled"]},
+            }
+        )
+    )
+    upcoming_classes = await db.live_classes.count_documents(
+        tenant_or_legacy_query(
+            {
+                **instructor_class_filter,
+                "start_at": {"$gte": now},
+                "status": {"$in": ["upcoming", "scheduled"]},
+            }
+        )
+    )
+
+    tests_count = await db.tests.count_documents(
+        tenant_or_legacy_query(
+            {
+                "$or": [
+                    {"created_by": {"$in": instructor_variants}},
+                    {"instructor_id": {"$in": instructor_variants}},
+                ]
+            }
+        )
+    )
+    published_tests = await db.tests.count_documents(
+        tenant_or_legacy_query(
+            {
+                "$or": [
+                    {"created_by": {"$in": instructor_variants}},
+                    {"instructor_id": {"$in": instructor_variants}},
+                ],
+                "$and": [
+                    {
+                        "$or": [
+                            {"is_published": True},
+                            {"status": {"$in": ["active", "published", "closed"]}},
+                        ]
+                    }
+                ],
+            }
+        )
+    )
+
+    active_enrollment_match = {
+        "status": {"$nin": ["cancelled", "canceled", "expired", "failed", "pending", "inactive"]},
+        "$or": [
+            {"expires_at": {"$exists": False}},
+            {"expires_at": None},
+            {"expires_at": {"$gt": now}},
+        ],
+    }
+    if course_variants:
+        active_enrollment_match["course_id"] = {"$in": course_variants}
+    else:
+        active_enrollment_match["course_id"] = {"$in": []}
+    student_docs = [
+        x
+        async for x in db.enrollments.aggregate(
+            [
+                {"$match": tenant_or_legacy_query(active_enrollment_match)},
+                {"$group": {"_id": "$student_id"}},
+                {"$count": "total"},
+            ]
+        )
+    ]
+    total_students = int(student_docs[0]["total"]) if student_docs else 0
+
+    attempts_match: dict = {}
+    test_ids = []
+    async for test in db.tests.find(
+        tenant_or_legacy_query(
+            {
+                "$or": [
+                    {"created_by": {"$in": instructor_variants}},
+                    {"instructor_id": {"$in": instructor_variants}},
+                ]
+            }
+        ),
+        {"_id": 1},
+    ):
+        test_id = str(test.get("_id") or "").strip()
+        if test_id:
+            test_ids.append(test_id)
+    if test_ids:
+        attempts_match["test_id"] = {"$in": test_ids}
+    total_attempts = await db.test_attempts.count_documents(attempts_match) if test_ids else 0
+
+    revenue_match = tenant_or_legacy_query({"status": "captured"})
+    revenue_or = []
+    if course_variants:
+        revenue_or.append({"target_id": {"$in": [str(x) for x in course_variants]}})
+    revenue_or.extend(
+        [
+            {"instructor_id": {"$in": instructor_variants}},
+            {"created_by": {"$in": instructor_variants}},
+        ]
+    )
+    revenue_match = {"$and": [revenue_match, {"$or": revenue_or}]}
+    revenue_docs = [
+        x
+        async for x in db.payments.aggregate(
+            [
+                {"$match": revenue_match},
+                {
+                    "$group": {
+                        "_id": None,
+                        "total": {"$sum": {"$ifNull": ["$instructor_amount", "$amount"]}},
+                    }
+                },
+            ]
+        )
+    ]
+    instructor_revenue = round(float(revenue_docs[0]["total"]), 2) if revenue_docs else 0
+
+    event_count = await db.events.count_documents(tenant_or_legacy_query())
     return {
         "live_sessions_week": live_sessions,
+        "upcoming_classes": upcoming_classes,
         "lab_modules": modules_count,
         "weekly_tests": tests_count,
+        "published_tests": published_tests,
+        "total_students": total_students,
+        "total_attempts": total_attempts,
+        "instructor_revenue": instructor_revenue,
         "events": event_count,
+        "courses": modules_count,
+        "tests": tests_count,
     }
 
 
@@ -1387,14 +2065,102 @@ async def instructor_dashboard(user=Depends(require_roles(Role.INSTRUCTOR))):
 async def student_dashboard(user=Depends(require_roles(Role.STUDENT))):
     tenant_id = user.get("tenant_id")
     student_id = user.get("sub")
-    courses_in_progress = await db.enrollments.count_documents({"tenant_id": tenant_id, "student_id": student_id})
-    live_this_week = await db.live_classes.count_documents({"tenant_id": tenant_id, "status": "upcoming"})
-    certificates = await db.certificates.count_documents({"tenant_id": tenant_id, "student_id": student_id})
-    notifications_unread = await db.notifications.count_documents({"user_id": student_id, "read": False})
+    now = datetime.now(timezone.utc)
+    week_end = now + timedelta(days=7)
+
+    def _id_variants(value: str | None) -> list:
+        raw = str(value or "").strip()
+        if not raw:
+            return []
+        variants: list = [raw]
+        if ObjectId.is_valid(raw):
+            variants.append(ObjectId(raw))
+        return variants
+
+    student_variants = _id_variants(student_id)
+    if not student_variants:
+        raise HTTPException(status_code=401, detail="Invalid student identity")
+
+    def tenant_or_legacy_query(extra: dict | None = None) -> dict:
+        query: dict = {}
+        if tenant_id:
+            query = {
+                "$or": [
+                    {"tenant_id": tenant_id},
+                    {"tenant_id": None},
+                    {"tenant_id": {"$exists": False}},
+                ]
+            }
+        if extra:
+            if "$or" in query and "$or" in extra:
+                return {"$and": [query, extra]}
+            query.update(extra)
+        return query
+
+    active_enrollment_query = tenant_or_legacy_query(
+        {
+            "student_id": {"$in": student_variants},
+            "status": {"$nin": ["cancelled", "canceled", "expired", "failed", "pending", "inactive"]},
+            "$or": [
+                {"expires_at": {"$exists": False}},
+                {"expires_at": None},
+                {"expires_at": {"$gt": now}},
+            ],
+        }
+    )
+    active_enrollment_docs = [
+        x
+        async for x in db.enrollments.aggregate(
+            [
+                {"$match": active_enrollment_query},
+                {
+                    "$group": {
+                        "_id": {
+                            "student_id": "$student_id",
+                            "course_id": "$course_id",
+                            "enrollment_type": {"$ifNull": ["$enrollment_type", "course"]},
+                        }
+                    }
+                },
+                {"$count": "total"},
+            ]
+        )
+    ]
+    courses_in_progress = int(active_enrollment_docs[0]["total"]) if active_enrollment_docs else 0
+
+    enrolled_course_variants: list = []
+    seen_course_variants: set[str] = set()
+    async for enrollment in db.enrollments.find(active_enrollment_query, {"course_id": 1}):
+        course_id = str(enrollment.get("course_id") or "").strip()
+        if not course_id:
+            continue
+        for variant in _id_variants(course_id):
+            key = str(variant)
+            if key in seen_course_variants:
+                continue
+            seen_course_variants.add(key)
+            enrolled_course_variants.append(variant)
+
+    live_match: dict = {
+        "status": {"$in": ["upcoming", "active", "ongoing", "scheduled"]},
+        "start_at": {"$gte": now, "$lt": week_end},
+        "$or": [{"attendee_ids": {"$in": student_variants}}],
+    }
+    if enrolled_course_variants:
+        live_match["$or"].append({"course_id": {"$in": enrolled_course_variants}})
+    live_this_week = await db.live_classes.count_documents(tenant_or_legacy_query(live_match))
+
+    quiz_attempts = await db.test_attempts.count_documents({"student_id": {"$in": student_variants}})
+    certificates = await db.certificates.count_documents(
+        tenant_or_legacy_query({"student_id": {"$in": student_variants}})
+    )
+    notifications_unread = await db.notifications.count_documents(
+        {"user_id": {"$in": student_variants}, "read": False}
+    )
     return {
         "courses_in_progress": courses_in_progress,
         "live_classes_week": live_this_week,
-        "quiz_attempts": 0,
+        "quiz_attempts": quiz_attempts,
         "certificates_earned": certificates,
         "unread_notifications": notifications_unread,
     }
@@ -1590,7 +2356,36 @@ async def list_notifications(user=Depends(get_current_user), skip: int = 0, limi
         query = {"tenant_id": tenant_id} if tenant_id else {"user_id": user["sub"]}
     else:
         query = {"user_id": user["sub"]}
-    return await paged(db.notifications, query, "created_at", -1, skip, limit)
+    result = await paged(db.notifications, query, "created_at", -1, skip, limit)
+    result["items"] = await _enrich_notification_docs(result.get("items") or [], tenant_id)
+    return result
+
+
+@router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user=Depends(get_current_user)):
+    try:
+        notification_oid = ObjectId(notification_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid notification id")
+
+    role = user.get("role")
+    tenant_id = user.get("tenant_id")
+    query: dict = {"_id": notification_oid}
+    if role in {Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value} and tenant_id:
+        query["tenant_id"] = tenant_id
+    else:
+        query["user_id"] = user["sub"]
+
+    result = await db.notifications.update_one(
+        query,
+        {"$set": {"read": True, "updated_at": datetime.now(timezone.utc)}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    room = f"tenant:{tenant_id}" if role in {Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value} and tenant_id else f"user:{user['sub']}"
+    await ws_manager.broadcast(room, {"type": "notification.read", "data": {"id": notification_id}})
+    return {"message": "Marked as read"}
 
 
 @router.patch("/notifications/read-all")
@@ -1602,6 +2397,8 @@ async def mark_notifications_read(user=Depends(get_current_user)):
     else:
         query = {"user_id": user["sub"], "read": False}
     await db.notifications.update_many(query, {"$set": {"read": True, "updated_at": datetime.now(timezone.utc)}})
+    room = f"tenant:{tenant_id}" if role in {Role.ADMIN.value, Role.SUB_ADMIN.value, Role.SUPER_ADMIN.value} and tenant_id else f"user:{user['sub']}"
+    await ws_manager.broadcast(room, {"type": "notification.read", "data": {"all": True}})
     return {"message": "Marked all as read"}
 
 
@@ -1611,6 +2408,16 @@ async def create_payment_order(payload: RazorpayOrderIn, tenant_id: str = Depend
     amount_paise = int(round(payload.amount * 100))
     if amount_paise <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+
+    target_doc = await _resolve_payment_target(
+        {"target_id": payload.target_id, "enrollment_type": payload.enrollment_type, "tenant_id": tenant_id},
+        tenant_id,
+    )
+    enrollment_type = str(payload.enrollment_type or "").lower()
+    if enrollment_type == "course" and target_doc and not _course_is_active(target_doc):
+        raise HTTPException(status_code=400, detail=_course_inactive_message())
+    if enrollment_type == "live_class" and target_doc and _is_ended_live_class_status(target_doc.get("status")):
+        raise HTTPException(status_code=400, detail="This live class has ended. Please enroll in a newly scheduled class.")
 
     order_id = f"order_local_{ObjectId()}"
     currency = "INR"
@@ -1640,10 +2447,6 @@ async def create_payment_order(payload: RazorpayOrderIn, tenant_id: str = Depend
         except Exception:  # noqa: BLE001
             pass
 
-    target_doc = await _resolve_payment_target(
-        {"target_id": payload.target_id, "enrollment_type": payload.enrollment_type, "tenant_id": tenant_id},
-        tenant_id,
-    )
     target_title = str(payload.target_title or "").strip() or _payment_item_title(target_doc, payload.enrollment_type)
     original_price = _money(
         payload.original_price

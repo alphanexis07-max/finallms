@@ -231,6 +231,12 @@ export default function HeaderPanel({ onMenuToggle }) {
     }
   }, [location.pathname])
 
+  useEffect(() => {
+    const handleNotificationCountChanged = () => loadUnreadCount()
+    window.addEventListener('lms:notifications-updated', handleNotificationCountChanged)
+    return () => window.removeEventListener('lms:notifications-updated', handleNotificationCountChanged)
+  }, [])
+
   const notificationRoom =
     resolvedRole === 'admin' || resolvedRole === 'sub_admin' || resolvedRole === 'super_admin'
       ? (tenantId ? `tenant:${tenantId}` : '')

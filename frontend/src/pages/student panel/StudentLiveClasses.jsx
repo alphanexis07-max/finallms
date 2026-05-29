@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Search, Video, Calendar, Clock3, Users, PlayCircle, BookOpen,
-  Star, ChevronRight, ChevronDown, X, Check, Lock, CreditCard, CheckCircle2,
+  Star, X, Check, Lock, CreditCard, CheckCircle2,
   CalendarDays, BarChart2, MessageSquare, Monitor, UserCheck,
   Link2, Clock, Wifi
 } from 'lucide-react'
@@ -20,11 +20,11 @@ const AVATARS = [A1, A2, A3, A4, A5]
 const STATUS_CONFIG = {
   live: { label: 'Live', bg: 'bg-[#fee2e2]', text: 'text-[#991b1b]', dot: 'bg-[#ef4444]' },
   upcoming: { label: 'Upcoming', bg: 'bg-[#fef9c3]', text: 'text-[#854d0e]', dot: 'bg-[#eab308]' },
-  recent: { label: 'Completed', bg: 'bg-[#dcfce7]', text: 'text-[#14532d]', dot: 'bg-[#22c55e]' },
-  ended: { label: 'Course Ended', bg: 'bg-[#f1f5f9]', text: 'text-[#475569]', dot: 'bg-[#94a3b8]' },
+  completed: { label: 'Completed', bg: 'bg-[#dcfce7]', text: 'text-[#14532d]', dot: 'bg-[#22c55e]' },
+  ended: { label: 'Completed', bg: 'bg-[#dcfce7]', text: 'text-[#14532d]', dot: 'bg-[#22c55e]' },
 }
 
-const FILTERS = ['All Sessions', 'Live Now', 'Upcoming', 'Complete', 'Enrolled']
+const FILTERS = ['All Sessions', 'Live Now', 'Upcoming', 'Completed Classes', 'Enrolled']
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000
 
 const LIVE_SUBSCRIPTION_TEMPLATES = [
@@ -97,37 +97,6 @@ function resolveUserId(user) {
   return getUserIdFromToken()
 }
 
-function normalizePlanKey(name) {
-  const normalized = String(name || '').trim().toLowerCase()
-  if (!normalized) return ''
-  if (normalized.includes('demo')) return 'demo'
-  if (normalized.includes('half')) return 'half'
-  if (normalized.includes('full')) return 'full'
-  return ''
-}
-
-function normalizePlanPeriodText(value, key, fallback) {
-  const raw = String(value || '').trim()
-  if (!raw) return fallback
-
-  const lower = raw.toLowerCase()
-  if (lower.includes('half course complete hone tak')) {
-    return 'Half (until half of the course is completed)'
-  }
-  if (lower.includes('full course complete hone tak')) {
-    return 'Full (until the full course is completed)'
-  }
-
-  if (key === 'half' && lower === 'half') {
-    return 'Half (until half of the course is completed)'
-  }
-  if (key === 'full' && lower === 'full') {
-    return 'Full (until the full course is completed)'
-  }
-
-  return raw
-}
-
 function buildLiveSubscriptionPlans(rawPlans, classAmountValue) {
   const activePlans = (rawPlans || [])
     .filter((plan) => Boolean(plan) && Boolean(plan?.active ?? true))
@@ -167,7 +136,7 @@ function getMinSubscriptionLabel(rawPlans, classAmountValue) {
 
 function getSessionStatus(rawStatus, startAtValue, durationMinutes) {
   const status = String(rawStatus || '').toLowerCase()
-  if (status === 'ended' || status === 'course_ended') return 'ended'
+  if (status === 'ended' || status === 'course_ended' || status === 'completed' || status === 'complete') return 'completed'
 
   const startAt = parseServerDate(startAtValue)
   if (!startAt) return 'upcoming'
@@ -676,7 +645,7 @@ function ClassDetailModal({ session, onClose }) {
                   </div>
                 ))}
               </div>
-              {session.link && (
+              {session.link && session.status !== 'completed' && session.status !== 'ended' && (
                 <div className="flex items-center gap-2 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] p-3">
                   <Link2 className="h-4 w-4 text-[#5b3df6] shrink-0" />
                   <span className="text-[12px] text-[#5b3df6] truncate flex-1">{session.link}</span>
@@ -725,6 +694,7 @@ function ClassDetailModal({ session, onClose }) {
 
 function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, ratingValue, ratingSaving, enrollPriceLabel }) {
   const isLive = session.status === 'live'
+  const isCompleted = session.status === 'completed' || session.status === 'ended'
 
   return (
     <div className={`group relative overflow-hidden rounded-[14px] border transition-all duration-200 hover:shadow-md ${isLive ? 'border-[#ef4444]/30 bg-[#fff5f5]' : 'border-black/[0.08] bg-white hover:border-[#5b3df6]/30'}`}>
@@ -836,6 +806,13 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
                 >
                   <PlayCircle className="h-4 w-4" /> Join Class
                 </button>
+              ) : isCompleted ? (
+                <button
+                  onClick={() => onJoinClick(session)}
+                  className="flex-1 h-9 rounded-[8px] bg-[#16a34a] text-[11px] font-semibold text-white flex items-center justify-center gap-1.5 hover:bg-[#15803d] transition-colors"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Completed
+                </button>
               ) : (
                 <button
                   onClick={() => onJoinClick(session)}
@@ -845,7 +822,7 @@ function SessionCard({ session, isEnrolled, onJoinClick, onEnrollClick, onRate, 
                 </button>
               )}
             </>
-          ) : (
+          ) : isCompleted ? null : (
             <>
               <button
                 onClick={() => onJoinClick(session)}
@@ -938,14 +915,6 @@ export default function StudentLiveClasses() {
         const course = courseMap.get(r.course_id) || {}
         const startAt = parseServerDate(r.start_at)
         const hasValidStart = !!startAt
-        try {
-          // Debug: log raw and parsed start times to help diagnose timezone parsing
-          // Remove this log once issue is confirmed
-          // eslint-disable-next-line no-console
-          console.log('[LIVE-CLASS-TIME]', { id: r._id, raw: r.start_at, parsed: startAt, dateLabel: hasValidStart ? formatDateInIst(r.start_at) : null, timeLabel: hasValidStart ? formatTimeInIst(r.start_at) : null })
-        } catch (e) {
-          // ignore logging errors
-        }
         const attendeeIds = (r.attendee_ids || []).map((id) => String(id))
         // Mark as enrolled if student is in attendee_ids OR has an enrollment for this course
         if (
@@ -957,7 +926,7 @@ export default function StudentLiveClasses() {
         const numericPrice = Number(r.amount ?? course.price ?? 0)
         const status = getSessionStatus(r.status, r.start_at, r.duration_minutes)
         const tags = [
-          status === 'live' ? 'Live today' : status === 'recent' ? 'Completed' : 'Upcoming',
+          status === 'live' ? 'Live today' : status === 'completed' ? 'Completed' : 'Upcoming',
           course.title ? 'Course Linked' : 'Live Class',
         ]
         return {
@@ -1038,14 +1007,9 @@ export default function StudentLiveClasses() {
   useRealtime(tenantId ? `tenant:${tenantId}` : '', () => loadLiveClasses())
 
   const [activeFilter, setActiveFilter] = useState('All Sessions')
-  const [activeCourseFilter, setActiveCourseFilter] = useState('All Courses')
   const [search, setSearch] = useState('')
   const [enrollModal, setEnrollModal] = useState(null)   // session to enroll
   const [detailModal, setDetailModal] = useState(null)   // session to view detail
-
-  const courseFilters = [...new Set(liveSessions.map((s) => String(s.course || '').trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b))
-  const allCourseFilters = ['All Courses', ...courseFilters]
 
   const handleEnrollSuccess = (sessionId) => {
     const normalized = String(sessionId || '')
@@ -1054,24 +1018,25 @@ export default function StudentLiveClasses() {
   }
 
   const filtered = liveSessions.filter(s => {
-    const selectedCourse = activeCourseFilter.trim().toLowerCase()
+    const isEnrolled = enrolledSessionIds.includes(s.id)
+    const isCompleted = s.status === 'completed' || s.status === 'ended'
     const matchFilter =
-      (activeFilter === 'All Sessions') ||
-      (activeFilter === 'Live Now' && s.status === 'live' && enrolledSessionIds.includes(s.id)) ||
+      (activeFilter === 'All Sessions' && !isCompleted) ||
+      (activeFilter === 'Live Now' && s.status === 'live' && isEnrolled) ||
       (activeFilter === 'Upcoming' && s.status === 'upcoming') ||
-      (activeFilter === 'Complete' && s.status === 'ended') ||
-      (activeFilter === 'Enrolled' && enrolledSessionIds.includes(s.id))
-    const matchCourse = selectedCourse === 'all courses' || s.course.toLowerCase() === selectedCourse
+      (activeFilter === 'Completed Classes' && isCompleted && isEnrolled) ||
+      (activeFilter === 'Enrolled' && isEnrolled && !isCompleted)
     const matchSearch =
       s.title.toLowerCase().includes(search.toLowerCase()) ||
       s.instructor.toLowerCase().includes(search.toLowerCase()) ||
       s.course.toLowerCase().includes(search.toLowerCase())
-    return matchFilter && matchCourse && matchSearch
+    return matchFilter && matchSearch
   })
 
   const liveCount = liveSessions.filter(s => s.status === 'live' && enrolledSessionIds.includes(s.id)).length
-  const endedCount = liveSessions.filter(s => s.status === 'ended').length
-  const enrolledCount = enrolledSessionIds.length
+  const endedCount = liveSessions.filter(s => (s.status === 'completed' || s.status === 'ended') && enrolledSessionIds.includes(s.id)).length
+  const enrolledCount = liveSessions.filter(s => enrolledSessionIds.includes(s.id) && s.status !== 'completed' && s.status !== 'ended').length
+  const activeSessionCount = liveSessions.filter(s => s.status !== 'completed' && s.status !== 'ended').length
 
   return (
     <div className="min-h-full bg-[#f6f8fa]">
@@ -1092,7 +1057,7 @@ export default function StudentLiveClasses() {
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'Total sessions', value: liveSessions.length },
+            { label: 'Active sessions', value: activeSessionCount },
             { label: 'Live now', value: liveCount },
             { label: 'Completed classes', value: endedCount },
             { label: 'Courses enrolled', value: enrolledCount },
@@ -1106,7 +1071,7 @@ export default function StudentLiveClasses() {
 
         <section className="rounded-[8px] border border-black/[0.08] bg-white p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-[20px] font-bold text-[#0f172a]">All Live Classes</h3>
+            <h3 className="text-[20px] font-bold text-[#0f172a]">Live Classes</h3>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
@@ -1116,18 +1081,6 @@ export default function StudentLiveClasses() {
                   placeholder="Search classes..."
                   className="h-9 w-[200px] rounded-[7px] border border-black/[0.08] pl-9 pr-3 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
                 />
-              </div>
-              <div className="relative">
-                <select
-                  value={activeCourseFilter}
-                  onChange={(e) => setActiveCourseFilter(e.target.value)}
-                  className="h-9 w-[190px] appearance-none rounded-[7px] border border-black/[0.08] bg-white px-3 pr-8 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#5b3df6]/30"
-                >
-                  {allCourseFilters.map((courseName) => (
-                    <option key={courseName} value={courseName}>{courseName}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
               </div>
             </div>
           </div>

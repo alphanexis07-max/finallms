@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { api, getToken, loadRazorpayScript } from '../../lib/api'
+import useRealtime from '../../hooks/useRealtime'
 
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1400&q=80'
@@ -126,11 +127,12 @@ function parseUserMetaFromToken() {
 
 function toDisplayCourse(course) {
   const isPaid = course?.course_type === 'paid' && Number(course?.price || 0) > 0
+  const active = course?.is_active !== false
   const priceLabel = isPaid ? formatCurrency(course?.price || 0) : 'Free'
   return {
     ...course,
     image: getCourseImage(course),
-    tags: [course?.course_type || 'course', isPaid ? 'Paid' : 'Free'].filter(Boolean),
+    tags: [course?.course_type || 'course', isPaid ? 'Paid' : 'Free', active ? '' : 'Inactive'].filter(Boolean),
     mentor: course?.instructor_name || 'Instructor',
     role: 'Course owner',
     rating: Number(course?.rating || 0) > 0 ? Number(course.rating).toFixed(1) : null,
@@ -138,6 +140,10 @@ function toDisplayCourse(course) {
     note: course?.youtube_url ? 'Video content available' : 'No video preview',
     createdAtLabel: formatDate(course?.created_at),
   }
+}
+
+function isCourseActive(course) {
+  return course?.is_active !== false
 }
 
 function CourseDetailModal({ course, onClose, onEnroll, enrolled }) {
@@ -291,7 +297,6 @@ function CheckoutModal({
               Checkout
             </span>
             <h2 className="mt-2 text-[22px] font-bold text-[#0f172a] sm:text-[26px]">Complete your enrollment</h2>
-            <p className="mt-1 text-[13px] text-[#94a3b8]">Enrollment will be saved to backend database.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-gray-100">
             <X className="h-5 w-5 text-[#94a3b8]" />
@@ -452,14 +457,15 @@ export default function StudentBrowseCourse() {
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponError, setCouponError] = useState('')
+  const tenantId = localStorage.getItem('lms_tenant_id') || ''
 
-  useEffect(() => {
+  const loadCourses = () => {
     setLoading(true)
     setError('')
 
     Promise.all([
-      api('/lms/courses?limit=500'),
-      api('/lms/enrollments?limit=500').catch(() => ({ items: [] })),
+      api(`/lms/courses?limit=500&_=${Date.now()}`),
+      api(`/lms/enrollments?limit=500&_=${Date.now()}`).catch(() => ({ items: [] })),
       api('/lms/coupons?limit=200').catch(() => ({ items: [] })),
     ])
       .then(([courseData, enrollmentData, couponData]) => {
@@ -474,27 +480,31 @@ export default function StudentBrowseCourse() {
         setError(err?.message || 'Unable to load courses right now.')
       })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadCourses()
   }, [])
+
+  useRealtime(tenantId ? `tenant:${tenantId}` : '', (payload) => {
+    if (String(payload?.type || '').startsWith('course.')) loadCourses()
+  })
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
       const byType = typeFilter === 'all' || (course.course_type || '').toLowerCase() === typeFilter
       const text = `${course.title || ''} ${course.description || ''} ${course.mentor || ''}`.toLowerCase()
       const bySearch = !query || text.includes(query.toLowerCase())
-      return byType && bySearch
+      return isCourseActive(course) && byType && bySearch
     })
   }, [courses, query, typeFilter])
 
-  const thisMonthCount = useMemo(() => {
-    const now = new Date()
-    return courses.filter((course) => {
-      const created = new Date(course.created_at)
-      return !Number.isNaN(created.getTime()) && created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
-    }).length
-  }, [courses])
-
   const openEnrollFlow = (course) => {
     if (!course || enrolledIds.has(course._id)) return
+    if (!isCourseActive(course)) {
+      setError('This course is currently inactive.')
+      return
+    }
 
     setCheckoutCourse(course)
     setSelectedCourse(null)
@@ -542,6 +552,11 @@ export default function StudentBrowseCourse() {
 
   const createEnrollment = async (course) => {
     if (!course || enrolledIds.has(course._id)) return
+    if (!isCourseActive(course)) {
+      setError('This course is currently inactive.')
+      setCheckoutCourse(null)
+      return
+    }
 
     const studentId = parseUserIdFromToken()
     if (!studentId) {

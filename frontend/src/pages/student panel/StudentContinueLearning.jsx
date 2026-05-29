@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { BookOpen, ExternalLink, PlayCircle } from 'lucide-react'
+import { AlertCircle, BookOpen, ExternalLink, PlayCircle } from 'lucide-react'
 import { api } from '../../lib/api'
+import useRealtime from '../../hooks/useRealtime'
 
 const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1400&q=80'
@@ -62,6 +63,10 @@ function formatPrice(value) {
   return `Rs. ${price.toLocaleString()}`
 }
 
+function isCourseActive(course) {
+  return course?.is_active !== false
+}
+
 function mapCourse(course, enrollment) {
   return {
     _id: course?._id,
@@ -70,6 +75,7 @@ function mapCourse(course, enrollment) {
     youtube_url: course?.youtube_url || '',
     course_type: course?.course_type || 'course',
     price: Number(course?.price || 0),
+    is_active: course?.is_active !== false,
     image: getCourseImage(course),
     enrolledAt: enrollment?.created_at || null,
     updatedAt: course?.updated_at || course?.created_at || null,
@@ -81,14 +87,15 @@ export default function StudentContinueLearning() {
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const tenantId = localStorage.getItem('lms_tenant_id') || ''
 
-  useEffect(() => {
+  const loadCourses = () => {
     setLoading(true)
     setError('')
 
     Promise.all([
-      api('/lms/enrollments?limit=500').catch(() => ({ items: [] })),
-      api('/lms/courses?limit=800').catch(() => ({ items: [] })),
+      api(`/lms/enrollments?limit=500&_=${Date.now()}`).catch(() => ({ items: [] })),
+      api(`/lms/courses?limit=800&_=${Date.now()}`).catch(() => ({ items: [] })),
     ])
       .then(([enrollmentRes, courseRes]) => {
         const enrollments = enrollmentRes?.items || []
@@ -110,7 +117,16 @@ export default function StudentContinueLearning() {
         setError(err?.message || 'Unable to load learning courses.')
       })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadCourses, 0)
+    return () => window.clearTimeout(timer)
   }, [])
+
+  useRealtime(tenantId ? `tenant:${tenantId}` : '', (payload) => {
+    if (String(payload?.type || '').startsWith('course.')) loadCourses()
+  })
 
   const selectedCourse = useMemo(() => {
     return courses.find((course) => course._id === selectedCourseId) || courses[0] || null
@@ -155,6 +171,7 @@ export default function StudentContinueLearning() {
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-semibold text-[#0f172a]">{course.title}</p>
                       <p className="mt-0.5 text-[11px] text-[#94a3b8]">Enrolled: {formatDate(course.enrolledAt)}</p>
+                      {!isCourseActive(course) ? <p className="mt-1 text-[11px] font-semibold text-red-600">Inactive</p> : null}
                     </div>
                   </div>
                 </button>
@@ -171,9 +188,21 @@ export default function StudentContinueLearning() {
               <img src={selectedCourse.image} alt={selectedCourse.title} className="h-[220px] w-full rounded-[10px] object-cover sm:h-[300px]" />
 
               <div className="mt-5">
-                <h3 className="text-[24px] font-bold leading-tight text-[#0f172a]">{selectedCourse.title}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-[24px] font-bold leading-tight text-[#0f172a]">{selectedCourse.title}</h3>
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${isCourseActive(selectedCourse) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    {isCourseActive(selectedCourse) ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
                 <p className="mt-2 text-[14px] leading-relaxed text-[#64748b]">{selectedCourse.description}</p>
               </div>
+
+              {!isCourseActive(selectedCourse) ? (
+                <div className="mt-4 flex items-start gap-2 rounded-[10px] border border-red-200 bg-red-50 p-3 text-[13px] font-medium text-red-700">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>This course is currently inactive.</span>
+                </div>
+              ) : null}
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-[10px] bg-[#f8fafc] p-3">
@@ -198,16 +227,16 @@ export default function StudentContinueLearning() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (selectedCourse.youtube_url) window.open(selectedCourse.youtube_url, '_blank', 'noopener,noreferrer')
+                    if (isCourseActive(selectedCourse) && selectedCourse.youtube_url) window.open(selectedCourse.youtube_url, '_blank', 'noopener,noreferrer')
                   }}
-                  disabled={!selectedCourse.youtube_url}
+                  disabled={!isCourseActive(selectedCourse) || !selectedCourse.youtube_url}
                   className="inline-flex h-10 items-center gap-2 rounded-[8px] bg-[#5b3df6] px-4 text-[13px] font-semibold text-white hover:bg-[#4a2ed8] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <PlayCircle className="h-4 w-4" />
-                  {selectedCourse.youtube_url ? 'Continue Learning' : 'Content Not Available'}
+                  {!isCourseActive(selectedCourse) ? 'Course Inactive' : selectedCourse.youtube_url ? 'Continue Learning' : 'Content Not Available'}
                 </button>
 
-                {selectedCourse.youtube_url ? (
+                {isCourseActive(selectedCourse) && selectedCourse.youtube_url ? (
                   <a
                     href={selectedCourse.youtube_url}
                     target="_blank"

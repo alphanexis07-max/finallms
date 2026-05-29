@@ -39,6 +39,7 @@ class CourseIn(BaseModel):
     price: float = 0
     course_type: str = Field(default="free", pattern="^(free|paid|demo)$")
     youtube_url: str = ""
+    is_active: bool = True
 
 
 class CourseUpdateIn(BaseModel):
@@ -47,6 +48,7 @@ class CourseUpdateIn(BaseModel):
     price: float | None = None
     course_type: str | None = Field(default=None, pattern="^(free|paid|demo)$")
     youtube_url: str | None = None
+    is_active: bool | None = None
 
 
 class LiveClassIn(BaseModel):

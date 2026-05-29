@@ -1,8 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { PlayCircle, Video, Trophy, BookOpen as BookIcon } from 'lucide-react'
+import { PlayCircle, Video, BookOpen as BookIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import useRealtime from '../../hooks/useRealtime'
+import { formatDateTimeInIst } from '../../lib/dates'
+
+const DEFAULT_STATS = {
+  courses_in_progress: 0,
+  live_classes_week: 0,
+  quiz_attempts: 0,
+  certificates_earned: 0,
+  unread_notifications: 0,
+}
+
+function toNumber(value) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
+}
 
 export default function StudentDashboard() {
   const navigate = useNavigate()
@@ -10,13 +24,7 @@ export default function StudentDashboard() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [statsData, setStatsData] = useState({
-    courses_in_progress: 0,
-    live_classes_week: 0,
-    quiz_attempts: 0,
-    certificates_earned: 0,
-    unread_notifications: 0,
-  })
+  const [statsData, setStatsData] = useState(DEFAULT_STATS)
   const [enrollments, setEnrollments] = useState([])
   const [courses, setCourses] = useState([])
   const [liveClasses, setLiveClasses] = useState([])
@@ -30,18 +38,19 @@ export default function StudentDashboard() {
       setError('')
 
       const [dashboardRes, enrollmentsRes, coursesRes] = await Promise.all([
-        api('/lms/dashboard/student').catch(() => ({
-          courses_in_progress: 0,
-          live_classes_week: 0,
-          quiz_attempts: 0,
-          certificates_earned: 0,
-          unread_notifications: 0,
-        })),
+        api('/lms/dashboard/student'),
         api('/lms/enrollments?limit=100').catch(() => ({ items: [] })),
         api('/lms/courses?limit=200').catch(() => ({ items: [] })),
       ])
 
-      setStatsData(dashboardRes || {})
+      setStatsData({
+        ...DEFAULT_STATS,
+        courses_in_progress: toNumber(dashboardRes?.courses_in_progress),
+        live_classes_week: toNumber(dashboardRes?.live_classes_week),
+        quiz_attempts: toNumber(dashboardRes?.quiz_attempts),
+        certificates_earned: toNumber(dashboardRes?.certificates_earned),
+        unread_notifications: toNumber(dashboardRes?.unread_notifications),
+      })
       setEnrollments(enrollmentsRes?.items || [])
       setCourses(coursesRes?.items || [])
     } catch (err) {
@@ -129,12 +138,10 @@ export default function StudentDashboard() {
   const liveClassRows = useMemo(
     () =>
       liveClasses.slice(0, 4).map((liveClass) => {
-        const startsAt = liveClass.start_at ? new Date(liveClass.start_at) : null
-        const schedule = startsAt && !Number.isNaN(startsAt.getTime()) ? startsAt.toLocaleString() : 'Schedule pending'
         return {
           id: liveClass._id,
           title: liveClass.title || 'Live class',
-          meta: schedule,
+          meta: liveClass.start_at ? formatDateTimeInIst(liveClass.start_at) : 'Schedule pending',
         }
       }),
     [liveClasses],
@@ -155,14 +162,6 @@ export default function StudentDashboard() {
       }),
     [enrollments, coursesById],
   )
-
-  const quizNoticeRows = useMemo(() => {
-    const filtered = notifications.filter((item) => {
-      const text = `${item?.title || ''} ${item?.message || ''}`.toLowerCase()
-      return text.includes('quiz') || text.includes('test') || text.includes('certificate')
-    })
-    return filtered.slice(0, 3)
-  }, [notifications])
 
   return (
     <div className="min-h-full bg-[#F7FAFD]">
@@ -328,35 +327,6 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            <div className="bg-white border border-black/[0.08] border-solid flex flex-col gap-[16px] items-start p-[21px] rounded-[8px]">
-              <div>
-                <h3 className="font-bold text-[18px] text-[#0f172a]">Quiz section</h3>
-                <p className="text-[13px] text-[#94a3b8] mt-[4px]">Scores and quiz-related alerts from live records.</p>
-              </div>
-              <div className="flex flex-col w-full gap-[12px]">
-                <div className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px]">
-                  <p className="font-semibold text-[14px] text-[#0f172a]">Quiz attempts recorded: {statsData.quiz_attempts ?? 0}</p>
-                  <Trophy className="h-[18px] w-[18px] text-[#5b3df6]" />
-                </div>
-                <div className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px]">
-                  <p className="font-semibold text-[14px] text-[#0f172a]">Certificates earned: {statsData.certificates_earned ?? 0}</p>
-                  <Trophy className="h-[18px] w-[18px] text-[#5b3df6]" />
-                </div>
-                {quizNoticeRows.length === 0 ? (
-                  <div className="p-[14px] border border-black/[0.08] rounded-[6px] text-[13px] text-[#94a3b8]">No quiz or certificate alerts yet.</div>
-                ) : (
-                  quizNoticeRows.map((item) => (
-                    <div key={item._id} className="flex items-center justify-between p-[14px] border border-black/[0.08] rounded-[6px]">
-                      <div>
-                        <p className="font-semibold text-[14px] text-[#0f172a]">{item.title || 'Quiz update'}</p>
-                        <p className="text-[11px] text-[#94a3b8] mt-[3px]">{item.message || 'Latest notification'}</p>
-                      </div>
-                      <Trophy className="h-[18px] w-[18px] text-[#5b3df6]" />
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>
